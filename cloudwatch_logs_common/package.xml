@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>cloudwatch_logs_common</name>
+  <version>1.0.0</version>
+  <description>AWS CloudWatch management library used by ROS1/2 node to publish logs to CloudWatch service</description>
+
+  <author email="ros-contributions@amazon.com">AWS RoboMaker</author>
+  <maintainer email="ros-contributions@amazon.com">AWS RoboMaker</maintainer>
+
+  <license>Apache 2.0</license>
+
+  <depend>aws_common</depend>
+  <buildtool_depend>cmake</buildtool_depend>
+  <test_depend>gtest</test_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
