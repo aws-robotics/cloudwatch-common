@@ -19,6 +19,8 @@
 #include <aws/logs/CloudWatchLogsErrors.h>
 #include <aws/logs/model/CreateLogGroupRequest.h>
 #include <aws/logs/model/CreateLogStreamRequest.h>
+#include <aws/logs/model/DescribeLogGroupsRequest.h>
+#include <aws/logs/model/DescribeLogGroupsResult.h>
 #include <aws/logs/model/DescribeLogStreamsRequest.h>
 #include <aws/logs/model/DescribeLogStreamsResult.h>
 #include <aws/logs/model/InputLogEvent.h>
@@ -147,6 +149,50 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogGroup(
   return status;
 }
 
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CheckLogGroupExists(
+  const std::string & log_group)
+{
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_LOG_GROUP_NOT_FOUND;
+  Aws::CloudWatchLogs::Model::DescribeLogGroupsRequest describe_log_group_request;
+  Aws::String next_token;
+
+  describe_log_group_request.SetLogGroupNamePrefix(log_group.c_str());
+
+  while (CW_LOGS_LOG_GROUP_NOT_FOUND == status) {
+    if (next_token.size() != 0) {
+      describe_log_group_request.SetNextToken(next_token);
+    }
+
+    const auto & response = this->cw_client_.DescribeLogGroups(describe_log_group_request);
+    if (!response.IsSuccess()) {
+      status = CW_LOGS_FAILED;
+      AWS_LOGSTREAM_WARN(__func__, "Request to check if log group named "
+              << log_group << " exists failed. Error message: "
+              << response.GetError().GetMessage() << ", with error code: "
+              << static_cast<int>(response.GetError().GetErrorType()));
+      break;
+    }
+
+    auto & log_group_list = response.GetResult().GetLogGroups();
+    next_token = response.GetResult().GetNextToken();
+
+    for (auto it = log_group_list.begin(); it != log_group_list.end(); ++it) {
+      Aws::CloudWatchLogs::Model::LogGroup curr_log_group = *it;
+      if (curr_log_group.GetLogGroupName().c_str() == log_group) {
+        AWS_LOGSTREAM_DEBUG(__func__, "Found Log Group named: " << log_group << ".");
+        status = CW_LOGS_SUCCEEDED;
+        break;
+      }
+    }
+    if (CW_LOGS_SUCCEEDED != status && next_token.size() == 0) {
+      AWS_LOGSTREAM_INFO(__func__, "Failed to find Log Group named: " << log_group << ".");
+      break;
+    }
+  }
+
+  return status;
+}
+
 Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogStream(
   const std::string & log_group, const std::string & log_stream)
 {
@@ -173,43 +219,70 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogStream(
   return status;
 }
 
-Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::GetLogStreamToken(
-  const std::string & log_group, const std::string & log_stream, Aws::String & next_token)
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CheckLogStreamExists(
+  const std::string & log_group, const std::string & log_stream,
+  Aws::CloudWatchLogs::Model::LogStream * log_stream_object)
 {
-  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
-
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_LOG_STREAM_NOT_FOUND;
   Aws::CloudWatchLogs::Model::DescribeLogStreamsRequest describe_log_stream_request;
+  Aws::String next_token;
+
   describe_log_stream_request.SetLogGroupName(log_group.c_str());
   describe_log_stream_request.SetLogStreamNamePrefix(log_stream.c_str());
-  ;
 
-  const auto & response = this->cw_client_.DescribeLogStreams(describe_log_stream_request);
-  if (!response.IsSuccess()) {
-    status = CW_LOGS_FAILED;
-    AWS_LOGSTREAM_ERROR(__func__, "Failed to obtain sequence token due to: "
-                                    << response.GetError().GetMessage() << ", with error code: "
-                                    << static_cast<int>(response.GetError().GetErrorType()));
-  }
+  while (CW_LOGS_LOG_STREAM_NOT_FOUND == status) {
+    if (next_token.size() != 0) {
+      describe_log_stream_request.SetNextToken(next_token);
+    }
 
-  if (CW_LOGS_SUCCEEDED == status) {
-    const auto & log_stream_list = response.GetResult().GetLogStreams();
-    status = CW_LOGS_LOG_STREAM_NOT_FOUND;
+    const auto & response = this->cw_client_.DescribeLogStreams(describe_log_stream_request);
+    if (!response.IsSuccess()) {
+      status = CW_LOGS_FAILED;
+      AWS_LOGSTREAM_WARN(
+              __func__, "Request to check if log stream named "
+                      << log_stream << " exists in log group named: " << log_group
+                      << ". Error message: " << response.GetError().GetMessage()
+                      << ", with error code: " << static_cast<int>(response.GetError().GetErrorType()));
+      break;
+    }
+
+    auto & log_stream_list = response.GetResult().GetLogStreams();
+    next_token = response.GetResult().GetNextToken();
+
     for (auto it = log_stream_list.begin(); it != log_stream_list.end(); ++it) {
       Aws::CloudWatchLogs::Model::LogStream curr_log_stream = *it;
       if (curr_log_stream.GetLogStreamName().c_str() == log_stream) {
-        AWS_LOGSTREAM_DEBUG(__func__, "Successfully obtain sequence token for Log Stream: "
-                                        << log_stream << " in Log Group :" << log_group << ".");
-        next_token = curr_log_stream.GetUploadSequenceToken();
+        AWS_LOGSTREAM_DEBUG(__func__, "Found Log Stream named: " << log_stream << " in Log Group :"
+                                                                 << log_group << ".");
+        if (nullptr != log_stream_object) {
+          *log_stream_object = curr_log_stream;
+        }
         status = CW_LOGS_SUCCEEDED;
         break;
       }
     }
-    if (CW_LOGS_SUCCEEDED != status) {
-      AWS_LOGSTREAM_ERROR(__func__, "Failed to obtain sequence token due to Log Stream :"
-                                      << log_stream << " in Log Group :" << log_group
-                                      << " doesn't exist, with error code: "
-                                      << static_cast<int>(response.GetError().GetErrorType()));
+    if (CW_LOGS_SUCCEEDED != status && next_token.size() == 0) {
+      AWS_LOGSTREAM_INFO(__func__, "Failed to find Log Stream named: " << log_stream
+                                                                       << ".");
+      break;
     }
+  }
+
+  return status;
+}
+
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::GetLogStreamToken(
+  const std::string & log_group, const std::string & log_stream, Aws::String & next_token)
+{
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
+  Aws::CloudWatchLogs::Model::LogStream log_stream_object;
+  if (CW_LOGS_SUCCEEDED != CheckLogStreamExists(log_group, log_stream, &log_stream_object)) {
+    status = CW_LOGS_LOG_STREAM_NOT_FOUND;
+    AWS_LOGSTREAM_ERROR(__func__, "Failed to obtain sequence token due to Log Stream: "
+                                    << log_stream << " in Log Group :" << log_group
+                                    << " doesn't exist.");
+  } else {
+    next_token = log_stream_object.GetUploadSequenceToken();
   }
 
   return status;

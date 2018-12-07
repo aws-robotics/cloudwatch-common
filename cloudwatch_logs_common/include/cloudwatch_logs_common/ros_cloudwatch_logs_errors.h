@@ -51,6 +51,8 @@ enum ROSCloudWatchLogsErrors {
   CW_LOGS_LOG_GROUP_ALREADY_EXISTS,
   /** An error indicating that a log stream already exists. */
   CW_LOGS_LOG_STREAM_ALREADY_EXISTS,
+  /** An error indicating that a log group cannot be found. */
+  CW_LOGS_LOG_GROUP_NOT_FOUND,
   /** An error indicating that a log stream cannot be found in a log group. */
   CW_LOGS_LOG_STREAM_NOT_FOUND
 };

@@ -70,6 +70,15 @@ public:
     const std::string & log_group);
 
   /**
+   * @brief Check if a log group exists
+   *
+   * @param log_group Name of the log group
+   * @return An error code that will be SUCCESS if log group is successfully found
+   */
+  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CheckLogGroupExists(
+    const std::string & log_group);
+
+  /**
    * @brief Creates a log stream in the specified log group
    *
    * @param log_group Name of the log group
@@ -79,6 +88,19 @@ public:
    */
   virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CreateLogStream(
     const std::string & log_group, const std::string & log_stream);
+
+  /**
+   * @brief Check if a log stream in a log group exists
+   *
+   * @param log_group Name of the log group
+   * @param log_stream Name of the stream
+   * @param log_stream_object A log stream object that contains information about the log stream
+   * @return An error code that will be SUCCESS if log stream is successfully found
+   */
+  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CheckLogStreamExists(
+    const std::string & log_group, const std::string & log_stream,
+    Aws::CloudWatchLogs::Model::LogStream * log_stream_object);
+
   /**
    * @brief Gets the next sequence token to use for sending logs to cloudwatch
    *
