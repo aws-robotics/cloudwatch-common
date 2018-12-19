@@ -112,10 +112,16 @@ void LogPublisher::Run()
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors publisher_status = CW_LOGS_SUCCEEDED;
   Aws::String next_token;
-  this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_, next_token);
   while (this->thread_keep_running_.load(std::memory_order_acquire)) {
     // if log group cannot be created or log stream doesnt already exist, don't try to send to CW
     if (!this->does_group_exist_) {
+      Aws::CloudWatchLogs::ROSCloudWatchLogsErrors check_log_group_exists_status =
+        this->cloudwatch_facade_->CheckLogGroupExists(this->log_group_);
+      if (CW_LOGS_SUCCEEDED == check_log_group_exists_status) {
+        this->does_group_exist_ = true;
+        AWS_LOGSTREAM_DEBUG(__func__, "Found existing log group: " << log_group_);
+        continue;
+      }
       Aws::CloudWatchLogs::ROSCloudWatchLogsErrors create_log_group_status =
         this->cloudwatch_facade_->CreateLogGroup(this->log_group_);
       if (CW_LOGS_SUCCEEDED == create_log_group_status) {
@@ -132,6 +138,14 @@ void LogPublisher::Run()
 
     // if log stream cannot be created or log group doesnt already exist, don't try to send to CW
     if (!this->does_stream_exist_) {
+      Aws::CloudWatchLogs::ROSCloudWatchLogsErrors check_log_stream_exists_status =
+        this->cloudwatch_facade_->CheckLogStreamExists(this->log_group_, this->log_stream_,
+                                                       nullptr);
+      if (CW_LOGS_SUCCEEDED == check_log_stream_exists_status) {
+        this->does_stream_exist_ = true;
+        AWS_LOGSTREAM_DEBUG(__func__, "Found existing log stream: " << log_stream_);
+        continue;
+      }
       Aws::CloudWatchLogs::ROSCloudWatchLogsErrors create_log_stream_status =
         this->cloudwatch_facade_->CreateLogStream(this->log_group_, this->log_stream_);
       if (CW_LOGS_SUCCEEDED == create_log_stream_status) {
@@ -145,6 +159,8 @@ void LogPublisher::Run()
         continue;
       }
     }
+
+    this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_, next_token);
 
     auto shared_logs_obj = this->shared_logs_.load(std::memory_order_acquire);
     if (nullptr != shared_logs_obj) {
