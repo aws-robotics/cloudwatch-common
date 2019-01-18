@@ -38,7 +38,7 @@ public:
    *
    *  @return An instance of LogManager
    */
-  std::shared_ptr<LogManager> CreateLogManager(
+  virtual std::shared_ptr<LogManager> CreateLogManager(
     const std::string & log_group, const std::string & log_stream,
     const Aws::Client::ClientConfiguration & client_config, const Aws::SDKOptions & sdk_options);
 

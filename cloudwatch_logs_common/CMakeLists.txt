@@ -20,7 +20,7 @@ endif()
 
 set(ALL_SRC_FILES src/log_manager.cpp src/log_manager_factory.cpp src/log_publisher.cpp src/utils/cloudwatch_facade.cpp)
 
-add_library(${PROJECT_NAME} ${ALL_SRC_FILES})
+add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})
 target_link_libraries(${PROJECT_NAME} ${OUTPUT})
 target_include_directories(${PROJECT_NAME} PRIVATE ${AWSSDK_INCLUDE_DIRS} include ${aws_common_INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME} PUBLIC
