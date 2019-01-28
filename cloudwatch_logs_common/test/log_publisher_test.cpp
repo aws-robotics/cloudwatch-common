@@ -45,6 +45,19 @@ public:
     this->send_logs_call_count = 0;
   }
 
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CheckLogGroupExists(
+    const std::string & log_group) override
+  {
+    return Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED;
+  }
+
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CheckLogStreamExists(
+    const std::string & log_group, const std::string & log_stream,
+    Aws::CloudWatchLogs::Model::LogStream * log_stream_object) override
+  {
+    return Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED;
+  }
+
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CreateLogGroup(
     const std::string & log_group) override
   {
