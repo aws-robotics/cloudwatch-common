@@ -2,5 +2,5 @@
 Changelog for package cloudwatch_metrics_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.1 (2019-02-26)
+------------------
