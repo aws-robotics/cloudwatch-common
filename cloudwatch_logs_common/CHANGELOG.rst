@@ -2,8 +2,8 @@
 Changelog for package cloudwatch_logs_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.1 (2019-03-20)
+------------------
 * adding unit tests for cloudwatch facade
 * Merge pull request `#4 <https://github.com/aws-robotics/cloudwatch-common/issues/4>`_ from juanrh/improve-coverage-cloudwatch_logger
   Improve coverage cloudwatch logger

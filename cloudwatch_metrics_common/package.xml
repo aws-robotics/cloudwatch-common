@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>cloudwatch_metrics_common</name>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   <description>Library used by ROS1/2 node to publish metrics</description>
 
   <author email="ros-contributions@amazon.com">AWS RoboMaker</author>
