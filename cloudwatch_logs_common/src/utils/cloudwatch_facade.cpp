@@ -106,7 +106,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsToCloudWa
                                       << ". Dropping this batch of logs.");
       return status;
     } else {
-      AWS_LOGSTREAM_INFO(__func__,
+      AWS_LOGSTREAM_DEBUG(__func__,
                          "A batch of log was successfully sent to CloudWatch in Log Group: "
                            << log_group << " Log Stream: " << log_stream << ".");
     }
@@ -121,7 +121,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsToCloudWa
                                       << " with error code: " << status
                                       << ". Dropping the last bit of this batch of logs.");
     } else {
-      AWS_LOGSTREAM_INFO(__func__, "All logs were successfully sent to CloudWatch in Log Group: "
+      AWS_LOGSTREAM_DEBUG(__func__, "All logs were successfully sent to CloudWatch in Log Group: "
                                      << log_group << " Log Stream: " << log_stream << ".");
     }
   }
