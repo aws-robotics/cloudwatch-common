@@ -228,7 +228,7 @@ void LogPublisher::Run()
       case LOG_PUBLISHER_RUN_INIT_TOKEN:
         InitToken(next_token);
         break;
-      case LOG_PUBLISHER_RUN_CREATE_SEND_LOGS:
+      case LOG_PUBLISHER_RUN_SEND_LOGS:
         SendLogs(next_token);
         break;
       default:
