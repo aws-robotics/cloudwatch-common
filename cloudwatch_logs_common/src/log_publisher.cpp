@@ -107,6 +107,9 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::StopPublisherThread()
   return CW_LOGS_SUCCEEDED;
 }
 
+/**
+ * Checks to see if a log group already exists and tries to create it if not.
+ */
 void LogPublisher::CreateGroup()
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors check_log_group_exists_status =
@@ -125,10 +128,14 @@ void LogPublisher::CreateGroup()
     this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM;
     AWS_LOG_DEBUG(__func__, "Log group already exists, quit attempting to create it.");
   } else {
-    AWS_LOG_ERROR(__func__, "Failed to create log group, retrying ...");
+    AWS_LOGSTREAM_ERROR(__func__, "Failed to create log group, status: " 
+                        << create_log_group_status << ". Retrying ...");
   }
 }
 
+/**
+ * Checks to see if a log stream already exists and tries to create it if not.
+ */
 void LogPublisher::CreateStream()
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors check_log_stream_exists_status =
@@ -136,7 +143,7 @@ void LogPublisher::CreateStream()
                                                    nullptr);
   if (CW_LOGS_SUCCEEDED == check_log_stream_exists_status) {
     this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
-    AWS_LOGSTREAM_DEBUG(__func__, "Found existing log stream: " << log_stream_);
+    AWS_LOGSTREAM_DEBUG(__func__, "Found existing log stream: " << this->log_stream_);
     return;
   }
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors create_log_stream_status =
@@ -148,10 +155,14 @@ void LogPublisher::CreateStream()
     this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
     AWS_LOG_DEBUG(__func__, "Log stream already exists, quit attempting to create it.");
   } else {
-    AWS_LOGSTREAM_ERROR(__func__, "Failed to create log stream with , retrying ...");
+    AWS_LOGSTREAM_ERROR(__func__, "Failed to create log stream, status: " 
+                        << create_log_stream_status << ". Retrying ...");
   }
 }
 
+/**
+ * Fetches the token to use for writing logs to a stream. 
+ */
 void LogPublisher::InitToken(Aws::String & next_token)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors get_token_status =
@@ -160,10 +171,15 @@ void LogPublisher::InitToken(Aws::String & next_token)
   if (CW_LOGS_SUCCEEDED == get_token_status) {
     this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_SEND_LOGS;
   } else {
-    AWS_LOG_WARN(__func__, "Unable to obtain the sequence token to use");
+    AWS_LOGSTREAM_ERROR(__func__, "Unable to obtain the sequence token to use, status: " 
+                        << get_token_status << ". Retrying ...");
   }
 }
 
+/**
+ * Checks if there are logs ready to be sent out. If so then it attempts to send them
+ * to CloudWatch.
+ */
 void LogPublisher::SendLogs(Aws::String & next_token)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors publisher_status = CW_LOGS_SUCCEEDED;
