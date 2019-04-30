@@ -158,7 +158,7 @@ void LogPublisher::InitToken(Aws::String & next_token)
     this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_,
                                                 next_token);
   if (CW_LOGS_SUCCEEDED == get_token_status) {
-    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_SEND_LOGS;
+    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_SEND_LOGS;
   } else {
     AWS_LOG_WARN(__func__, "Unable to obtain the sequence token to use");
   }
