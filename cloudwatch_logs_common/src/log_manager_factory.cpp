@@ -42,5 +42,5 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
       "Log publisher failed to start a publisher thread, the publisher thread is set to null");
     return nullptr;
   }
-  return std::make_shared<LogManager>(publisher, );
+  return std::make_shared<LogManager>(publisher);
 }

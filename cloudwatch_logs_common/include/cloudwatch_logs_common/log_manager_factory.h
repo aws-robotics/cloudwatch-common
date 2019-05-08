@@ -42,8 +42,7 @@ public:
     const std::string & log_group,
     const std::string & log_stream,
     const Aws::Client::ClientConfiguration & client_config,
-    const Aws::SDKOptions & sdk_options
-
+    const Aws::SDKOptions & sdk_options);
 private:
   /**
    * Block copy constructor and assignment operator for Factory object.
