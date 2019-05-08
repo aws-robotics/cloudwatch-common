@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>cloudwatch_logs_common</name>
   <version>1.0.2</version>
   <description>AWS CloudWatch management library used by ROS1/2 node to publish logs to CloudWatch service</description>
@@ -11,7 +11,11 @@
 
   <depend>aws_common</depend>
   <buildtool_depend>cmake</buildtool_depend>
-  <test_depend>gtest</test_depend>
+  
+  <test_depend condition="$ROS_VERSION == 1">gtest</test_depend>
+  <test_depend condition="$ROS_VERSION == 1">google-mock</test_depend>
+  <test_depend condition="$ROS_VERSION == 2">ament_cmake_gtest</test_depend>
+  <test_depend condition="$ROS_VERSION == 2">ament_cmake_gmock</test_depend>
 
   <export>
     <build_type>cmake</build_type>

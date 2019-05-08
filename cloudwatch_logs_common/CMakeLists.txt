@@ -12,6 +12,7 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 find_package(aws_common REQUIRED)
+
 if(AWSSDK_FOUND)
   set(SERVICE logs)
   AWSSDK_DETERMINE_LIBS_TO_LINK(SERVICE OUTPUT)
@@ -59,12 +60,8 @@ INSTALL(EXPORT ${PROJECT_NAME}-targets DESTINATION share/${PROJECT_NAME}/cmake)
 #############
 
 enable_testing()
-find_package(GTest QUIET)
-if(NOT GTEST_FOUND)
-  message(WARNING "Could not find GTest. Not building unit tests.")
-else()
-  include_directories(/usr/include/gmock /usr/src/gmock)
-  add_library(libgmock /usr/src/gmock/src/gmock-all.cc)
+find_common_test_packages()
+if(GMOCK_LIBRARIES)
   add_executable(test_cloudwatch_logs_common
     test/main_test.cpp
     test/shared_object_test.cpp
