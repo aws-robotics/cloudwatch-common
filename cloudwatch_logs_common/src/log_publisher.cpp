@@ -160,7 +160,6 @@ void LogPublisher::CreateStream()
   }
 }
 
-<<<<<<< HEAD
 /**
  * Fetches the token to use for writing logs to a stream. 
  */
