@@ -49,7 +49,7 @@ LogPublisher::~LogPublisher()
 }
 
 Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::PublishLogs(
-  Utils::SharedObject<std::list<Aws::CloudWatchLogs::Model::InputLogEvent> *> * shared_logs)
+  Utils::SharedObject<LogType> * shared_logs)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
   if (nullptr == shared_logs) {
@@ -160,6 +160,7 @@ void LogPublisher::CreateStream()
   }
 }
 
+<<<<<<< HEAD
 /**
  * Fetches the token to use for writing logs to a stream. 
  */
@@ -208,6 +209,9 @@ void LogPublisher::SendLogs(Aws::String & next_token)
             }
           }
           tries--;
+        }
+        if (this->upload_status_function_) {
+          upload_status_function_(send_logs_status, logs);
         }
         if (CW_LOGS_SUCCEEDED != send_logs_status) {
           AWS_LOG_WARN(

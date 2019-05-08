@@ -20,6 +20,7 @@
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
 #include <cloudwatch_logs_common/utils/shared_object.h>
+#include <cloudwatch_logs_common/utils/task_utils.h>
 
 #include <memory>
 #include <thread>
@@ -103,7 +104,8 @@ private:
   void InitToken(Aws::String & next_token);
   void SendLogs(Aws::String & next_token);
   void Run();
-
+  using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent> *;
+  Utils::UploadStatusFunction<ROSCloudWatchLogsErrors, LogType> upload_status_function_;
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
   std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cloudwatch_client_;
   Aws::SDKOptions aws_sdk_options_;
