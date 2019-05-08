@@ -19,17 +19,22 @@
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
+#include <cloudwatch_logs_common/utils/file_manager.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 
 std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
-  const std::string & log_group, const std::string & log_stream,
-  const Aws::Client::ClientConfiguration & client_config, const Aws::SDKOptions & sdk_options)
+  const std::string & log_group,
+  const std::string & log_stream,
+  const Aws::Client::ClientConfiguration & client_config,
+  const Aws::SDKOptions & sdk_options)
 {
   Aws::InitAPI(sdk_options);
   auto cloudwatch_facade =
     std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchFacade>(client_config);
+  auto file_manager=
+    std::make_shared<LogFileManager>();
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, cloudwatch_facade);
   if (CW_LOGS_SUCCEEDED != publisher->StartPublisherThread()) {
     AWS_LOG_FATAL(
@@ -37,5 +42,5 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
       "Log publisher failed to start a publisher thread, the publisher thread is set to null");
     return nullptr;
   }
-  return std::make_shared<LogManager>(publisher);
+  return std::make_shared<LogManager>(publisher, );
 }
