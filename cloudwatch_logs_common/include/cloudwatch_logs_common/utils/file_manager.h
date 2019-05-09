@@ -25,19 +25,23 @@ namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
-using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent> *;
+using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
+using LogTypePtr = LogType *;
 
 /**
  * Manages how files are split up, which files to write to and read when requested.
  */
 class FileManagerStrategy {
 public:
+
+  virtual ~FileManagerStrategy() = default;
+
   /**
    * Get the file name to write to.
    *
    * @return current file name
    */
-  std::string getFileToWrite(){
+  virtual std::string getFileToWrite() const {
     return file_name_;
   }
 
@@ -55,6 +59,22 @@ private:
 template <typename T>
 class FileManager {
 public:
+  /**
+   * Default constructor.
+   */
+  FileManager() {
+    file_manager_strategy_ = std::make_shared<FileManagerStrategy>();
+  }
+
+  /**
+   * Initialize the file manager with a custom file manager strategy.
+   *
+   * @param file_manager_strategy custom strategy.
+   */
+  FileManager(std::shared_ptr<FileManagerStrategy> &file_manager_strategy) {
+    file_manager_strategy_ = file_manager_strategy;
+  }
+
   virtual ~FileManager() = default;
 
   /**
@@ -67,14 +87,26 @@ protected:
    * The object that keeps track of which files to delete, read, or write to.
    * Should probably be thread safe or something :)
    */
-  FileManagerStrategy file_manager_strategy_;
+  std::shared_ptr<FileManagerStrategy> file_manager_strategy_;
 };
 
 /**
  * The log specific file manager. Handles the specific writes of log data.
  */
-class LogFileManager : FileManager<LogType>{
+class LogFileManager :
+  FileManager<LogType>{
 public:
+  /**
+   * Default Constructor.
+   */
+  LogFileManager() {
+
+  }
+  LogFileManager(std::shared_ptr<FileManagerStrategy> file_manager_strategy) : FileManager(file_manager_strategy) {
+
+  }
+
+  ~LogFileManager() = default;
   /**
    * Handle an upload complete status.
    *

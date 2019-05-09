@@ -104,7 +104,8 @@ private:
   void InitToken(Aws::String & next_token);
   void SendLogs(Aws::String & next_token);
   void Run();
-  using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent> *;
+  using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
+  using LogTypePtr = LogType *;
   Utils::UploadStatusFunction<ROSCloudWatchLogsErrors, LogType> upload_status_function_;
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
   std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cloudwatch_client_;
