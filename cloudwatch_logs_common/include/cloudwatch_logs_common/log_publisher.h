@@ -23,6 +23,8 @@
 #include <cloudwatch_logs_common/utils/task_utils.h>
 #include <cloudwatch_logs_common/utils/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/status_monitor.h>
+#include <cloudwatch_logs_common/file_upload/queue_monitor.h>
+#include <cloudwatch_logs_common/file_upload/file_upload_manager.h>
 
 #include <memory>
 #include <thread>
@@ -52,6 +54,8 @@ enum LogPublisherRunState {
 class LogPublisher
 {
 public:
+  using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
+  using LogTypePtr = LogType *;
   /**
    *  @brief Creates a LogPublisher object that uses the provided client and SDK configuration
    *  Constructs a LogPublisher object that will use the provided CloudWatchClient and SDKOptions
@@ -106,16 +110,24 @@ public:
   virtual void SetNetworkMonitor(
       std::shared_ptr<Aws::FileManagement::StatusMonitor> &network_monitor);
 
+  using Task = Aws::FileManagement::Task<LogType>;
+  using LogTaskQueueMonitor = std::shared_ptr<Aws::FileManagement::QueueMonitor<std::shared_ptr<Task>>>;
+  virtual inline void SetQueueMonitor(LogTaskQueueMonitor &queue_monitor) {
+    queue_monitor_ = queue_monitor;
+  }
+
 private:
   void CreateGroup();
   void CreateStream();
   void InitToken(Aws::String & next_token);
   void SendLogs(Aws::String & next_token);
+  void SendLogFiles(Aws::String & next_token);
   void Run();
-  using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
-  using LogTypePtr = LogType *;
+  ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, LogTypePtr logs);
+
   Utils::UploadStatusFunction<ROSCloudWatchLogsErrors, LogType> upload_status_function_;
   std::shared_ptr<Utils::LogFileManager> log_file_manager_ = nullptr;
+  LogTaskQueueMonitor queue_monitor_;
   std::shared_ptr<Aws::FileManagement::StatusMonitor> network_monitor_ = nullptr;
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
   std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cloudwatch_client_;

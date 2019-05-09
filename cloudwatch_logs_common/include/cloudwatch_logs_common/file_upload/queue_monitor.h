@@ -27,14 +27,14 @@ public:
   QueueMonitor() = default;
   virtual ~QueueMonitor() = default;
 
-  inline void add_queue(std::shared_ptr<ObservedQueue<T>> &observed_queue) {
+  inline void add_queue(std::shared_ptr<ObservedQueue<T>> observed_queue) {
     auto status_monitor = std::make_shared<StatusMonitor>();
     addStatusMonitor(status_monitor);
     observed_queue->setStatusMonitor(status_monitor);
     queues_.push_back(observed_queue);
   }
 
-  inline T&& dequeue() {
+  inline T dequeue() {
     T data;
     for (auto &queue : queues_)
     {

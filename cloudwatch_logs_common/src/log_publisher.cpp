@@ -177,62 +177,83 @@ void LogPublisher::InitToken(Aws::String & next_token)
   }
 }
 
+void LogPublisher::SendLogFiles(Aws::String & next_token) {
+  if (queue_monitor_) {
+    queue_monitor_->waitForWork();
+    auto data = queue_monitor_->dequeue();
+    if (data) {
+      AWS_LOG_DEBUG(__func__,
+                    "Attempting to send file data");
+      LogType batch_data = data->getBatchData();
+      auto status = SendLogs(next_token, &batch_data);
+      using Aws::FileManagement::UploadStatus;
+      UploadStatus upload_status = (status == CW_LOGS_SUCCEEDED) ?
+          UploadStatus::SUCCESS : UploadStatus::FAIL;
+      data->onComplete(upload_status);
+    }
+  }
+}
+
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String & next_token, LogTypePtr logs) {
+  AWS_LOG_DEBUG(__func__,
+                "Attempting to use logs of size %i", logs->size());
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors send_logs_status = CW_LOGS_FAILED;
+  if (!logs->empty()) {
+    int tries = kMaxRetries;
+    while (CW_LOGS_SUCCEEDED != send_logs_status && tries > 0) {
+      send_logs_status = this->cloudwatch_facade_->SendLogsToCloudWatch(
+          next_token, this->log_group_, this->log_stream_, logs);
+      if (CW_LOGS_SUCCEEDED != send_logs_status) {
+        AWS_LOG_WARN(__func__, "Unable to send logs to CloudWatch, retrying ...");
+        Aws::CloudWatchLogs::ROSCloudWatchLogsErrors get_token_status =
+            this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_,
+                                                        next_token);
+        if (CW_LOGS_SUCCEEDED != get_token_status) {
+          AWS_LOG_WARN(__func__,
+                       "Unable to obtain the sequence token to use, quit attempting to send "
+                       "logs to CloudWatch");
+          break;
+        }
+      }
+      tries--;
+    }
+    if (CW_LOGS_SUCCEEDED != send_logs_status) {
+      AWS_LOG_WARN(
+          __func__,
+          "Unable to send logs to CloudWatch and retried, dropping this batch of logs ...");
+    }
+  } else {
+    AWS_LOG_DEBUG(__func__,
+                  "Unable to obtain the sequence token to use, quit attempting to send "
+                  "logs to CloudWatch");
+  }
+  if (network_monitor_) {
+    auto network_status = send_logs_status ?
+                          Aws::FileManagement::Status::UNAVAILABLE : Aws::FileManagement::Status::AVAILABLE;
+    network_monitor_->setStatus(network_status);
+  }
+  return send_logs_status;
+}
 /**
  * Checks if there are logs ready to be sent out. If so then it attempts to send them
  * to CloudWatch.
  */
 void LogPublisher::SendLogs(Aws::String & next_token)
 {
-  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors publisher_status = CW_LOGS_SUCCEEDED;
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors publisher_status;
   auto shared_logs_obj = this->shared_logs_.load(std::memory_order_acquire);
   if (nullptr != shared_logs_obj) {
     std::list<Aws::CloudWatchLogs::Model::InputLogEvent> * logs;
     publisher_status = shared_logs_obj->getDataAndLock(logs);
-    AWS_LOG_DEBUG(__func__,
-                  "Attempting to use logs of size %i", logs->size());
     Aws::CloudWatchLogs::ROSCloudWatchLogsErrors send_logs_status = CW_LOGS_FAILED;
-    if (CW_LOGS_SUCCEEDED == publisher_status) {
-      if (!logs->empty()) {
-        int tries = kMaxRetries;
-        while (CW_LOGS_SUCCEEDED != send_logs_status && tries > 0) {
-          send_logs_status = this->cloudwatch_facade_->SendLogsToCloudWatch(
-            next_token, this->log_group_, this->log_stream_, logs);
-          if (CW_LOGS_SUCCEEDED != send_logs_status) {
-            AWS_LOG_WARN(__func__, "Unable to send logs to CloudWatch, retrying ...");
-            Aws::CloudWatchLogs::ROSCloudWatchLogsErrors get_token_status =
-              this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_,
-                                                          next_token);
-            if (CW_LOGS_SUCCEEDED != get_token_status) {
-              AWS_LOG_WARN(__func__,
-                           "Unable to obtain the sequence token to use, quit attempting to send "
-                           "logs to CloudWatch");
-              break;
-            }
-          }
-          tries--;
-        }
-        if (CW_LOGS_SUCCEEDED != send_logs_status) {
-          AWS_LOG_WARN(
-            __func__,
-            "Unable to send logs to CloudWatch and retried, dropping this batch of logs ...");
-        }
-      }
-    } else {
-      AWS_LOG_DEBUG(__func__,
-                   "Unable to obtain the sequence token to use, quit attempting to send "
-                   "logs to CloudWatch");
-    }
-    if (network_monitor_) {
-      auto network_status = send_logs_status ?
-          Aws::FileManagement::Status::UNAVAILABLE : Aws::FileManagement::Status::AVAILABLE;
-      network_monitor_->setStatus(network_status);
+    if (publisher_status == CW_LOGS_SUCCEEDED) {
+      send_logs_status = SendLogs(next_token, logs);
     }
     if (this->upload_status_function_) {
       AWS_LOG_DEBUG(__func__,
                     "Calling callback function with logs of size %i", logs->size());
       upload_status_function_(send_logs_status, *logs);
     }
-
     /* Null out the class reference before unlocking the object. The external thread will be
        looking to key off if the shared object is locked or not to know it can start again, but
        the PublishLogs function checks if the the pointer is null or not. */
@@ -275,6 +296,7 @@ void LogPublisher::Run()
         break;
       case LOG_PUBLISHER_RUN_SEND_LOGS:
         SendLogs(next_token);
+        SendLogFiles(next_token);
         break;
       default:
         AWS_LOGSTREAM_ERROR(__func__, "Unknown state!");
