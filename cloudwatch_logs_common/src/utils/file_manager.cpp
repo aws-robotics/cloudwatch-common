@@ -27,10 +27,11 @@ void LogFileManager::uploadCompleteStatus(const ROSCloudWatchLogsErrors& upload_
     write(log_messages);
   }
 }
+
 void LogFileManager::write(const LogType & data) {
   std::ofstream log_file;
-  log_file.open(FileManager::file_manager_strategy_.getFileToWrite());
-  for (const Model::InputLogEvent &log: *data) {
+  log_file.open(FileManager::file_manager_strategy_->getFileToWrite());
+  for (const Model::InputLogEvent &log: data) {
     auto str = log.Jsonize().View().WriteCompact();
     log_file << str << std::endl;
   }
