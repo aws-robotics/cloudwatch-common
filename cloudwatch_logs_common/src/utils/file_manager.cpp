@@ -23,8 +23,10 @@ namespace CloudWatchLogs {
 namespace Utils {
 
 void LogFileManager::uploadCompleteStatus(const ROSCloudWatchLogsErrors& upload_status, const LogType &log_messages) {
-  if (ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED != upload_status) {
-    write(log_messages);
+  if (!log_messages.empty()) {
+    if (ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED != upload_status) {
+      write(log_messages);
+    }
   }
 }
 
@@ -36,6 +38,9 @@ void LogFileManager::write(const LogType & data) {
     log_file << str << std::endl;
   }
   log_file.close();
+  if (FileManager::file_status_monitor_) {
+    FileManager::file_status_monitor_->setStatus(Aws::FileManagement::Status::AVAILABLE);
+  }
 }
 
 }  // namespace Utils

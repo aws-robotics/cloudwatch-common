@@ -22,6 +22,7 @@
 #include <cloudwatch_logs_common/utils/shared_object.h>
 #include <cloudwatch_logs_common/utils/task_utils.h>
 #include <cloudwatch_logs_common/utils/file_manager.h>
+#include <cloudwatch_logs_common/file_upload/network_monitor.h>
 
 #include <memory>
 #include <thread>
@@ -99,7 +100,11 @@ public:
    */
   virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors StopPublisherThread();
 
-  virtual void SetLogFileManager(std::shared_ptr<Utils::LogFileManager> log_file_manager);
+  virtual void SetLogFileManager(
+      std::shared_ptr<Utils::LogFileManager> &log_file_manager);
+
+  virtual void SetNetworkMonitor(
+      std::shared_ptr<Aws::FileManagement::StatusMonitor> &network_monitor);
 
 private:
   void CreateGroup();
@@ -111,6 +116,7 @@ private:
   using LogTypePtr = LogType *;
   Utils::UploadStatusFunction<ROSCloudWatchLogsErrors, LogType> upload_status_function_;
   std::shared_ptr<Utils::LogFileManager> log_file_manager_ = nullptr;
+  std::shared_ptr<Aws::FileManagement::StatusMonitor> network_monitor_ = nullptr;
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
   std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cloudwatch_client_;
   Aws::SDKOptions aws_sdk_options_;

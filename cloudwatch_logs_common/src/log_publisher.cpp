@@ -188,11 +188,12 @@ void LogPublisher::SendLogs(Aws::String & next_token)
   if (nullptr != shared_logs_obj) {
     std::list<Aws::CloudWatchLogs::Model::InputLogEvent> * logs;
     publisher_status = shared_logs_obj->getDataAndLock(logs);
+    AWS_LOG_DEBUG(__func__,
+                  "Attempting to use logs of size %i", logs->size());
+    Aws::CloudWatchLogs::ROSCloudWatchLogsErrors send_logs_status = CW_LOGS_FAILED;
     if (CW_LOGS_SUCCEEDED == publisher_status) {
       if (!logs->empty()) {
-        Aws::CloudWatchLogs::ROSCloudWatchLogsErrors send_logs_status = CW_LOGS_FAILED;
         int tries = kMaxRetries;
-
         while (CW_LOGS_SUCCEEDED != send_logs_status && tries > 0) {
           send_logs_status = this->cloudwatch_facade_->SendLogsToCloudWatch(
             next_token, this->log_group_, this->log_stream_, logs);
@@ -210,18 +211,27 @@ void LogPublisher::SendLogs(Aws::String & next_token)
           }
           tries--;
         }
-        if (this->upload_status_function_) {
-          upload_status_function_(send_logs_status, *logs);
-        }
         if (CW_LOGS_SUCCEEDED != send_logs_status) {
           AWS_LOG_WARN(
             __func__,
             "Unable to send logs to CloudWatch and retried, dropping this batch of logs ...");
         }
       }
+    } else {
+      AWS_LOG_DEBUG(__func__,
+                   "Unable to obtain the sequence token to use, quit attempting to send "
+                   "logs to CloudWatch");
     }
-    // TODO: For now we're just going to discard logs that fail to get sent. Later we may add some
-    // retry strategy
+    if (network_monitor_) {
+      auto network_status = send_logs_status ?
+          Aws::FileManagement::Status::UNAVAILABLE : Aws::FileManagement::Status::AVAILABLE;
+      network_monitor_->setStatus(network_status);
+    }
+    if (this->upload_status_function_) {
+      AWS_LOG_DEBUG(__func__,
+                    "Calling callback function with logs of size %i", logs->size());
+      upload_status_function_(send_logs_status, *logs);
+    }
 
     /* Null out the class reference before unlocking the object. The external thread will be
        looking to key off if the shared object is locked or not to know it can start again, but
@@ -231,8 +241,14 @@ void LogPublisher::SendLogs(Aws::String & next_token)
   }
 }
 
+void LogPublisher::SetNetworkMonitor(
+    std::shared_ptr<Aws::FileManagement::StatusMonitor> &network_monitor)
+{
+  network_monitor_ = network_monitor;
+}
+
 void LogPublisher::SetLogFileManager(
-    std::shared_ptr<Utils::LogFileManager> log_file_manager)
+    std::shared_ptr<Utils::LogFileManager> &log_file_manager)
 {
   log_file_manager_ = log_file_manager;
   using namespace std::placeholders;
