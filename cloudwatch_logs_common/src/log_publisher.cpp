@@ -37,8 +37,7 @@ LogPublisher::LogPublisher(
   this->publisher_thread_ = nullptr;
   this->log_group_ = log_group;
   this->log_stream_ = log_stream;
-  this->does_stream_exist_ = false;
-  this->does_group_exist_ = false;
+  this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_GROUP;
 }
 
 LogPublisher::~LogPublisher()
@@ -108,102 +107,153 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::StopPublisherThread()
   return CW_LOGS_SUCCEEDED;
 }
 
-void LogPublisher::Run()
+/**
+ * Checks to see if a log group already exists and tries to create it if not.
+ */
+void LogPublisher::CreateGroup()
+{
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors check_log_group_exists_status =
+    this->cloudwatch_facade_->CheckLogGroupExists(this->log_group_);
+  if (CW_LOGS_SUCCEEDED == check_log_group_exists_status) {
+    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM;
+    AWS_LOGSTREAM_DEBUG(__func__, "Found existing log group: " << log_group_);
+    return;
+  }
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors create_log_group_status =
+    this->cloudwatch_facade_->CreateLogGroup(this->log_group_);
+  if (CW_LOGS_SUCCEEDED == create_log_group_status) {
+    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM;
+    AWS_LOG_DEBUG(__func__, "Successfully created log group.");
+  } else if (CW_LOGS_LOG_GROUP_ALREADY_EXISTS == create_log_group_status) {
+    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM;
+    AWS_LOG_DEBUG(__func__, "Log group already exists, quit attempting to create it.");
+  } else {
+    AWS_LOGSTREAM_ERROR(__func__, "Failed to create log group, status: " 
+                        << create_log_group_status << ". Retrying ...");
+  }
+}
+
+/**
+ * Checks to see if a log stream already exists and tries to create it if not.
+ */
+void LogPublisher::CreateStream()
+{
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors check_log_stream_exists_status =
+    this->cloudwatch_facade_->CheckLogStreamExists(this->log_group_, this->log_stream_,
+                                                   nullptr);
+  if (CW_LOGS_SUCCEEDED == check_log_stream_exists_status) {
+    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
+    AWS_LOGSTREAM_DEBUG(__func__, "Found existing log stream: " << this->log_stream_);
+    return;
+  }
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors create_log_stream_status =
+    this->cloudwatch_facade_->CreateLogStream(this->log_group_, this->log_stream_);
+  if (CW_LOGS_SUCCEEDED == create_log_stream_status) {
+    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
+    AWS_LOG_DEBUG(__func__, "Successfully created log stream.");
+  } else if (CW_LOGS_LOG_STREAM_ALREADY_EXISTS == create_log_stream_status) {
+    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
+    AWS_LOG_DEBUG(__func__, "Log stream already exists, quit attempting to create it.");
+  } else {
+    AWS_LOGSTREAM_ERROR(__func__, "Failed to create log stream, status: " 
+                        << create_log_stream_status << ". Retrying ...");
+  }
+}
+
+/**
+ * Fetches the token to use for writing logs to a stream. 
+ */
+void LogPublisher::InitToken(Aws::String & next_token)
+{
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors get_token_status =
+    this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_,
+                                                next_token);
+  if (CW_LOGS_SUCCEEDED == get_token_status) {
+    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_SEND_LOGS;
+  } else {
+    AWS_LOGSTREAM_ERROR(__func__, "Unable to obtain the sequence token to use, status: " 
+                        << get_token_status << ". Retrying ...");
+  }
+}
+
+/**
+ * Checks if there are logs ready to be sent out. If so then it attempts to send them
+ * to CloudWatch.
+ */
+void LogPublisher::SendLogs(Aws::String & next_token)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors publisher_status = CW_LOGS_SUCCEEDED;
-  Aws::String next_token;
-  while (this->thread_keep_running_.load(std::memory_order_acquire)) {
-    // if log group cannot be created or log stream doesnt already exist, don't try to send to CW
-    if (!this->does_group_exist_) {
-      Aws::CloudWatchLogs::ROSCloudWatchLogsErrors check_log_group_exists_status =
-        this->cloudwatch_facade_->CheckLogGroupExists(this->log_group_);
-      if (CW_LOGS_SUCCEEDED == check_log_group_exists_status) {
-        this->does_group_exist_ = true;
-        AWS_LOGSTREAM_DEBUG(__func__, "Found existing log group: " << log_group_);
-        continue;
-      }
-      Aws::CloudWatchLogs::ROSCloudWatchLogsErrors create_log_group_status =
-        this->cloudwatch_facade_->CreateLogGroup(this->log_group_);
-      if (CW_LOGS_SUCCEEDED == create_log_group_status) {
-        this->does_group_exist_ = true;
-        AWS_LOG_DEBUG(__func__, "Successfully created log group.");
-      } else if (CW_LOGS_LOG_GROUP_ALREADY_EXISTS == create_log_group_status) {
-        this->does_group_exist_ = true;
-        AWS_LOG_DEBUG(__func__, "Log group already exists, quit attempting to create it.");
-      } else {
-        AWS_LOG_ERROR(__func__, "Failed to create log group, retrying ...");
-        continue;
-      }
-    }
+  auto shared_logs_obj = this->shared_logs_.load(std::memory_order_acquire);
+  if (nullptr != shared_logs_obj) {
+    std::list<Aws::CloudWatchLogs::Model::InputLogEvent> * logs;
+    publisher_status = shared_logs_obj->getDataAndLock(logs);
+    if (CW_LOGS_SUCCEEDED == publisher_status) {
+      if (!logs->empty()) {
+        Aws::CloudWatchLogs::ROSCloudWatchLogsErrors send_logs_status = CW_LOGS_FAILED;
+        int tries = kMaxRetries;
 
-    // if log stream cannot be created or log group doesnt already exist, don't try to send to CW
-    if (!this->does_stream_exist_) {
-      Aws::CloudWatchLogs::ROSCloudWatchLogsErrors check_log_stream_exists_status =
-        this->cloudwatch_facade_->CheckLogStreamExists(this->log_group_, this->log_stream_,
-                                                       nullptr);
-      if (CW_LOGS_SUCCEEDED == check_log_stream_exists_status) {
-        this->does_stream_exist_ = true;
-        AWS_LOGSTREAM_DEBUG(__func__, "Found existing log stream: " << log_stream_);
-        continue;
-      }
-      Aws::CloudWatchLogs::ROSCloudWatchLogsErrors create_log_stream_status =
-        this->cloudwatch_facade_->CreateLogStream(this->log_group_, this->log_stream_);
-      if (CW_LOGS_SUCCEEDED == create_log_stream_status) {
-        this->does_stream_exist_ = true;
-        AWS_LOG_DEBUG(__func__, "Successfully created log stream.");
-      } else if (CW_LOGS_LOG_STREAM_ALREADY_EXISTS == create_log_stream_status) {
-        this->does_stream_exist_ = true;
-        AWS_LOG_DEBUG(__func__, "Log stream already exists, quit attempting to create it.");
-      } else {
-        AWS_LOGSTREAM_ERROR(__func__, "Failed to create log stream with , retrying ...");
-        continue;
-      }
-    }
-
-    this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_, next_token);
-
-    auto shared_logs_obj = this->shared_logs_.load(std::memory_order_acquire);
-    if (nullptr != shared_logs_obj) {
-      std::list<Aws::CloudWatchLogs::Model::InputLogEvent> * logs;
-      publisher_status = shared_logs_obj->getDataAndLock(logs);
-      if (CW_LOGS_SUCCEEDED == publisher_status) {
-        if (!logs->empty()) {
-          Aws::CloudWatchLogs::ROSCloudWatchLogsErrors send_logs_status = CW_LOGS_FAILED;
-          int tries = kMaxRetries;
-
-          while (CW_LOGS_SUCCEEDED != send_logs_status && tries > 0) {
-            send_logs_status = this->cloudwatch_facade_->SendLogsToCloudWatch(
-              next_token, this->log_group_, this->log_stream_, logs);
-            if (CW_LOGS_SUCCEEDED != send_logs_status) {
-              AWS_LOG_WARN(__func__, "Unable to send logs to CloudWatch, retrying ...");
-              Aws::CloudWatchLogs::ROSCloudWatchLogsErrors get_token_status =
-                this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_,
-                                                            next_token);
-              if (CW_LOGS_SUCCEEDED != get_token_status) {
-                AWS_LOG_WARN(__func__,
-                             "Unable to obtain the sequence token to use, quit attempting to send "
-                             "logs to CloudWatch");
-                break;
-              }
-            }
-            tries--;
-          }
+        while (CW_LOGS_SUCCEEDED != send_logs_status && tries > 0) {
+          send_logs_status = this->cloudwatch_facade_->SendLogsToCloudWatch(
+            next_token, this->log_group_, this->log_stream_, logs);
           if (CW_LOGS_SUCCEEDED != send_logs_status) {
-            AWS_LOG_WARN(
-              __func__,
-              "Unable to send logs to CloudWatch and retried, dropping this batch of logs ...");
+            AWS_LOG_WARN(__func__, "Unable to send logs to CloudWatch, retrying ...");
+            Aws::CloudWatchLogs::ROSCloudWatchLogsErrors get_token_status =
+              this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_,
+                                                          next_token);
+            if (CW_LOGS_SUCCEEDED != get_token_status) {
+              AWS_LOG_WARN(__func__,
+                           "Unable to obtain the sequence token to use, quit attempting to send "
+                           "logs to CloudWatch");
+              break;
+            }
           }
+          tries--;
+        }
+        if (CW_LOGS_SUCCEEDED != send_logs_status) {
+          AWS_LOG_WARN(
+            __func__,
+            "Unable to send logs to CloudWatch and retried, dropping this batch of logs ...");
         }
       }
-      // TODO: For now we're just going to discard logs that fail to get sent. Later we may add some
-      // retry strategy
-
-      /* Null out the class reference before unlocking the object. The external thread will be
-         looking to key off if the shared object is locked or not to know it can start again, but
-         the PublishLogs function checks if the the pointer is null or not. */
-      this->shared_logs_.store(nullptr, std::memory_order_release);
-      shared_logs_obj->freeDataAndUnlock();
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    // TODO: For now we're just going to discard logs that fail to get sent. Later we may add some
+    // retry strategy
+
+    /* Null out the class reference before unlocking the object. The external thread will be
+       looking to key off if the shared object is locked or not to know it can start again, but
+       the PublishLogs function checks if the the pointer is null or not. */
+    this->shared_logs_.store(nullptr, std::memory_order_release);
+    shared_logs_obj->freeDataAndUnlock();
+  }
+}
+
+void LogPublisher::Run()
+{
+  Aws::String next_token;
+  this->run_state_ = LOG_PUBLISHER_RUN_CREATE_GROUP;
+  
+  while (this->thread_keep_running_.load(std::memory_order_acquire)) {
+    LogPublisherRunState previous_state = this->run_state_;
+    switch (this->run_state_) {
+      case LOG_PUBLISHER_RUN_CREATE_GROUP:
+        CreateGroup();
+        break;
+      case LOG_PUBLISHER_RUN_CREATE_STREAM:
+        CreateStream();
+        break;
+      case LOG_PUBLISHER_RUN_INIT_TOKEN:
+        InitToken(next_token);
+        break;
+      case LOG_PUBLISHER_RUN_SEND_LOGS:
+        SendLogs(next_token);
+        break;
+      default:
+        AWS_LOGSTREAM_ERROR(__func__, "Unknown state!");
+        break;
+    }
+    if (previous_state == this->run_state_) {
+      // Don't sleep between state changes for a faster startup
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000)); 
+    }
   }
 }
