@@ -35,13 +35,21 @@ public:
     status_monitor_->setStatus(AVAILABLE);
   }
 
-  inline T&& dequeue() {
+  inline T dequeue() {
     T front = dequeue_.front();
     dequeue_.pop_front();
     if (dequeue_.empty()) {
       status_monitor_->setStatus(UNAVAILABLE);
     }
     return front;
+  }
+
+  inline bool empty() {
+    return dequeue_.empty();
+  }
+
+  inline size_t size() {
+    return dequeue_.size();
   }
 
 private:

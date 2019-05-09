@@ -34,8 +34,8 @@ template<typename T>
 class Task {
 public:
   virtual ~Task() = default;
-  virtual T getBatchData() = 0;
-  virtual void onComplete() = 0;
+  virtual T& getBatchData() = 0;
+  virtual void onComplete(const UploadStatus &upload_status) = 0;
 };
 
 template<typename T>
@@ -64,10 +64,10 @@ public:
 template<typename T>
 class FileUploadManager {
 public:
-  FileUploadManager(
+  explicit FileUploadManager(
     std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor,
     std::shared_ptr<FileManager<T>> file_manager,
-    std::shared_ptr<ObservedQueue<Task<T>>> observed_queue,
+    std::shared_ptr<ObservedQueue<std::shared_ptr<Task<T>>>> observed_queue,
     size_t batch_size)
   {
     status_condition_monitor_ = status_condition_monitor;
@@ -77,6 +77,14 @@ public:
   }
 
   virtual ~FileUploadManager() = default;
+
+  void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor) {
+    status_condition_monitor_->addStatusMonitor(status_monitor);
+  }
+
+  std::shared_ptr<ObservedQueue<std::shared_ptr<Task<T>>>> getObservedQueue() {
+    return observed_queue_;
+  }
 
   inline void run() {
     status_condition_monitor_->waitForWork();
@@ -92,7 +100,7 @@ private:
   size_t batch_size_;
   std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor_;
   std::shared_ptr<FileManager<T>> file_manager_;
-  std::shared_ptr<ObservedQueue<Task<T>>> observed_queue_;
+  std::shared_ptr<ObservedQueue<std::shared_ptr<Task<T>>>> observed_queue_;
 };
 
 }  // namespace FileManagement
