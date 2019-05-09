@@ -19,6 +19,7 @@
 #include <aws/logs/model/InputLogEvent.h>
 
 #include "cloudwatch_logs_common/utils/task_utils.h"
+#include "cloudwatch_logs_common/utils/file_manager_strategy.h"
 #include "cloudwatch_logs_common/ros_cloudwatch_logs_errors.h"
 #include "cloudwatch_logs_common/file_upload/status_monitor.h"
 
@@ -43,30 +44,6 @@ enum UploadStatus {
 };
 
 /**
- * Manages how files are split up, which files to write to and read when requested.
- */
-class FileManagerStrategy {
-public:
-
-  virtual ~FileManagerStrategy() = default;
-
-  /**
-   * Get the file name to write to.
-   *
-   * @return current file name
-   */
-  virtual std::string getFileToWrite() const {
-    return file_name_;
-  }
-
-private:
-  /**
-   * Current file name to write to.
-   */
-  std::string file_name_ = "/tmp/example_file.log";
-};
-
-/**
  * File manager specific to the type of data to write to files.
  * @tparam T type of data to write
  */
@@ -78,6 +55,7 @@ public:
    */
   FileManager() {
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>();
+    file_manager_strategy_->initialize();
   }
 
   /**
@@ -118,7 +96,6 @@ public:
   inline void addFileStatusMonitor(std::shared_ptr<Aws::FileManagement::StatusMonitor> status_monitor) {
     file_status_monitor_ = status_monitor;
   }
-
 protected:
   /**
    * The object that keeps track of which files to delete, read, or write to.
