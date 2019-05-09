@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include <cloudwatch_logs_common/file_upload/network_monitor.h>
+#include <cloudwatch_logs_common/file_upload/status_monitor.h>
 #include <cloudwatch_logs_common/file_upload/observed_queue.h>
 #include <cloudwatch_logs_common/file_upload/queue_monitor.h>
 #include <cloudwatch_logs_common/utils/task_utils.h>
@@ -61,13 +61,13 @@ public:
   UploadStatusFunction<UploadStatus, FileObject<T>> upload_status_function_;
 };
 
-template<typename Status, typename T>
+template<typename T>
 class FileUploadManager {
 public:
   FileUploadManager(
     std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor,
     std::shared_ptr<FileManager<T>> file_manager,
-    std::shared_ptr<ObservedQueue<FileUploadTask<T>>> observed_queue,
+    std::shared_ptr<ObservedQueue<Task<T>>> observed_queue,
     size_t batch_size)
   {
     status_condition_monitor_ = status_condition_monitor;
@@ -77,21 +77,22 @@ public:
   }
 
   virtual ~FileUploadManager() = default;
+
   inline void run() {
     status_condition_monitor_->waitForWork();
     T batch = file_manager_.readBatch(batch_size_);
     using namespace std::placeholders;
-    UploadStatusFunction<Status, T> upload_func =
+    UploadStatusFunction<UploadStatus, T> upload_func =
         std::bind(&FileManager<T>::fileUploadCompleteStatus, file_manager_, _1, _2);
     FileUploadTask<T> file_upload_task(batch, upload_func);
-    observed_queue_->push_back(file_upload_task);
+    observed_queue_->enqueue(file_upload_task);
   }
 
 private:
   size_t batch_size_;
   std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor_;
   std::shared_ptr<FileManager<T>> file_manager_;
-  std::shared_ptr<ObservedQueue<FileUploadTask<T>>> observed_queue_;
+  std::shared_ptr<ObservedQueue<Task<T>>> observed_queue_;
 };
 
 }  // namespace FileManagement

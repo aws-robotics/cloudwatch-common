@@ -20,7 +20,7 @@
 
 #include "cloudwatch_logs_common/utils/task_utils.h"
 #include "cloudwatch_logs_common/ros_cloudwatch_logs_errors.h"
-#include "cloudwatch_logs_common/file_upload/network_monitor.h"
+#include "cloudwatch_logs_common/file_upload/status_monitor.h"
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -158,6 +158,11 @@ public:
       const LogType &log_messages);
 
   void write(const LogType & data) override;
+
+  LogType readBatch(size_t batch_size) override {
+    LogType log_type;
+    return log_type;
+  }
 };
 
 }  // namespace Utils

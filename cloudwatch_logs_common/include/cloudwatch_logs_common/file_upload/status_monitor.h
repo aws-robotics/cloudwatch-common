@@ -27,54 +27,32 @@ enum Status : uint {
   AVAILABLE
 };
 
+class MultiStatusConditionMonitor;
+
 class StatusMonitor {
 public:
   virtual ~StatusMonitor() = default;
-  void setStatus(const Status &status) {
-    status_ = status;
+  void setStatus(const Status &status);
+
+  inline void setStatusObserver(MultiStatusConditionMonitor *multi_status_cond) {
+    multi_status_cond_ = multi_status_cond;
   }
 
-  Status getStatus() const {
+  inline Status getStatus() const {
     return status_;
   }
 private:
   Status status_ = UNAVAILABLE;
+  MultiStatusConditionMonitor *multi_status_cond_ = nullptr;
 };
 
 class MultiStatusConditionMonitor {
 public:
-
-  inline void waitForWork() {
-    if (!hasWork()) {
-      std::unique_lock<std::mutex> lck(idle_mutex_);
-      work_condition_.wait(lck);
-    }
-  }
-
-  inline void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor) {
-    if (status_monitor) {
-      status_monitors_.push_back(status_monitor);
-    }
-  }
-
-  inline void setStatus(const Status &status) {
-    if (hasWork()) {
-      std::unique_lock<std::mutex> lck(idle_mutex_);
-      work_condition_.notify_one();
-    }
-  }
-
+  void waitForWork();
+  void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor);
+  void setStatus(const Status &status);
 protected:
-  virtual inline bool hasWork() {
-    return (std::accumulate(
-        status_monitors_.begin(),
-        status_monitors_.end(),
-        !status_monitors_.empty(),
-        [](bool amount, StatusMonitor statusMonitor) -> bool {
-          return amount && statusMonitor.getStatus();
-        }));
-  }
-
+  virtual bool hasWork();
   std::vector<std::shared_ptr<StatusMonitor>> status_monitors_;
   std::mutex idle_mutex_;
   std::condition_variable work_condition_;
