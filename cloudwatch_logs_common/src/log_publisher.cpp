@@ -13,6 +13,7 @@
  * permissions and limitations under the License.
  */
 
+#include <functional>
 #include <aws/core/Aws.h>
 #include <aws/core/utils/logging/LogMacros.h>
 #include <aws/logs/CloudWatchLogsClient.h>
@@ -228,6 +229,15 @@ void LogPublisher::SendLogs(Aws::String & next_token)
     this->shared_logs_.store(nullptr, std::memory_order_release);
     shared_logs_obj->freeDataAndUnlock();
   }
+}
+
+void LogPublisher::SetLogFileManager(
+    std::shared_ptr<Utils::LogFileManager> log_file_manager)
+{
+  log_file_manager_ = log_file_manager;
+  using namespace std::placeholders;
+  upload_status_function_ =
+      std::bind(&Utils::LogFileManager::uploadCompleteStatus, log_file_manager_, _1, _2);
 }
 
 void LogPublisher::Run()

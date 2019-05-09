@@ -36,6 +36,7 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
   auto file_manager=
     std::make_shared<LogFileManager>();
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, cloudwatch_facade);
+  publisher->SetLogFileManager(file_manager);
   if (CW_LOGS_SUCCEEDED != publisher->StartPublisherThread()) {
     AWS_LOG_FATAL(
       __func__,
