@@ -20,6 +20,7 @@
 
 #include "cloudwatch_logs_common/utils/task_utils.h"
 #include "cloudwatch_logs_common/ros_cloudwatch_logs_errors.h"
+#include "cloudwatch_logs_common/file_upload/network_monitor.h"
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -27,6 +28,18 @@ namespace Utils {
 
 using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
 using LogTypePtr = LogType *;
+
+template <typename T>
+struct FileObject {
+  T batch_data;
+  std::string file_location;
+  size_t batch_size;
+};
+
+enum UploadStatus {
+  FAIL,
+  SUCCESS
+};
 
 /**
  * Manages how files are split up, which files to write to and read when requested.
@@ -49,7 +62,7 @@ private:
   /**
    * Current file name to write to.
    */
-  std::string file_name_ = "example_file.log";
+  std::string file_name_ = "/tmp/example_file.log";
 };
 
 /**
@@ -82,38 +95,68 @@ public:
    * @param data to write.
    */
   virtual void write(const T & data) = 0;
+
+  virtual T readBatch(size_t batch_size) = 0;
+
+/**
+ * Handle an upload complete status.
+ *
+ * @param upload_status the status of an attempted upload of data
+ * @param log_messages the data which was attempted to be uploaded
+ */
+  inline void fileUploadCompleteStatus(
+      const UploadStatus& upload_status,
+      const FileObject<T> &log_messages) {
+    if (UploadStatus::SUCCESS == upload_status) {
+      // Delete file if empty log_messages.file_location.
+    } else {
+      // Set last read location for this file.
+    }
+  }
+
+  inline void addFileStatusMonitor(std::shared_ptr<Aws::FileManagement::StatusMonitor> status_monitor) {
+    file_status_monitor_ = status_monitor;
+  }
+
 protected:
   /**
    * The object that keeps track of which files to delete, read, or write to.
    * Should probably be thread safe or something :)
    */
   std::shared_ptr<FileManagerStrategy> file_manager_strategy_;
+  std::shared_ptr<Aws::FileManagement::StatusMonitor> file_status_monitor_;
+
 };
 
 /**
  * The log specific file manager. Handles the specific writes of log data.
  */
 class LogFileManager :
-  FileManager<LogType>{
+  public FileManager<LogType>{
 public:
   /**
    * Default Constructor.
    */
-  LogFileManager() {
+  LogFileManager()  = default;
 
+  explicit LogFileManager(
+    std::shared_ptr<FileManagerStrategy> file_manager_strategy)
+    : FileManager(file_manager_strategy)
+  {
   }
-  LogFileManager(std::shared_ptr<FileManagerStrategy> file_manager_strategy) : FileManager(file_manager_strategy) {
 
-  }
+  ~LogFileManager() override = default;
 
-  ~LogFileManager() = default;
   /**
    * Handle an upload complete status.
    *
    * @param upload_status the status of an attempted upload of data
    * @param log_messages the data which was attempted to be uploaded
    */
-  void uploadCompleteStatus(const ROSCloudWatchLogsErrors& upload_status, const LogType &log_messages);
+  void uploadCompleteStatus(
+      const ROSCloudWatchLogsErrors& upload_status,
+      const LogType &log_messages);
+
   void write(const LogType & data) override;
 };
 

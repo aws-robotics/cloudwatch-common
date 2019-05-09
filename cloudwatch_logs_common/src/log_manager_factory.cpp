@@ -20,6 +20,8 @@
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
 #include <cloudwatch_logs_common/utils/file_manager.h>
+#include <cloudwatch_logs_common/file_upload/network_monitor.h>
+#include <cloudwatch_logs_common/file_upload/file_upload_manager.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
@@ -37,6 +39,19 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
     std::make_shared<LogFileManager>();
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, cloudwatch_facade);
   publisher->SetLogFileManager(file_manager);
+  auto network_monitor=
+      std::make_shared<Aws::FileManagement::StatusMonitor>();
+  auto file_monitor=
+      std::make_shared<Aws::FileManagement::StatusMonitor>();
+  auto multi_status_condition_monitor =
+      std::make_shared<Aws::FileManagement::MultiStatusConditionMonitor>();
+  multi_status_condition_monitor->addStatusMonitor(network_monitor);
+  multi_status_condition_monitor->addStatusMonitor(file_monitor);
+  file_manager->addFileStatusMonitor(file_monitor);
+  publisher->SetNetworkMonitor(network_monitor);
+
+  auto file_upload_manager =
+      std::make_shared<Aws::FileManagement::FileUploadManager>();
   if (CW_LOGS_SUCCEEDED != publisher->StartPublisherThread()) {
     AWS_LOG_FATAL(
       __func__,
