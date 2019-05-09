@@ -17,7 +17,7 @@
 
 #include <deque>
 
-#include <cloudwatch_logs_common/file_upload/network_monitor.h>
+#include <cloudwatch_logs_common/file_upload/status_monitor.h>
 
 namespace Aws {
 namespace FileManagement {
@@ -30,12 +30,12 @@ public:
   inline void setStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor) {
     status_monitor_ = status_monitor;
   }
-  inline void enqueue( const T& value ) {
+  inline void enqueue(T&& value) {
     dequeue_.push_back(value);
     status_monitor_->setStatus(AVAILABLE);
   }
 
-  inline T dequeue( const T& value ) {
+  inline T&& dequeue() {
     T front = dequeue_.front();
     dequeue_.pop_front();
     if (dequeue_.empty()) {

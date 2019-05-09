@@ -22,7 +22,7 @@
 #include <cloudwatch_logs_common/utils/shared_object.h>
 #include <cloudwatch_logs_common/utils/task_utils.h>
 #include <cloudwatch_logs_common/utils/file_manager.h>
-#include <cloudwatch_logs_common/file_upload/network_monitor.h>
+#include <cloudwatch_logs_common/file_upload/status_monitor.h>
 
 #include <memory>
 #include <thread>

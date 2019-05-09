@@ -15,14 +15,14 @@
 
 #pragma once
 #include <vector>
-#include <cloudwatch_logs_common/file_upload/network_monitor.h>
+#include <cloudwatch_logs_common/file_upload/status_monitor.h>
 #include <cloudwatch_logs_common/file_upload/observed_queue.h>
 
 namespace Aws {
 namespace FileManagement {
 
 template<typename T>
-class QueueMonitor : MultiStatusConditionMonitor {
+class QueueMonitor : public MultiStatusConditionMonitor {
 public:
   QueueMonitor() = default;
   virtual ~QueueMonitor() = default;
@@ -34,8 +34,7 @@ public:
     queues_.push_back(observed_queue);
   }
 
-  inline T& dequeue() {
-    waitForWork();
+  inline T&& dequeue() {
     T data;
     for (auto &queue : queues_)
     {
@@ -45,14 +44,15 @@ public:
     }
     return data;
   }
+
 protected:
   inline bool hasWork() override {
     return (std::accumulate(
         status_monitors_.begin(),
         status_monitors_.end(),
         !status_monitors_.empty(),
-        [](bool amount, StatusMonitor statusMonitor) -> bool {
-          return amount || statusMonitor.getStatus();
+        [](bool amount, const std::shared_ptr<StatusMonitor> statusMonitor) -> bool {
+          return amount || statusMonitor->getStatus();
         }));
   }
 private:

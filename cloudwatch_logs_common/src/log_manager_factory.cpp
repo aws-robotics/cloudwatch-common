@@ -20,11 +20,13 @@
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
 #include <cloudwatch_logs_common/utils/file_manager.h>
-#include <cloudwatch_logs_common/file_upload/network_monitor.h>
+#include <cloudwatch_logs_common/file_upload/status_monitor.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_manager.h>
+#include <cloudwatch_logs_common/file_upload/observed_queue.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
+using namespace Aws::FileManagement;
 
 std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
   const std::string & log_group,
@@ -33,6 +35,7 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
   const Aws::SDKOptions & sdk_options)
 {
   Aws::InitAPI(sdk_options);
+  // Streamer system
   auto cloudwatch_facade =
     std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchFacade>(client_config);
   auto file_manager=
@@ -41,17 +44,34 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
   publisher->SetLogFileManager(file_manager);
   auto network_monitor=
       std::make_shared<Aws::FileManagement::StatusMonitor>();
+  publisher->SetNetworkMonitor(network_monitor);
+
+  // File Management system
+  // Create a file monitor to get notified if a file is ready to be read
   auto file_monitor=
       std::make_shared<Aws::FileManagement::StatusMonitor>();
+
+  // Create a multi status condition to trigger on network status and file status
   auto multi_status_condition_monitor =
       std::make_shared<Aws::FileManagement::MultiStatusConditionMonitor>();
   multi_status_condition_monitor->addStatusMonitor(network_monitor);
   multi_status_condition_monitor->addStatusMonitor(file_monitor);
-  file_manager->addFileStatusMonitor(file_monitor);
-  publisher->SetNetworkMonitor(network_monitor);
 
+  // Add the file monitor to the file manager to get notifications
+  file_manager->addFileStatusMonitor(file_monitor);
+
+  // Create an observed queue to trigger a publish when data is available
+  auto observed_queue =
+      std::make_shared<ObservedQueue<Task<LogType>>>();
+
+  // Create a file upload manager to handle uploading a file.
   auto file_upload_manager =
-      std::make_shared<Aws::FileManagement::FileUploadManager>();
+    std::make_shared<Aws::FileManagement::FileUploadManager<LogType>>(
+        multi_status_condition_monitor,
+        file_manager,
+        observed_queue,
+        10);
+
   if (CW_LOGS_SUCCEEDED != publisher->StartPublisherThread()) {
     AWS_LOG_FATAL(
       __func__,
