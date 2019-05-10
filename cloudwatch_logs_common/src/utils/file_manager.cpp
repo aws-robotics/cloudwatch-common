@@ -40,7 +40,6 @@ void LogFileManager::write(const LogType & data) {
     std::string str(aws_str.c_str());
     file_manager_strategy_->write(str);
   }
-  log_file.close();
   if (FileManager::file_status_monitor_) {
     FileManager::file_status_monitor_->setStatus(Aws::FileManagement::Status::AVAILABLE);
   }
