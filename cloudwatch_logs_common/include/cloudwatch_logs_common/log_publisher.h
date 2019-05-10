@@ -123,7 +123,7 @@ private:
   void SendLogs(Aws::String & next_token);
   void SendLogFiles(Aws::String & next_token);
   void Run();
-  ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, LogTypePtr logs);
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, LogTypePtr logs);
 
   Utils::UploadStatusFunction<ROSCloudWatchLogsErrors, LogType> upload_status_function_;
   std::shared_ptr<Utils::LogFileManager> log_file_manager_ = nullptr;

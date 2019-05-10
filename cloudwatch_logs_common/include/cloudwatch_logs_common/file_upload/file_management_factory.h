@@ -51,7 +51,6 @@ std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
           file_manager,
           observed_queue,
           10);
-
   return file_upload_manager;
 }
 

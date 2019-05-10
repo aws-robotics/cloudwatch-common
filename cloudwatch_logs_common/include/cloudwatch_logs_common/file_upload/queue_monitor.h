@@ -50,7 +50,7 @@ protected:
     return (std::accumulate(
         status_monitors_.begin(),
         status_monitors_.end(),
-        !status_monitors_.empty(),
+        false,
         [](bool amount, const std::shared_ptr<StatusMonitor> statusMonitor) -> bool {
           return amount || statusMonitor->getStatus();
         }));

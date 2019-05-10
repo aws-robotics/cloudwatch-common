@@ -32,14 +32,18 @@ public:
   }
   inline void enqueue(T&& value) {
     dequeue_.push_back(value);
-    status_monitor_->setStatus(AVAILABLE);
+    if (status_monitor_) {
+      status_monitor_->setStatus(AVAILABLE);
+    }
   }
 
   inline T dequeue() {
     T front = dequeue_.front();
     dequeue_.pop_front();
     if (dequeue_.empty()) {
-      status_monitor_->setStatus(UNAVAILABLE);
+      if (status_monitor_) {
+        status_monitor_->setStatus(UNAVAILABLE);
+      }
     }
     return front;
   }
