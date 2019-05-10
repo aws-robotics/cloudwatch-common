@@ -55,7 +55,6 @@ public:
    */
   FileManager() {
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>();
-    file_manager_strategy_->initialize();
   }
 
   /**
