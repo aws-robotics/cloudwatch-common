@@ -15,6 +15,7 @@
 
 #pragma once
 #include <list>
+#include <memory>
 
 #include <aws/logs/model/InputLogEvent.h>
 
@@ -34,8 +35,8 @@ template <typename T>
 class FileObject {
 public:
   T batch_data;
-  std::string file_location;
   size_t batch_size;
+  FileInfo file_info;
 };
 
 enum UploadStatus {
@@ -68,7 +69,13 @@ public:
 
   virtual ~FileManager() = default;
 
-  virtual std::string read() = 0;
+  FileInfo read(std::string &data) {
+    auto file_info = file_manager_strategy_->read(data);
+    if (file_info.file_status == END_OF_READ) {
+      file_status_monitor_->setStatus(Aws::FileManagement::Status::UNAVAILABLE);
+    }
+    return file_info;
+  }
 
   /**
    * Write data to the appropriate file.
@@ -76,7 +83,7 @@ public:
    */
   virtual void write(const T & data) = 0;
 
-  virtual T readBatch(size_t batch_size) = 0;
+  virtual FileObject<T> readBatch(size_t batch_size) = 0;
 
 /**
  * Handle an upload complete status.
@@ -88,7 +95,17 @@ public:
       const UploadStatus& upload_status,
       const FileObject<T> &log_messages) {
     if (UploadStatus::SUCCESS == upload_status) {
+      total_logs_uploaded += log_messages.batch_size;
+      AWS_LOG_INFO(__func__,
+                   "Total logs uploaded: %i",
+                   total_logs_uploaded);
       // Delete file if empty log_messages.file_location.
+      if (END_OF_READ == log_messages.file_info.file_status) {
+        AWS_LOG_INFO(__func__,
+                     "Found end of file, deleting file: %s",
+                     log_messages.file_info.file_name);
+        file_manager_strategy_->deleteFile(log_messages.file_info.file_name);
+      }
     } else {
       // Set last read location for this file.
     }
@@ -102,6 +119,7 @@ protected:
    * The object that keeps track of which files to delete, read, or write to.
    * Should probably be thread safe or something :)
    */
+  size_t total_logs_uploaded = 0;
   std::shared_ptr<FileManagerStrategy> file_manager_strategy_;
   std::shared_ptr<Aws::FileManagement::StatusMonitor> file_status_monitor_;
 
@@ -135,16 +153,10 @@ public:
   void uploadCompleteStatus(
       const ROSCloudWatchLogsErrors& upload_status,
       const LogType &log_messages);
+
   void write(const LogType & data) override;
 
-  LogType readBatch(size_t batch_size) override {
-    LogType log_data;
-    Aws::CloudWatchLogs::Model::InputLogEvent input_event;
-    input_event.SetTimestamp(0);
-    input_event.SetMessage("Hello my name is foo");
-    log_data.push_back(input_event);
-    return log_data;
-  }
+  FileObject<LogType> readBatch(size_t batch_size) override;
 };
 
 }  // namespace Utils

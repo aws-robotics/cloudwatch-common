@@ -32,7 +32,6 @@ TEST(test_file_upload_manager, create_file_upload_manager) {
   auto observed_queue = file_upload_manager->getObservedQueue();
   auto queue_monitor = std::make_shared<QueueMonitor<std::shared_ptr<Task<LogType>>>>();
   queue_monitor->add_queue(observed_queue);
-  queue_monitor->waitForWork();
   EXPECT_TRUE(observed_queue->empty());
   LogType log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
@@ -42,6 +41,9 @@ TEST(test_file_upload_manager, create_file_upload_manager) {
   file_manager->uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_FAILED, log_data);
   file_upload_manager->run();
   EXPECT_FALSE(observed_queue->empty());
-  auto data = queue_monitor->dequeue()->getBatchData();
+  auto task = queue_monitor->dequeue();
+  auto data = task->getBatchData();
+  task->onComplete(UploadStatus::SUCCESS);
   EXPECT_EQ("Hello my name is foo", data.front().GetMessage());
+  EXPECT_FALSE(std::ifstream("/tmp/active_file.log").good());
 }

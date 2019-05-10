@@ -56,7 +56,8 @@ TEST_F(FileManagerTest, file_manager_write_on_fail) {
   log_data.push_back(input_event);
   file_manager.uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_FAILED, log_data);
   std::string fileName = file_manager_strategy->getFileToRead();
-  std::string line = file_manager_strategy->read();
+  std::string line;
+  file_manager_strategy->read(line);
   EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
   file_manager_strategy->deleteFile(fileName);
 }
@@ -74,7 +75,8 @@ TEST_F(FileManagerTest, file_manager_no_write_on_success) {
   input_event.SetMessage("Hello my name is bar");
   log_data.push_back(input_event);
   file_manager.uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED, log_data);
-  EXPECT_ANY_THROW(file_manager_strategy->read());
+  std::string line;
+  EXPECT_ANY_THROW(file_manager_strategy->read(line));
 }
 
 int main(int argc, char** argv) {

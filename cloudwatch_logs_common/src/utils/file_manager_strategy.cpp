@@ -1,6 +1,8 @@
 #include <iostream>
 #include <experimental/filesystem>
 #include <fstream>
+#include <cloudwatch_logs_common/utils/file_manager.h>
+#include <aws/core/utils/logging/LogMacros.h>
 #include "cloudwatch_logs_common/utils/file_manager_strategy.h"
 
 namespace fs = std::experimental::filesystem;
@@ -17,19 +19,27 @@ void FileManagerStrategy::initialize() {
   discoverStoredFiles();
 }
 
-std::string FileManagerStrategy::read() {
+FileInfo FileManagerStrategy::read(std::string &data) {
   const std::string file_name = getFileToRead();
-  std::cout << "Reading from " << file_name;
-  std::string data;
-  std::ifstream log_file(file_name);
-  std::getline(log_file, data);
-  log_file.close();
-  return data;
+  AWS_LOG_INFO(__func__,
+                      "Reading from active log");
+  if (!current_log_file_) {
+    current_log_file_  = std::make_unique<std::ifstream>(file_name);
+  }
+  FileInfo file_info;
+  file_info.file_name = file_name;
+  file_info.file_status = GOOD;
+  std::getline(*current_log_file_, data);
+  if (current_log_file_->eof()) {
+    current_log_file_ = nullptr;
+    file_info.file_status = END_OF_READ;
+  }
+  return file_info;
 }
 
 void FileManagerStrategy::write(const std::string data) {
   std::ofstream log_file;
-  log_file.open(getFileToWrite());
+  log_file.open(getFileToWrite(), std::ios_base::app);
   log_file << data << std::endl;
   log_file.close();
 }
