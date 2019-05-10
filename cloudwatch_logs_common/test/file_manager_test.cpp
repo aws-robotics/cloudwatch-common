@@ -13,8 +13,6 @@
  * permissions and limitations under the License.
  */
 
-#include <list>
-
 #include <iostream>
 #include <fstream>
 #include <cstdio>

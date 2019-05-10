@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include <thread>
 #include <cloudwatch_logs_common/file_upload/status_monitor.h>
 #include <cloudwatch_logs_common/file_upload/observed_queue.h>
 #include <cloudwatch_logs_common/file_upload/queue_monitor.h>
@@ -41,13 +42,15 @@ public:
 template<typename T>
 class FileUploadTask : public Task<T> {
 public:
-  FileUploadTask(
-    FileObject<T> && batch_data,
+  explicit FileUploadTask(
+    FileObject<T> batch_data,
     UploadStatusFunction<UploadStatus, FileObject<T>> upload_status_function)
   {
     this->batch_data_ = batch_data;
     this->upload_status_function_ = upload_status_function;
   }
+
+  virtual ~FileUploadTask() override = default;
 
   inline T& getBatchData() override {
     return batch_data_.batch_data;
@@ -88,15 +91,28 @@ public:
 
   inline void run() {
     status_condition_monitor_->waitForWork();
-    T batch = file_manager_.readBatch(batch_size_);
+    T batch = file_manager_->readBatch(batch_size_);
     using namespace std::placeholders;
-    UploadStatusFunction<UploadStatus, T> upload_func =
+    auto upload_func =
         std::bind(&FileManager<T>::fileUploadCompleteStatus, file_manager_, _1, _2);
-    FileUploadTask<T> file_upload_task(batch, upload_func);
+    auto file_object = Aws::CloudWatchLogs::Utils::FileObject<T>();
+    file_object.batch_data = batch;
+    auto file_upload_task = std::make_shared<FileUploadTask<T>>(file_object, upload_func);
     observed_queue_->enqueue(file_upload_task);
   }
 
+  void start() {
+    thread = std::make_unique<std::thread>(std::bind(&FileUploadManager::run,this));
+  }
+
+  void join() {
+    if (thread) {
+        thread->join();
+      }
+  }
+
 private:
+  std::unique_ptr<std::thread> thread;
   size_t batch_size_;
   std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor_;
   std::shared_ptr<FileManager<T>> file_manager_;

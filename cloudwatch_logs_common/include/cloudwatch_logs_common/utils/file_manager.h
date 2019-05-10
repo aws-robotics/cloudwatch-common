@@ -30,7 +30,8 @@ using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
 using LogTypePtr = LogType *;
 
 template <typename T>
-struct FileObject {
+class FileObject {
+public:
   T batch_data;
   std::string file_location;
   size_t batch_size;
@@ -160,8 +161,12 @@ public:
   void write(const LogType & data) override;
 
   LogType readBatch(size_t batch_size) override {
-    LogType log_type;
-    return log_type;
+    LogType log_data;
+    Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+    input_event.SetTimestamp(0);
+    input_event.SetMessage("Hello my name is foo");
+    log_data.push_back(input_event);
+    return log_data;
   }
 };
 
