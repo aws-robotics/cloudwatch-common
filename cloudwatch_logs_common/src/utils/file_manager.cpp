@@ -30,18 +30,22 @@ void LogFileManager::uploadCompleteStatus(const ROSCloudWatchLogsErrors& upload_
   }
 }
 
+std::string LogFileManager::read() {
+  return file_manager_strategy_->read();
+}
+
 void LogFileManager::write(const LogType & data) {
-  std::ofstream log_file;
-  log_file.open(FileManager::file_manager_strategy_->getFileToWrite());
   for (const Model::InputLogEvent &log: data) {
-    auto str = log.Jsonize().View().WriteCompact();
-    log_file << str << std::endl;
+    auto aws_str = log.Jsonize().View().WriteCompact();
+    std::string str(aws_str.c_str());
+    file_manager_strategy_->write(str);
   }
   log_file.close();
   if (FileManager::file_status_monitor_) {
     FileManager::file_status_monitor_->setStatus(Aws::FileManagement::Status::AVAILABLE);
   }
 }
+
 
 }  // namespace Utils
 }  // namespace CloudWatchLogs
