@@ -69,6 +69,8 @@ public:
 
   virtual ~FileManager() = default;
 
+  virtual std::string read() = 0;
+
   /**
    * Write data to the appropriate file.
    * @param data to write.
@@ -134,7 +136,6 @@ public:
   void uploadCompleteStatus(
       const ROSCloudWatchLogsErrors& upload_status,
       const LogType &log_messages);
-
   void write(const LogType & data) override;
 
   LogType readBatch(size_t batch_size) override {

@@ -16,9 +16,15 @@ namespace Utils {
  */
 class FileManagerStrategy {
 public:
-    FileManagerStrategy() {};
+    FileManagerStrategy();
 
     ~FileManagerStrategy() = default;
+
+    virtual std::string read();
+
+    virtual void write(std::string data);
+
+    virtual void deleteFile(std::string fileName);
 
     virtual void initialize();
 
@@ -26,7 +32,7 @@ public:
 
     virtual void discoverStoredFiles() ;
 
-    virtual void addFileNameToStorage(std:: string) ;
+    virtual void addFileNameToStorage(std::string filename);
 
     virtual uintmax_t getActiveFileSize() ;
     /**
@@ -42,7 +48,7 @@ private:
     /**
      * Current file name to write to.
      */
-    std::string active_file_ = "example_file.log";
+    std::string active_file_;
     std::list<std::string> storage_files_;
 
     /**

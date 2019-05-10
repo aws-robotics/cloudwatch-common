@@ -1,5 +1,6 @@
 #include <iostream>
 #include <experimental/filesystem>
+#include <fstream>
 #include "cloudwatch_logs_common/utils/file_manager_strategy.h"
 
 namespace fs = std::experimental::filesystem;
@@ -8,9 +9,33 @@ namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
+FileManagerStrategy::FileManagerStrategy() {
+  rotateActiveFile();
+}
+
 void FileManagerStrategy::initialize() {
   discoverStoredFiles();
-  rotateActiveFile();
+}
+
+std::string FileManagerStrategy::read() {
+  const std::string file_name = getFileToRead();
+  std::cout << "Reading from " << file_name;
+  std::string data;
+  std::ifstream log_file(file_name);
+  std::getline(log_file, data);
+  log_file.close();
+  return data;
+}
+
+void FileManagerStrategy::write(const std::string data) {
+  std::ofstream log_file;
+  log_file.open(getFileToWrite());
+  log_file << data << std::endl;
+  log_file.close();
+}
+
+void FileManagerStrategy::deleteFile(const std::string fileName) {
+  std::remove(fileName.c_str());
 }
 
 std::string FileManagerStrategy::getFileToWrite() {
@@ -33,7 +58,7 @@ std::string FileManagerStrategy::getFileToRead() {
     return file_path;
   }
 
-  return nullptr;
+  throw "No files available for reading";
 }
 
 void FileManagerStrategy::discoverStoredFiles() {

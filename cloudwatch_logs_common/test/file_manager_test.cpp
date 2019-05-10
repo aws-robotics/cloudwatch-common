@@ -26,11 +26,6 @@
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 
-class MockFileManagerStrategy : public FileManagerStrategy {
-public:
-  MOCK_CONST_METHOD0(getFileToWrite, std::string(void));
-};
-
 class FileManagerTest : public ::testing::Test {
 public:
   void SetUp() override
@@ -51,38 +46,35 @@ protected:
  * Test that the upload complete with CW Failure goes to a file.
  */
 TEST_F(FileManagerTest, file_manager_write_on_fail) {
-  std::shared_ptr<MockFileManagerStrategy> mock_file_manager_strategy = std::make_shared<MockFileManagerStrategy>();
-  EXPECT_CALL(*mock_file_manager_strategy, getFileToWrite())
-    .Times(1)
-    .WillOnce(testing::Return(test_file_name));
-  LogFileManager file_manager(mock_file_manager_strategy);
+  std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>();
+  file_manager_strategy->rotateActiveFile();
+  LogFileManager file_manager(file_manager_strategy);
   LogType log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
   input_event.SetTimestamp(0);
   input_event.SetMessage("Hello my name is foo");
   log_data.push_back(input_event);
   file_manager.uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_FAILED, log_data);
-  std::ifstream log_file(test_file_name);
-  std::string line;
-  std::getline(log_file, line);
-  log_file.close();
+  std::string fileName = file_manager_strategy->getFileToRead();
+  std::string line = file_manager_strategy->read();
   EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
+  file_manager_strategy->deleteFile(fileName);
 }
 
 /**
  * Test that the upload complete with CW success does not go to a file.
  */
 TEST_F(FileManagerTest, file_manager_no_write_on_success) {
-  std::shared_ptr<MockFileManagerStrategy> mock_file_manager_strategy = std::make_shared<MockFileManagerStrategy>();
-  LogFileManager file_manager(mock_file_manager_strategy);
+  std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>();
+  file_manager_strategy->rotateActiveFile();
+  LogFileManager file_manager(file_manager_strategy);
   LogType log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
   input_event.SetTimestamp(0);
-  input_event.SetMessage("Hello my name is foo");
+  input_event.SetMessage("Hello my name is bar");
   log_data.push_back(input_event);
   file_manager.uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED, log_data);
-  std::ifstream log_file(test_file_name);
-  EXPECT_FALSE(log_file);
+  EXPECT_ANY_THROW(file_manager_strategy->read());
 }
 
 int main(int argc, char** argv) {
