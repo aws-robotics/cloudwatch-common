@@ -24,8 +24,9 @@
 #include <cloudwatch_logs_common/utils/shared_object.h>
 
 #include <memory>
+#include <fstream>
 
-constexpr int kMaxRetries = 5;
+constexpr int kMaxRetries = 1;
 
 using namespace Aws::CloudWatchLogs;
 
@@ -179,11 +180,12 @@ void LogPublisher::InitToken(Aws::String & next_token)
 
 void LogPublisher::SendLogFiles(Aws::String & next_token) {
   if (queue_monitor_) {
-    queue_monitor_->waitForWork();
+    AWS_LOG_INFO(__func__,
+                 "Attempting to get data off queue");
     auto data = queue_monitor_->dequeue();
     if (data) {
-      AWS_LOG_DEBUG(__func__,
-                    "Attempting to send file data");
+      AWS_LOG_INFO(__func__,
+                    "Attempting to send log file data");
       LogType batch_data = data->getBatchData();
       auto status = SendLogs(next_token, &batch_data);
       using Aws::FileManagement::UploadStatus;
@@ -201,8 +203,11 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String 
   if (!logs->empty()) {
     int tries = kMaxRetries;
     while (CW_LOGS_SUCCEEDED != send_logs_status && tries > 0) {
-      send_logs_status = this->cloudwatch_facade_->SendLogsToCloudWatch(
-          next_token, this->log_group_, this->log_stream_, logs);
+      AWS_LOG_INFO(__func__, "Sending logs to CW");
+      if (!std::ifstream("/tmp/internet").good()) {
+        send_logs_status = this->cloudwatch_facade_->SendLogsToCloudWatch(
+            next_token, this->log_group_, this->log_stream_, logs);
+      }
       if (CW_LOGS_SUCCEEDED != send_logs_status) {
         AWS_LOG_WARN(__func__, "Unable to send logs to CloudWatch, retrying ...");
         Aws::CloudWatchLogs::ROSCloudWatchLogsErrors get_token_status =
@@ -250,7 +255,7 @@ void LogPublisher::SendLogs(Aws::String & next_token)
       send_logs_status = SendLogs(next_token, logs);
     }
     if (this->upload_status_function_) {
-      AWS_LOG_DEBUG(__func__,
+      AWS_LOG_INFO(__func__,
                     "Calling callback function with logs of size %i", logs->size());
       upload_status_function_(send_logs_status, *logs);
     }

@@ -16,6 +16,7 @@
 #pragma once
 
 #include <thread>
+#include <memory>
 #include <cloudwatch_logs_common/file_upload/status_monitor.h>
 #include <cloudwatch_logs_common/file_upload/observed_queue.h>
 #include <cloudwatch_logs_common/file_upload/queue_monitor.h>
@@ -79,7 +80,11 @@ public:
     batch_size_ = batch_size;
   }
 
-  virtual ~FileUploadManager() = default;
+  virtual ~FileUploadManager() {
+    if (thread) {
+      thread->join();
+    }
+  }
 
   void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor) {
     status_condition_monitor_->addStatusMonitor(status_monitor);
@@ -89,20 +94,34 @@ public:
     return observed_queue_;
   }
 
+  inline void startRun() {
+    while (true) {
+      run();
+    }
+  }
   inline void run() {
+    AWS_LOG_INFO(__func__,
+                 "Waiting for files and work.");
     status_condition_monitor_->waitForWork();
-    T batch = file_manager_->readBatch(batch_size_);
-    using namespace std::placeholders;
+    AWS_LOG_INFO(__func__,
+                 "Found work! Batching");
+    FileObject<T> file_object = file_manager_->readBatch(batch_size_);
+    total_logs_uploaded += file_object.batch_size;
     auto upload_func =
-        std::bind(&FileManager<T>::fileUploadCompleteStatus, file_manager_, _1, _2);
-    auto file_object = Aws::CloudWatchLogs::Utils::FileObject<T>();
-    file_object.batch_data = batch;
-    auto file_upload_task = std::make_shared<FileUploadTask<T>>(file_object, upload_func);
+        std::bind(
+            &FileManager<T>::fileUploadCompleteStatus,
+            file_manager_,
+            std::placeholders::_1,
+            std::placeholders::_2);
+    auto file_upload_task =
+        std::make_shared<FileUploadTask<T>>(file_object, upload_func);
     observed_queue_->enqueue(file_upload_task);
+    AWS_LOG_INFO(__func__,
+                 "Total logs from file queued %i", total_logs_uploaded);
   }
 
   void start() {
-    thread = std::make_unique<std::thread>(std::bind(&FileUploadManager::run,this));
+    thread = std::make_shared<std::thread>(std::bind(&FileUploadManager::startRun,this));
   }
 
   void join() {
@@ -112,7 +131,8 @@ public:
   }
 
 private:
-  std::unique_ptr<std::thread> thread;
+  size_t total_logs_uploaded = 0;
+  std::shared_ptr<std::thread> thread;
   size_t batch_size_;
   std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor_;
   std::shared_ptr<FileManager<T>> file_manager_;
