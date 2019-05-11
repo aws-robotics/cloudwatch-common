@@ -15,8 +15,8 @@
 
 #include <iostream>
 #include <fstream>
-#include "cloudwatch_logs_common/utils/file_manager.h"
-#include "cloudwatch_logs_common/utils/file_manager_strategy.h"
+#include "cloudwatch_logs_common/utils/log_file_manager.h"
+#include "cloudwatch_logs_common/file_upload/file_manager_strategy.h"
 #include <aws/core/utils/json/JsonSerializer.h>
 #include <aws/core/utils/logging/LogMacros.h>
 
@@ -24,7 +24,10 @@ namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
-void LogFileManager::uploadCompleteStatus(const ROSCloudWatchLogsErrors& upload_status, const LogType &log_messages) {
+void LogFileManager::uploadCompleteStatus(
+  const ROSCloudWatchLogsErrors& upload_status,
+  const LogType &log_messages)
+{
   if (!log_messages.empty()) {
     if (ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED != upload_status) {
       AWS_LOG_INFO(__func__, "Writing logs to file");
@@ -33,15 +36,17 @@ void LogFileManager::uploadCompleteStatus(const ROSCloudWatchLogsErrors& upload_
   }
 }
 
-FileObject<LogType> LogFileManager::readBatch(size_t batch_size) {
+FileObject<LogType> LogFileManager::readBatch(
+  size_t batch_size)
+{
   LogType log_data;
-  FileInfo file_info;
+  FileManagement::FileInfo file_info;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
   size_t actual_batch_size = 0;
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line, file_name;
     file_info = read(line);
-    if (END_OF_READ == file_info.file_status) {
+    if (FileManagement::FileStatus::END_OF_READ == file_info.file_status) {
       break;
     }
     Aws::String aws_line(line.c_str());
@@ -70,7 +75,6 @@ void LogFileManager::write(const LogType & data) {
   }
 }
 
-
 }  // namespace Utils
-}  // namespace CloudWatchLogs
+}  // namespace CloudwatchLogs
 }  // namespace Aws

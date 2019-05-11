@@ -1,15 +1,14 @@
 #include <iostream>
 #include <experimental/filesystem>
 #include <fstream>
-#include <cloudwatch_logs_common/utils/file_manager.h>
+#include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <aws/core/utils/logging/LogMacros.h>
-#include "cloudwatch_logs_common/utils/file_manager_strategy.h"
+#include "cloudwatch_logs_common/file_upload/file_manager_strategy.h"
 
 namespace fs = std::experimental::filesystem;
 
 namespace Aws {
-namespace CloudWatchLogs {
-namespace Utils {
+namespace FileManagement {
 
 FileManagerStrategy::FileManagerStrategy() {
   rotateActiveFile();
@@ -95,6 +94,5 @@ uintmax_t FileManagerStrategy::getActiveFileSize() {
   return fs::file_size(active_file_);
 }
 
-}  // namespace Utils
-}  // namespace CloudWatchLogs
+}  // namespace FileManagement
 }  // namespace Aws

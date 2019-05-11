@@ -18,15 +18,14 @@
 #include <memory>
 
 #include <aws/logs/model/InputLogEvent.h>
+#include <aws/core/utils/logging/LogMacros.h>
 
-#include "cloudwatch_logs_common/utils/task_utils.h"
-#include "cloudwatch_logs_common/utils/file_manager_strategy.h"
-#include "cloudwatch_logs_common/ros_cloudwatch_logs_errors.h"
+#include "cloudwatch_logs_common/file_upload/task_utils.h"
+#include "cloudwatch_logs_common/file_upload/file_manager_strategy.h"
 #include "cloudwatch_logs_common/file_upload/status_monitor.h"
 
 namespace Aws {
-namespace CloudWatchLogs {
-namespace Utils {
+namespace FileManagement {
 
 using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
 using LogTypePtr = LogType *;
@@ -125,40 +124,6 @@ protected:
 
 };
 
-/**
- * The log specific file manager. Handles the specific writes of log data.
- */
-class LogFileManager :
-  public FileManager<LogType>{
-public:
-  /**
-   * Default Constructor.
-   */
-  LogFileManager()  = default;
 
-  explicit LogFileManager(
-    std::shared_ptr<FileManagerStrategy> file_manager_strategy)
-    : FileManager(file_manager_strategy)
-  {
-  }
-
-  ~LogFileManager() override = default;
-
-  /**
-   * Handle an upload complete status.
-   *
-   * @param upload_status the status of an attempted upload of data
-   * @param log_messages the data which was attempted to be uploaded
-   */
-  void uploadCompleteStatus(
-      const ROSCloudWatchLogsErrors& upload_status,
-      const LogType &log_messages);
-
-  void write(const LogType & data) override;
-
-  FileObject<LogType> readBatch(size_t batch_size) override;
-};
-
-}  // namespace Utils
-}  // namespace CloudwatchLogs
+}  // namespace FileManagement
 }  // namespace Aws

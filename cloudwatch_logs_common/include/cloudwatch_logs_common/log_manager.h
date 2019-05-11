@@ -22,7 +22,7 @@
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/shared_object.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_manager.h>
-#include <cloudwatch_logs_common/utils/file_manager.h>
+#include <cloudwatch_logs_common/file_upload/file_manager.h>
 
 #include <iostream>
 #include <list>

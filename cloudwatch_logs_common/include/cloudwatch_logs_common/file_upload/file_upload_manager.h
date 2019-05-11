@@ -17,20 +17,18 @@
 
 #include <thread>
 #include <memory>
+
+#include <aws/core/utils/logging/LogMacros.h>
+
 #include <cloudwatch_logs_common/file_upload/status_monitor.h>
 #include <cloudwatch_logs_common/file_upload/observed_queue.h>
 #include <cloudwatch_logs_common/file_upload/queue_monitor.h>
-#include <cloudwatch_logs_common/utils/task_utils.h>
-#include <cloudwatch_logs_common/utils/file_manager.h>
+#include <cloudwatch_logs_common/file_upload/task_utils.h>
+#include <cloudwatch_logs_common/file_upload/file_manager.h>
+
 
 namespace Aws {
 namespace FileManagement {
-
-
-using Aws::CloudWatchLogs::Utils::UploadStatusFunction;
-using Aws::CloudWatchLogs::Utils::FileManager;
-using Aws::CloudWatchLogs::Utils::FileObject;
-using Aws::CloudWatchLogs::Utils::UploadStatus;
 
 template<typename T>
 class Task {
@@ -65,13 +63,25 @@ public:
   UploadStatusFunction<UploadStatus, FileObject<T>> upload_status_function_;
 };
 
+
+//------------- Definitions --------------//
+template<typename T>
+using TaskPtr = std::shared_ptr<Task<T>>;
+
+template<typename T>
+using FileUploadTaskPtr = std::shared_ptr<FileUploadTask<T>>;
+
+template<typename T>
+using TaskObservedQueue = ObservedQueue<TaskPtr<T>>;
+//----------------------------------------//
+
 template<typename T>
 class FileUploadManager {
 public:
   explicit FileUploadManager(
     std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor,
     std::shared_ptr<FileManager<T>> file_manager,
-    std::shared_ptr<ObservedQueue<std::shared_ptr<Task<T>>>> observed_queue,
+    std::shared_ptr<TaskObservedQueue<T>> observed_queue,
     size_t batch_size)
   {
     status_condition_monitor_ = status_condition_monitor;
@@ -90,7 +100,7 @@ public:
     status_condition_monitor_->addStatusMonitor(status_monitor);
   }
 
-  std::shared_ptr<ObservedQueue<std::shared_ptr<Task<T>>>> getObservedQueue() {
+  std::shared_ptr<TaskObservedQueue<T>> getObservedQueue() {
     return observed_queue_;
   }
 
@@ -136,7 +146,7 @@ private:
   size_t batch_size_;
   std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor_;
   std::shared_ptr<FileManager<T>> file_manager_;
-  std::shared_ptr<ObservedQueue<std::shared_ptr<Task<T>>>> observed_queue_;
+  std::shared_ptr<TaskObservedQueue<T>> observed_queue_;
 };
 
 }  // namespace FileManagement

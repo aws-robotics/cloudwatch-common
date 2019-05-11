@@ -19,9 +19,9 @@
 #include <aws/logs/CloudWatchLogsClient.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
+#include <cloudwatch_logs_common/utils/log_file_manager.h>
 #include <cloudwatch_logs_common/utils/shared_object.h>
-#include <cloudwatch_logs_common/utils/task_utils.h>
-#include <cloudwatch_logs_common/utils/file_manager.h>
+#include <cloudwatch_logs_common/file_upload/task_utils.h>
 #include <cloudwatch_logs_common/file_upload/status_monitor.h>
 #include <cloudwatch_logs_common/file_upload/queue_monitor.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_manager.h>
@@ -125,7 +125,7 @@ private:
   void Run();
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, LogTypePtr logs);
 
-  Utils::UploadStatusFunction<ROSCloudWatchLogsErrors, LogType> upload_status_function_;
+  FileManagement::UploadStatusFunction<ROSCloudWatchLogsErrors, LogType> upload_status_function_;
   std::shared_ptr<Utils::LogFileManager> log_file_manager_ = nullptr;
   LogTaskQueueMonitor queue_monitor_;
   std::shared_ptr<Aws::FileManagement::StatusMonitor> network_monitor_ = nullptr;
