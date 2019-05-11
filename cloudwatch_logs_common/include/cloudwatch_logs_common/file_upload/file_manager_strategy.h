@@ -19,12 +19,10 @@
 #include <iostream>
 #include <fstream>
 #include <list>
-#include "cloudwatch_logs_common/utils/task_utils.h"
+#include "cloudwatch_logs_common/file_upload/task_utils.h"
 
 namespace Aws {
-namespace CloudWatchLogs {
-namespace Utils {
-
+namespace FileManagement {
 
 enum FileStatus {
   END_OF_READ,
@@ -88,6 +86,5 @@ private:
 };
 
 
-}  // namespace Utils
-}  // namespace CloudwatchLogs
+}  // namespace FileManagement
 }  // namespace Aws

@@ -18,8 +18,7 @@
 #include <functional>
 
 namespace Aws {
-namespace CloudWatchLogs {
-namespace Utils {
+namespace FileManagement {
 
 /**
  * Function callback when a message has attempted an upload to the cloud.
@@ -27,6 +26,5 @@ namespace Utils {
 template <typename Status, typename T>
 using UploadStatusFunction = std::function<void (const Status& upload_status, const T &message)>;
 
-}  // namespace Utils
-}  // namespace CloudwatchLogs
+}  // namespace FileManagement
 }  // namespace Aws

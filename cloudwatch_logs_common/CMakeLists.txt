@@ -24,8 +24,8 @@ set(ALL_SRC_FILES
     src/log_manager_factory.cpp
     src/log_publisher.cpp
     src/utils/cloudwatch_facade.cpp
-    src/utils/file_manager.cpp
-    src/utils/file_manager_strategy.cpp
+    src/utils/log_file_manager.cpp
+    src/file_upload/file_manager_strategy.cpp
     src/file_upload/status_monitor.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})

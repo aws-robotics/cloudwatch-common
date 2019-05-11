@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include <cloudwatch_logs_common/utils/file_manager.h>
+#include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/status_monitor.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_manager.h>
 #include <cloudwatch_logs_common/file_upload/observed_queue.h>
@@ -26,7 +26,7 @@ namespace FileManagement {
 
 template<typename T>
 std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
-    std::shared_ptr<CloudWatchLogs::Utils::FileManager<T>> file_manager) {
+    std::shared_ptr<FileManager<T>> file_manager) {
   // File Management system
   // Create a file monitor to get notified if a file is ready to be read
   auto file_monitor =
@@ -42,7 +42,7 @@ std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
 
   // Create an observed queue to trigger a publish when data is available
   auto observed_queue =
-      std::make_shared<ObservedQueue<std::shared_ptr<Task<T>>>>();
+      std::make_shared<TaskObservedQueue<T>>();
 
   // Create a file upload manager to handle uploading a file.
   auto file_upload_manager =
@@ -50,7 +50,7 @@ std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
           multi_status_condition_monitor,
           file_manager,
           observed_queue,
-          10);
+          50);
   return file_upload_manager;
 }
 
