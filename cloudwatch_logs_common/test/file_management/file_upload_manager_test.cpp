@@ -31,7 +31,7 @@ TEST(test_file_upload_manager, create_file_upload_manager) {
   auto file_upload_manager = createFileUploadManager(
       static_cast<std::shared_ptr<FileManager<LogType>>>(file_manager));
   auto observed_queue = file_upload_manager->getObservedQueue();
-  auto queue_monitor = std::make_shared<QueueMonitor<std::shared_ptr<Task<LogType>>>>();
+  auto queue_monitor = std::make_shared<QueueMonitor<TaskPtr<LogType>>>();
   queue_monitor->add_queue(observed_queue);
   EXPECT_TRUE(observed_queue->empty());
   LogType log_data;
