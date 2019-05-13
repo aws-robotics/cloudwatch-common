@@ -24,9 +24,17 @@
 namespace Aws {
 namespace FileManagement {
 
+/**
+ * Create a file upload manager complete with a file status monitor attached to the file_manager,
+ * and a task based queue.
+ * @tparam T the type of messages the file uploader will handle
+ * @param file_manager to use as the source of these messages
+ * @return a shared pointer to a configured file upload manager.
+ */
 template<typename T>
 std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
-    std::shared_ptr<FileManager<T>> file_manager) {
+  std::shared_ptr<FileManager<T>> file_manager)
+  {
   // File Management system
   // Create a file monitor to get notified if a file is ready to be read
   auto file_monitor =

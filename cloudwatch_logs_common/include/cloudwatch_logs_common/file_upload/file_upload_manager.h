@@ -109,6 +109,7 @@ public:
       run();
     }
   }
+
   inline void run() {
     AWS_LOG_INFO(__func__,
                  "Waiting for files and work.");

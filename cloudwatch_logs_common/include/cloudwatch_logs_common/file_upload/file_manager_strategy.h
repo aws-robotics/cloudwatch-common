@@ -24,11 +24,17 @@
 namespace Aws {
 namespace FileManagement {
 
+/**
+ * The status of a file.
+ */
 enum FileStatus {
   END_OF_READ,
   GOOD
 };
 
+/**
+ * File information struct.
+ */
 class FileInfo {
  public:
   std::string file_location;
