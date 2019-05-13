@@ -62,6 +62,9 @@ public:
   }
 
 protected:
+  /**
+   * @return True if any of the status monitors are enabled.
+   */
   inline bool hasWork() override {
     return (std::accumulate(
         status_monitors_.begin(),

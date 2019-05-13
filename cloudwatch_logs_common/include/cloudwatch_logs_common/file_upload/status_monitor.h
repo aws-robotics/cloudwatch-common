@@ -32,6 +32,9 @@ enum Status : uint {
 
 class MultiStatusConditionMonitor;
 
+/**
+ * Handle a single set/get status. Notify the multi_status_condition when the status is changed.
+ */
 class StatusMonitor {
 public:
   virtual ~StatusMonitor() = default;
@@ -49,6 +52,10 @@ private:
   MultiStatusConditionMonitor *multi_status_cond_ = nullptr;
 };
 
+/**
+ * Multi Status Condition Monitor listens to N StatusMonitors and determines whether to trigger wait for work
+ * based on the hasWork() function.
+ */
 class MultiStatusConditionMonitor {
 public:
   void waitForWork();
