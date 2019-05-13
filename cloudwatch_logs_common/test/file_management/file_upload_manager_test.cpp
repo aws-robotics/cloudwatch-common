@@ -40,11 +40,12 @@ TEST(test_file_upload_manager, create_file_upload_manager) {
   input_event.SetMessage("Hello my name is foo");
   log_data.push_back(input_event);
   file_manager->uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_FAILED, log_data);
-  file_upload_manager->run();
-  EXPECT_FALSE(observed_queue->empty());
+  std::thread thread (&FileUploadManager<LogType>::run, file_upload_manager);
+  queue_monitor->waitForWork();
   auto task = queue_monitor->dequeue();
   auto data = task->getBatchData();
   task->onComplete(UploadStatus::SUCCESS);
+  thread.join();
   EXPECT_EQ("Hello my name is foo", data.front().GetMessage());
   EXPECT_FALSE(std::ifstream("/tmp/active_file.log").good());
 }
