@@ -21,12 +21,23 @@
 namespace Aws {
 namespace FileManagement {
 
+/**
+ * Manage multiple queue's and their priorities.
+ * Exposes a dequeue API which enforces the desired priorities and returns the data with the highest priority.
+ *
+ * @tparam T type of data in the queues.
+ */
 template<typename T>
 class QueueMonitor : public MultiStatusConditionMonitor {
 public:
   QueueMonitor() = default;
   virtual ~QueueMonitor() = default;
 
+  /**
+   * Add a queue to the queue monitor.
+   *
+   * @param observed_queue
+   */
   inline void add_queue(std::shared_ptr<ObservedQueue<T>> observed_queue) {
     auto status_monitor = std::make_shared<StatusMonitor>();
     addStatusMonitor(status_monitor);
@@ -34,6 +45,11 @@ public:
     queues_.push_back(observed_queue);
   }
 
+  /**
+   * Dequeue data off of a queue with the highest priority.
+   *
+   * @return the dequeue'd data
+   */
   inline T dequeue() {
     T data;
     for (auto &queue : queues_)
@@ -56,6 +72,10 @@ protected:
         }));
   }
 private:
+
+  /**
+   * Vector of managed shared queues.
+   */
   std::vector<std::shared_ptr<ObservedQueue<T>>> queues_;
 };
 

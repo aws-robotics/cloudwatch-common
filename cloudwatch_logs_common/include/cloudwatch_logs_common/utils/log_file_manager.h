@@ -14,14 +14,20 @@
  */
 
 #pragma once
-#include "cloudwatch_logs_common/ros_cloudwatch_logs_errors.h"
+#include <aws/logs/model/InputLogEvent.h>
+
+#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 
 namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
-using FileManagement::LogType;
+//------------- Definitions --------------//
+using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
+using LogTypePtr = LogType *;
+//----------------------------------------//
+
 using FileManagement::FileManager;
 using FileManagement::FileManagerStrategy;
 using FileManagement::FileObject;

@@ -22,6 +22,9 @@
 namespace Aws {
 namespace FileManagement {
 
+/**
+ * Status.
+ */
 enum Status : uint {
   UNAVAILABLE = 0,
   AVAILABLE
