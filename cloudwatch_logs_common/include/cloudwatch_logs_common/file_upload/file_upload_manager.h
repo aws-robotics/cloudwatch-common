@@ -30,6 +30,10 @@
 namespace Aws {
 namespace FileManagement {
 
+/**
+ * Define a task to get batch data and call a callback when finished with this task.
+ * @tparam T
+ */
 template<typename T>
 class Task {
 public:
@@ -38,6 +42,11 @@ public:
   virtual void onComplete(const UploadStatus &upload_status) = 0;
 };
 
+/**
+ * The file upload task which calls the upload status callback with the data from the initial task.
+ *
+ * @tparam T
+ */
 template<typename T>
 class FileUploadTask : public Task<T> {
 public:
@@ -49,7 +58,7 @@ public:
     this->upload_status_function_ = upload_status_function;
   }
 
-  virtual ~FileUploadTask() override = default;
+  virtual ~FileUploadTask() = default;
 
   inline T& getBatchData() override {
     return batch_data_.batch_data;
@@ -59,10 +68,10 @@ public:
     upload_status_function_(upload_status, batch_data_);
   }
 
+private:
   FileObject<T> batch_data_;
   UploadStatusFunction<UploadStatus, FileObject<T>> upload_status_function_;
 };
-
 
 //------------- Definitions --------------//
 template<typename T>
@@ -75,9 +84,21 @@ template<typename T>
 using TaskObservedQueue = ObservedQueue<TaskPtr<T>>;
 //----------------------------------------//
 
+/**
+ * File upload manager handles reading data from the file manager and placing it in the observed queue.
+ *
+ * @tparam T
+ */
 template<typename T>
 class FileUploadManager {
 public:
+  /**
+   * Create a
+   * @param status_condition_monitor
+   * @param file_manager
+   * @param observed_queue
+   * @param batch_size
+   */
   explicit FileUploadManager(
     std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor,
     std::shared_ptr<FileManager<T>> file_manager,
@@ -96,6 +117,11 @@ public:
     }
   }
 
+  /**
+   * Add a status monitor for the file upload manager to wait for work on.
+   *
+   * @param status_monitor to add
+   */
   void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor) {
     status_condition_monitor_->addStatusMonitor(status_monitor);
   }
@@ -110,6 +136,14 @@ public:
     }
   }
 
+  /**
+   * Attempt to start uploading.
+   *
+   * 1. First wait for work on all the status conditions. (i.e wait until files are available to upload)
+   * 2. Read a batch of data from the file_manager
+   * 3. Bind the fileUploadCompleteStatus as the callback when the task is complete
+   * 4. Queue up the task to be worked on.
+   */
   inline void run() {
     AWS_LOG_INFO(__func__,
                  "Waiting for files and work.");
@@ -131,10 +165,16 @@ public:
                  "Total logs from file queued %i", total_logs_uploaded);
   }
 
+  /**
+   * Start the upload thread.
+   */
   void start() {
     thread = std::make_shared<std::thread>(std::bind(&FileUploadManager::startRun,this));
   }
 
+  /**
+   * Join the running thread if available.
+   */
   void join() {
     if (thread) {
         thread->join();
@@ -142,11 +182,34 @@ public:
   }
 
 private:
+  /**
+   * Metric on number of logs queued in the TaskObservedQueue.
+   */
   size_t total_logs_uploaded = 0;
+
+  /**
+   * Current thread working on file upload management.
+   */
   std::shared_ptr<std::thread> thread;
+
+  /**
+   * The configured batch size to use when uploading.
+   */
   size_t batch_size_;
+
+  /**
+   * The status condition monitor to wait on before uploading.
+   */
   std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor_;
+
+  /**
+   * The file manager to read data from.
+   */
   std::shared_ptr<FileManager<T>> file_manager_;
+
+  /**
+   * The queue which to add tasks to.
+   */
   std::shared_ptr<TaskObservedQueue<T>> observed_queue_;
 };
 

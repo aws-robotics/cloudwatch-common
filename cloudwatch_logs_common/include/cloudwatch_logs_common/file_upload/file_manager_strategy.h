@@ -53,9 +53,9 @@ public:
 
     virtual FileInfo read(std::string &data);
 
-    virtual void write(std::string data);
+    virtual void write(const std::string &data);
 
-    virtual void deleteFile(std::string fileName);
+    virtual void deleteFile(const std::string &fileName);
 
     virtual void initialize();
 

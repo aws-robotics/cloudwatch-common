@@ -36,14 +36,14 @@ FileInfo FileManagerStrategy::read(std::string &data) {
   return file_info;
 }
 
-void FileManagerStrategy::write(const std::string data) {
+void FileManagerStrategy::write(const std::string &data) {
   std::ofstream log_file;
   log_file.open(getFileToWrite(), std::ios_base::app);
   log_file << data << std::endl;
   log_file.close();
 }
 
-void FileManagerStrategy::deleteFile(const std::string fileName) {
+void FileManagerStrategy::deleteFile(const std::string &fileName) {
   std::remove(fileName.c_str());
 }
 

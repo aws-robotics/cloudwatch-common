@@ -44,7 +44,7 @@ FileObject<LogType> LogFileManager::readBatch(
   AWS_LOG_INFO(__func__, "Reading Logbatch");
   size_t actual_batch_size = 0;
   for (size_t i = 0; i < batch_size; ++i) {
-    std::string line, file_name;
+    std::string line;
     file_info = read(line);
     if (FileManagement::FileStatus::END_OF_READ == file_info.file_status) {
       break;
