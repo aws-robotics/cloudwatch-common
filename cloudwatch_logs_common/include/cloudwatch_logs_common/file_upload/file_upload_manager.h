@@ -25,64 +25,11 @@
 #include <cloudwatch_logs_common/file_upload/queue_monitor.h>
 #include <cloudwatch_logs_common/file_upload/task_utils.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
+#include <cloudwatch_logs_common/file_upload/file_upload_task.h>
 
 
 namespace Aws {
 namespace FileManagement {
-
-/**
- * Define a task to get batch data and call a callback when finished with this task.
- * @tparam T
- */
-template<typename T>
-class Task {
-public:
-  virtual ~Task() = default;
-  virtual T& getBatchData() = 0;
-  virtual void onComplete(const UploadStatus &upload_status) = 0;
-};
-
-/**
- * The file upload task which calls the upload status callback with the data from the initial task.
- *
- * @tparam T
- */
-template<typename T>
-class FileUploadTask : public Task<T> {
-public:
-  explicit FileUploadTask(
-    FileObject<T> batch_data,
-    UploadStatusFunction<UploadStatus, FileObject<T>> upload_status_function)
-  {
-    this->batch_data_ = batch_data;
-    this->upload_status_function_ = upload_status_function;
-  }
-
-  virtual ~FileUploadTask() = default;
-
-  inline T& getBatchData() override {
-    return batch_data_.batch_data;
-  }
-
-  inline void onComplete(const UploadStatus &upload_status) override {
-    upload_status_function_(upload_status, batch_data_);
-  }
-
-private:
-  FileObject<T> batch_data_;
-  UploadStatusFunction<UploadStatus, FileObject<T>> upload_status_function_;
-};
-
-//------------- Definitions --------------//
-template<typename T>
-using TaskPtr = std::shared_ptr<Task<T>>;
-
-template<typename T>
-using FileUploadTaskPtr = std::shared_ptr<FileUploadTask<T>>;
-
-template<typename T>
-using TaskObservedQueue = ObservedQueue<TaskPtr<T>>;
-//----------------------------------------//
 
 /**
  * File upload manager handles reading data from the file manager and placing it in the observed queue.
@@ -141,10 +88,11 @@ public:
    *
    * 1. First wait for work on all the status conditions. (i.e wait until files are available to upload)
    * 2. Read a batch of data from the file_manager
-   * 3. Bind the fileUploadCompleteStatus as the callback when the task is complete
-   * 4. Queue up the task to be worked on.
+   * 3. Queue up the task to be worked on.
+   * 4. Wait for the task to be completed to continue.
    */
   inline void run() {
+    // @todo(rddesmon): add timeout on wait for work and break out if the thread is cancelled.
     AWS_LOG_INFO(__func__,
                  "Waiting for files and work.");
     status_condition_monitor_->waitForWork();
@@ -152,17 +100,18 @@ public:
                  "Found work! Batching");
     FileObject<T> file_object = file_manager_->readBatch(batch_size_);
     total_logs_uploaded += file_object.batch_size;
-    auto upload_func =
-        std::bind(
-            &FileManager<T>::fileUploadCompleteStatus,
-            file_manager_,
-            std::placeholders::_1,
-            std::placeholders::_2);
     auto file_upload_task =
-        std::make_shared<FileUploadTask<T>>(file_object, upload_func);
+        std::make_shared<FileUploadTaskAsync<T>>(file_object);
+    auto future_result = file_upload_task->getResult();
     observed_queue_->enqueue(file_upload_task);
+    future_result.wait();
+    if (future_result.valid()) {
+      AWS_LOG_INFO(__func__, "Future is valid, call file upload complete status.")
+      auto result = future_result.get();
+      file_manager_->fileUploadCompleteStatus(result.second, result.first);
+    }
     AWS_LOG_INFO(__func__,
-                 "Total logs from file queued %i", total_logs_uploaded);
+                 "Total logs from file completed %i", total_logs_uploaded);
   }
 
   /**
