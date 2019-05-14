@@ -31,6 +31,19 @@
 namespace Aws {
 namespace FileManagement {
 
+struct FileManagerOptions {
+
+  /**
+   * Max number of data processed per read.
+   */
+ size_t batch_size;
+
+ /**
+  * Max number of elements in the queue.
+  */
+ size_t queue_size;
+};
+
 /**
  * File upload manager handles reading data from the file manager and placing it in the observed queue.
  *

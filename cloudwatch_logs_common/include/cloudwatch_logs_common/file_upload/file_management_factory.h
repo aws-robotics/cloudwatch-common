@@ -24,6 +24,7 @@
 namespace Aws {
 namespace FileManagement {
 
+static const FileManagerOptions kDefaultFileManagerOptions{50, 5};
 /**
  * Create a file upload manager complete with a file status monitor attached to the file_manager,
  * and a task based queue.
@@ -34,7 +35,7 @@ namespace FileManagement {
  */
 template<typename T>
 std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
-  std::shared_ptr<FileManager<T>> file_manager)
+  std::shared_ptr<FileManager<T>> file_manager, FileManagerOptions file_manager_options = kDefaultFileManagerOptions)
   {
   // File Management system
   // Create a file monitor to get notified if a file is ready to be read
@@ -59,7 +60,7 @@ std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
           multi_status_condition_monitor,
           file_manager,
           observed_queue,
-          50);
+          file_manager_options.batch_size);
   return file_upload_manager;
 }
 
