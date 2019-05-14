@@ -34,7 +34,7 @@ public:
   virtual T dequeue() = 0;
   virtual bool empty() = 0;
   virtual size_t size() = 0;
-  virtual void setStatusMonitor(std::weak_ptr<StatusMonitor> status_monitor) = 0;
+  virtual void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
 };
 /**
  * An observed queue is a dequeue wrapper which notifies an observer when a task is added.
@@ -55,7 +55,7 @@ public:
    *
    * @param status_monitor
    */
-  inline void setStatusMonitor(std::weak_ptr<StatusMonitor> status_monitor) override {
+  inline void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
     status_monitor_ = status_monitor;
   }
 
@@ -115,16 +115,15 @@ protected:
    * @param status the status to notify the monitor of.
    */
   void notifyMonitor(const Status &status) {
-    auto status_monitor_ptr = status_monitor_.lock();
-    if (status_monitor_ptr) {
-      status_monitor_ptr->setStatus(status);
+    if (status_monitor_) {
+      status_monitor_->setStatus(status);
     }
   }
 
   /**
    * The status monitor observer.
    */
-  std::weak_ptr<StatusMonitor> status_monitor_;
+  std::shared_ptr<StatusMonitor> status_monitor_;
 
   /**
    * The dequeue to store data.
