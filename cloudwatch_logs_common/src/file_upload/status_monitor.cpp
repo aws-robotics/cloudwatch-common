@@ -13,7 +13,7 @@
  * permissions and limitations under the License.
  */
 
-#include <cloudwatch_logs_common/file_upload/status_monitor.h>
+#include <cloudwatch_logs_common/dataflow/status_monitor.h>
 #include <numeric>
 using namespace Aws::FileManagement;
 void StatusMonitor::setStatus(const Status &status) {

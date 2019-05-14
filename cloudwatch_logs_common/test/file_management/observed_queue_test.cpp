@@ -17,7 +17,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <cloudwatch_logs_common/file_upload/observed_queue.h>
+#include <cloudwatch_logs_common/dataflow/observed_queue.h>
 
 using namespace Aws::FileManagement;
 

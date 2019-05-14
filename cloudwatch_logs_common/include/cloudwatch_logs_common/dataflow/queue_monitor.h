@@ -15,8 +15,8 @@
 
 #pragma once
 #include <vector>
-#include <cloudwatch_logs_common/file_upload/status_monitor.h>
-#include <cloudwatch_logs_common/file_upload/observed_queue.h>
+#include <cloudwatch_logs_common/dataflow/status_monitor.h>
+#include <cloudwatch_logs_common/dataflow/observed_queue.h>
 
 namespace Aws {
 namespace FileManagement {
@@ -99,10 +99,11 @@ protected:
   }
 private:
 
+  using QueuePriorityPair = std::pair<std::shared_ptr<ObservedQueue<T>>, PriorityOptions>;
   /**
    * Vector of managed shared queues.
    */
-  std::vector<std::shared_ptr<ObservedQueue<T>>> queues_;
+  std::vector<QueuePriorityPair> queues_;
 };
 
 }  // namespace FileManagement
