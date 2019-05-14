@@ -30,8 +30,18 @@ void MultiStatusConditionMonitor::waitForWork() {
   }
 }
 
+std::cv_status MultiStatusConditionMonitor::waitForWork(const std::chrono::milliseconds &duration) {
+  std::cv_status status = std::cv_status::no_timeout;
+  if (!hasWork()) {
+    std::unique_lock<std::mutex> lck(idle_mutex_);
+    status = work_condition_.wait_for(lck, duration);
+  }
+  return status;
+}
+
 void MultiStatusConditionMonitor::addStatusMonitor(
-std::shared_ptr<StatusMonitor> &status_monitor) {
+  std::shared_ptr<StatusMonitor> &status_monitor)
+{
   if (status_monitor) {
     status_monitor->setStatusObserver(this);
     status_monitors_.push_back(status_monitor);

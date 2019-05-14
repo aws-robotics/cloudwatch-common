@@ -91,7 +91,8 @@ if(GMOCK_LIBRARY)
   add_common_gtest(test_cloudwatch_offline
           test/file_management/file_manager_test.cpp
   #       test/file_manager_strategy_test.cpp
-          test/file_management/file_upload_manager_test.cpp)
+          test/file_management/file_upload_manager_test.cpp
+          test/file_management/observed_queue_test.cpp)
   target_include_directories(test_cloudwatch_offline
         PRIVATE include
         PRIVATE ${aws_common_INCLUDE_DIRS}
