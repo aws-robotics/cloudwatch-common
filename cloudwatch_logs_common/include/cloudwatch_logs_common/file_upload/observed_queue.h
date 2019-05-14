@@ -157,6 +157,8 @@ public:
 
   virtual ~ObservedBlockingQueue() = default;
   /**
+   * Blocking call
+   *
    * Enqueue data and notify the observer of data available.
    *
    * @param value to enqueue
@@ -174,9 +176,11 @@ public:
   }
 
   /**
-   * Enqueue data and notify the observer of data available.
+   * Blocking call.
    *
-   * @param value to enqueue
+   * @param value
+   * @param duration
+   * @return
    */
   inline bool tryEnqueue(
     T& value,
@@ -189,11 +193,6 @@ public:
       std::bind(wf, &condition_variable_, std::placeholders::_1, duration));
   }
 
-  /**
- * Enqueue data and notify the observer of data available.
- *
- * @param value to enqueue
- */
   inline bool tryEnqueue(
       T&& value,
       const std::chrono::microseconds &duration)
@@ -206,10 +205,10 @@ public:
   }
 
   /**
- * Dequeue data and notify the observer of data unavailable if the queue is empty.
- *
- * @return the front of the dequeue
- */
+   * Dequeue data and notify the observer of data unavailable if the queue is empty.
+   *
+   * @return the front of the dequeue
+   */
   inline T dequeue() override {
     auto data = OQ::dequeue();
     std::unique_lock<std::mutex> lck(enqueue_mutex_);
