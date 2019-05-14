@@ -22,8 +22,8 @@
 #include <cloudwatch_logs_common/utils/log_file_manager.h>
 #include <cloudwatch_logs_common/utils/shared_object.h>
 #include <cloudwatch_logs_common/file_upload/task_utils.h>
-#include <cloudwatch_logs_common/file_upload/status_monitor.h>
-#include <cloudwatch_logs_common/file_upload/queue_monitor.h>
+#include <cloudwatch_logs_common/dataflow/status_monitor.h>
+#include <cloudwatch_logs_common/dataflow/queue_monitor.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_manager.h>
 
 #include <memory>

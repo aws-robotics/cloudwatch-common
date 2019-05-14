@@ -19,11 +19,10 @@
 #include <functional>
 #include <mutex>
 
-#include <cloudwatch_logs_common/file_upload/status_monitor.h>
+#include <cloudwatch_logs_common/dataflow/status_monitor.h>
 
 namespace Aws {
 namespace FileManagement {
-
 
 template<
   class T,
