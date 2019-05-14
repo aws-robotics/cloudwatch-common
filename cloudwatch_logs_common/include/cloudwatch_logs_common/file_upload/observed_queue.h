@@ -65,7 +65,7 @@ public:
    *
    * @param value to enqueue
    */
-  inline virtual void enqueue(T&& value) override {
+  inline void enqueue(T&& value) override {
     dequeue_.push_back(value);
     notifyMonitor(AVAILABLE);
   }
@@ -75,7 +75,7 @@ public:
    *
    * @param value to enqueue
    */
-  inline virtual void enqueue(T& value) override {
+  inline void enqueue(T& value) override {
     dequeue_.push_back(value);
     notifyMonitor(AVAILABLE);
   }
@@ -85,7 +85,7 @@ public:
    *
    * @return the front of the dequeue
    */
-  inline virtual T dequeue() override {
+  inline T dequeue() override {
     T front = dequeue_.front();
     dequeue_.pop_front();
     if (dequeue_.empty()) {
