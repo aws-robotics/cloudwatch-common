@@ -53,7 +53,8 @@ template<typename T>
 class FileUploadManager {
 public:
   /**
-   * Create a
+   * Create a file upload manager.
+   *
    * @param status_condition_monitor
    * @param file_manager
    * @param observed_queue
@@ -73,7 +74,11 @@ public:
 
   virtual ~FileUploadManager() {
     if (thread) {
+      AWS_LOG_INFO(__func__,
+                   "Shutting down FileUploader thread.");
       thread->join();
+      AWS_LOG_INFO(__func__,
+                   "FileUploader successfully shutdown");
     }
   }
 
@@ -86,8 +91,11 @@ public:
     status_condition_monitor_->addStatusMonitor(status_monitor);
   }
 
-  std::shared_ptr<TaskObservedQueue<T>> getObservedQueue() {
-    return observed_queue_;
+  void subscribe(
+    IQueueMonitor<TaskPtr<T>> &queue_monitor,
+    PriorityOptions options = PriorityOptions())
+  {
+    queue_monitor.addQueue(observed_queue_, options);
   }
 
   inline void startRun() {
@@ -131,7 +139,7 @@ public:
    * Start the upload thread.
    */
   void start() {
-    thread = std::make_shared<std::thread>(std::bind(&FileUploadManager::startRun,this));
+    thread = std::make_shared<std::thread>(std::bind(&FileUploadManager::startRun, this));
   }
 
   /**

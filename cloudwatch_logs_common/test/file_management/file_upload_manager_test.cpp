@@ -30,10 +30,8 @@ TEST(test_file_upload_manager, create_file_upload_manager) {
   auto file_manager = std::make_shared<LogFileManager>();
   auto file_upload_manager = createFileUploadManager(
       static_cast<std::shared_ptr<FileManager<LogType>>>(file_manager));
-  auto observed_queue = file_upload_manager->getObservedQueue();
   auto queue_monitor = std::make_shared<QueueMonitor<TaskPtr<LogType>>>();
-  queue_monitor->addQueue(observed_queue);
-  EXPECT_TRUE(observed_queue->empty());
+  file_upload_manager->subscribe(*queue_monitor, PriorityOptions());
   LogType log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
   input_event.SetTimestamp(0);

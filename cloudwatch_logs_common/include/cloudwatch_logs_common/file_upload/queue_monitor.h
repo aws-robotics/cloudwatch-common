@@ -21,24 +21,47 @@
 namespace Aws {
 namespace FileManagement {
 
+enum PriorityLevel : uint {
+  LOWEST_PRIORITY,
+  LOW_PRIORITY,
+  MEDIUM_PRIORITY,
+  HIGH_PRIORITY,
+  HIGHEST_PRIORITY
+};
+
+struct PriorityOptions {
+  explicit PriorityOptions(PriorityLevel level = MEDIUM_PRIORITY) {
+    priority_level = level;
+  }
+  PriorityLevel priority_level;
+};
+
+template <typename T>
+class IQueueMonitor {
+public:
+  virtual ~IQueueMonitor() = default;
+  virtual void addQueue(std::shared_ptr<ObservedQueue<T>>, PriorityOptions) = 0;
+};
+
 /**
  * Manage multiple queue's and their priorities.
  * Exposes a dequeue API which enforces the desired priorities and returns the data with the highest priority.
  *
  * @tparam T type of data in the queues.
  */
-template<typename T>
-class QueueMonitor : public MultiStatusConditionMonitor {
+template <typename T>
+class QueueMonitor :
+  public IQueueMonitor<T>,
+  public MultiStatusConditionMonitor
+{
 public:
   QueueMonitor() = default;
   virtual ~QueueMonitor() = default;
 
-  /**
-   * Add a queue to the queue monitor.
-   *
-   * @param observed_queue
-   */
-  inline void addQueue(std::shared_ptr<ObservedQueue<T>> observed_queue) {
+  inline void addQueue(
+    std::shared_ptr<ObservedQueue<T>> observed_queue,
+    PriorityOptions priority_options) override
+  {
     auto status_monitor = std::make_shared<StatusMonitor>();
     addStatusMonitor(status_monitor);
     observed_queue->setStatusMonitor(status_monitor);
