@@ -19,7 +19,7 @@ using namespace Aws::FileManagement;
 void StatusMonitor::setStatus(const Status &status) {
   status_ = status;
   if (multi_status_cond_) {
-    multi_status_cond_->setStatus(status);
+    multi_status_cond_->setStatus(status, this);
   }
 }
 
@@ -44,24 +44,23 @@ void MultiStatusConditionMonitor::addStatusMonitor(
 {
   if (status_monitor) {
     status_monitor->setStatusObserver(this);
-    status_monitors_.push_back(status_monitor);
+    status_monitors_[(status_monitor.get())] = mask_factory_.getNewMask();
   }
 }
 
 void MultiStatusConditionMonitor::setStatus(
-  const Status &status) {
+  const Status &status, StatusMonitor *status_monitor) {
+  if (status == Status::AVAILABLE) {
+    mask_ |= status_monitors_[status_monitor];
+  } else {
+    mask_ &= ~status_monitors_[status_monitor];
+  }
   if (hasWork()) {
-    std::unique_lock<std::mutex> lck(idle_mutex_);
+    std::lock_guard<std::mutex> lck(idle_mutex_);
     work_condition_.notify_one();
   }
 }
 
 bool MultiStatusConditionMonitor::hasWork() {
-  return (std::accumulate(
-    status_monitors_.begin(),
-    status_monitors_.end(),
-    !status_monitors_.empty(),
-    [](bool amount, const std::shared_ptr<StatusMonitor> statusMonitor) -> bool {
-      return amount && statusMonitor->getStatus();
-    }));
+  return static_cast<bool>(mask_factory_.getTotalMask() & mask_);
 }

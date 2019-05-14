@@ -89,21 +89,15 @@ protected:
    * @return True if any of the status monitors are enabled.
    */
   inline bool hasWork() override {
-    return (std::accumulate(
-        status_monitors_.begin(),
-        status_monitors_.end(),
-        false,
-        [](bool amount, const std::shared_ptr<StatusMonitor> statusMonitor) -> bool {
-          return amount || statusMonitor->getStatus();
-        }));
+    return static_cast<bool>(mask_);
   }
-private:
 
+private:
   using QueuePriorityPair = std::pair<std::shared_ptr<ObservedQueue<T>>, PriorityOptions>;
   /**
    * Vector of managed shared queues.
    */
-  std::vector<QueuePriorityPair> queues_;
+  std::vector<std::shared_ptr<ObservedQueue<T>>> queues_;
 };
 
 }  // namespace FileManagement

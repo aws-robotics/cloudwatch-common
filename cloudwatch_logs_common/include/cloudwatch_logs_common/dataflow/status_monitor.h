@@ -15,9 +15,11 @@
 
 #pragma once
 
+#include <atomic>
 #include <vector>
 #include <mutex>              // std::mutex, std::unique_lock
 #include <condition_variable> // std::condition_variable
+#include <unordered_map>
 
 namespace Aws {
 namespace FileManagement {
@@ -52,6 +54,33 @@ private:
   MultiStatusConditionMonitor *multi_status_cond_ = nullptr;
 };
 
+class MaskFactory {
+public:
+  uint64_t getNewMask() {
+    uint64_t current_mask = 0, new_mask;
+    short shift = 0;
+    while (current_mask == 0) {
+      new_mask = (uint64_t) 1 << shift;
+      current_mask = !(collective_mask_ & new_mask) ? new_mask : 0;
+      if (shift > 63) {
+        throw "No more masks available";
+      }
+    }
+    collective_mask_ |= current_mask;
+    return current_mask;
+  }
+
+  void removeMask(uint64_t mask) {
+    collective_mask_ &= ~mask;
+  }
+
+  uint64_t getTotalMask() const {
+    return collective_mask_;
+  }
+private:
+  uint64_t collective_mask_;
+};
+
 /**
  * Multi Status Condition Monitor listens to N StatusMonitors and determines whether to trigger wait for work
  * based on the hasWork() function.
@@ -61,10 +90,13 @@ public:
   void waitForWork();
   std::cv_status waitForWork(const std::chrono::milliseconds &duration);
   void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor);
-  void setStatus(const Status &status);
 protected:
+  friend StatusMonitor;
+  virtual void setStatus(const Status &status, StatusMonitor *status_monitor);
   virtual bool hasWork();
-  std::vector<std::shared_ptr<StatusMonitor>> status_monitors_;
+  MaskFactory mask_factory_;
+  std::atomic<uint64_t> mask_;
+  std::unordered_map<StatusMonitor*, uint64_t> status_monitors_;
   std::mutex idle_mutex_;
   std::condition_variable work_condition_;
 };
