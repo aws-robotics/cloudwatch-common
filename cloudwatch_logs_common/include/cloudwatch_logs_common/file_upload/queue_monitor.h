@@ -38,7 +38,7 @@ public:
    *
    * @param observed_queue
    */
-  inline void add_queue(std::shared_ptr<ObservedQueue<T>> observed_queue) {
+  inline void addQueue(std::shared_ptr<ObservedQueue<T>> observed_queue) {
     auto status_monitor = std::make_shared<StatusMonitor>();
     addStatusMonitor(status_monitor);
     observed_queue->setStatusMonitor(status_monitor);

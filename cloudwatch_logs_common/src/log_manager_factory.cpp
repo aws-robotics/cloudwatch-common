@@ -51,7 +51,7 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
           static_cast<std::shared_ptr<CloudWatchLogs::Utils::FileManager<LogType>>>(file_manager));
   file_upload_manager->addStatusMonitor(network_monitor);
   publisher->SetQueueMonitor(queue_monitor);
-  queue_monitor->add_queue(file_upload_manager->getObservedQueue());
+  queue_monitor->addQueue(file_upload_manager->getObservedQueue());
   if (CW_LOGS_SUCCEEDED != publisher->StartPublisherThread()) {
     AWS_LOG_FATAL(
       __func__,

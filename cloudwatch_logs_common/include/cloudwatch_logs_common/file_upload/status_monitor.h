@@ -59,6 +59,7 @@ private:
 class MultiStatusConditionMonitor {
 public:
   void waitForWork();
+  std::cv_status waitForWork(const std::chrono::milliseconds &duration);
   void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor);
   void setStatus(const Status &status);
 protected:
