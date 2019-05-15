@@ -23,10 +23,10 @@
 #include <gmock/gmock.h>
 #include <aws/logs/model/InputLogEvent.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/utils/file_manager_strategy.h>
+#include <cloudwatch_logs_common/file_upload/file_manager_strategy.h>
 
 using namespace Aws::CloudWatchLogs;
-using namespace Aws::CloudWatchLogs::Utils;
+using namespace Aws::FileManagement;
 
 class FileManagerStrategyTest : public ::testing::Test {
 public:
@@ -53,11 +53,13 @@ TEST_F(FileManagerStrategyTest, initializeWorks) {
 }
 
 TEST_F(FileManagerStrategyTest, discoverStoredFiles) {
+  const std::string file_name = "/tmp/test_file.cwlog";
+  std::ofstream write_stream(file_name);
+  std::string test_data = "Some test log";
+  write_stream << test_data << std::endl;
+  write_stream.close();
   FileManagerStrategy file_manager_strategy;
-  const std::string file_name = "test_file.cwlog";
-  std::ofstream
-  file_manager_strategy.discoverStoredFiles();
-  const std::string stored_file = file_manager_strategy.getFileToRead();
-  EXPECT_EQ(file_name, stored_file);
-
+  file_manager_strategy.initialize();
+  const bool is_data_available = file_manager_strategy.isDataAvailable();
+  EXPECT_EQ(is_data_available, true);
 }

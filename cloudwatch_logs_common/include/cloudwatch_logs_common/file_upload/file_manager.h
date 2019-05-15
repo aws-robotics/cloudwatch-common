@@ -33,7 +33,7 @@ class FileObject {
 public:
   T batch_data;
   size_t batch_size;
-  FileInfo file_info;
+  std::list<DataToken> data_tokens;
 };
 
 enum UploadStatus {
@@ -96,12 +96,12 @@ public:
    * @param data [out] to fill with info
    * @return FileInfo meta info
    */
-  FileInfo read(std::string &data) {
-    auto file_info = file_manager_strategy_->read(data);
-    if (file_info.file_status == END_OF_READ) {
-      file_status_monitor_->setStatus(DataFlow::Status::UNAVAILABLE);
-    }
-    return file_info;
+  inline DataToken read(std::string &data) {
+    DataToken token = file_manager_strategy_->read(data);
+//    if (file_info.file_status == END_OF_READ) {
+//      file_status_monitor_->setStatus(Aws::FileManagement::Status::UNAVAILABLE);
+//    }
+    return token;
   }
 
   /**
@@ -125,12 +125,7 @@ public:
                    "Total logs uploaded: %i",
                    total_logs_uploaded_);
       // Delete file if empty log_messages.file_location.
-      if (END_OF_READ == log_messages.file_info.file_status) {
-        AWS_LOG_INFO(__func__,
-                     "Found end of file, deleting file: %s",
-                     log_messages.file_info.file_name);
-        file_manager_strategy_->deleteFile(log_messages.file_info.file_name);
-      }
+      file_manager_strategy_->resolve(log_messages.data_tokens);
     } else {
       // Set last read location for this file.
     }
