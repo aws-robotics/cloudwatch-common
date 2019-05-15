@@ -49,19 +49,16 @@ protected:
  */
 TEST_F(FileManagerTest, file_manager_write_on_fail) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>();
-  file_manager_strategy->rotateActiveFile();
   LogFileManager file_manager(file_manager_strategy);
   LogType log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
   input_event.SetTimestamp(0);
   input_event.SetMessage("Hello my name is foo");
   log_data.push_back(input_event);
-  file_manager.uploadCompleteStatus(Aws::FileManagement::FAIL, log_data);
-  std::string fileName = file_manager_strategy->getFileToRead();
+  file_manager.uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_FAILED, log_data);
   std::string line;
   file_manager_strategy->read(line);
   EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
-  file_manager_strategy->deleteFile(fileName);
 }
 
 /**
@@ -69,7 +66,6 @@ TEST_F(FileManagerTest, file_manager_write_on_fail) {
  */
 TEST_F(FileManagerTest, file_manager_no_write_on_success) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>();
-  file_manager_strategy->rotateActiveFile();
   LogFileManager file_manager(file_manager_strategy);
   LogType log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
