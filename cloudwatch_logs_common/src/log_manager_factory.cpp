@@ -21,6 +21,7 @@
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_management_factory.h>
+#include <cloudwatch_logs_common/dataflow/dataflow.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
@@ -49,8 +50,11 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
   auto file_upload_manager =
       Aws::FileManagement::createFileUploadManager(
           static_cast<std::shared_ptr<CloudWatchLogs::Utils::FileManager<LogType>>>(file_manager));
+
   file_upload_manager->addStatusMonitor(network_monitor);
-  file_upload_manager->subscribe(*queue_monitor, PriorityOptions());
+  // Create an observed queue to trigger a publish when data is available
+  auto observed_queue =
+      std::make_shared<TaskObservedQueue<LogType>>();
 
   if (CW_LOGS_SUCCEEDED != publisher->StartPublisherThread()) {
     AWS_LOG_FATAL(
@@ -58,8 +62,14 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
       "Log publisher failed to start a publisher thread, the publisher thread is set to null");
     return nullptr;
   }
-  file_upload_manager->start();
+  *file_upload_manager >> observed_queue >> LOWEST_PRIORITY >> queue_monitor;
+
+  // @todo(rddesmond) enable the following
+  //  *publisher >> limited_queue >> HIGHEST_PRIORITY >> queue_monitor;
+  // queue_monitor >> log_uploader
   auto log_manager = std::make_shared<LogManager>(publisher);
   log_manager->SetFileUploadManager(file_upload_manager);
+
+  file_upload_manager->start();
   return log_manager;
 }

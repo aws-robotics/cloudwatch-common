@@ -14,6 +14,8 @@
  */
 
 
+#include <tuple>
+
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
@@ -21,17 +23,25 @@
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_management_factory.h>
 #include <cloudwatch_logs_common/utils/log_file_manager.h>
+#include <cloudwatch_logs_common/dataflow/dataflow.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
 
+
 TEST(test_file_upload_manager, create_file_upload_manager) {
   auto file_manager = std::make_shared<LogFileManager>();
-  auto file_upload_manager = createFileUploadManager(
+  std::shared_ptr<FileUploadManager<LogType>> file_upload_manager = createFileUploadManager(
       static_cast<std::shared_ptr<FileManager<LogType>>>(file_manager));
   auto queue_monitor = std::make_shared<QueueMonitor<TaskPtr<LogType>>>();
-  file_upload_manager->subscribe(*queue_monitor, PriorityOptions());
+  // Create an observed queue to trigger a publish when data is available
+  std::shared_ptr<TaskObservedQueue<LogType>> observed_queue =
+      std::make_shared<TaskObservedQueue<LogType>>();
+
+  // Create the pipeline
+  *file_upload_manager >> observed_queue >> LOWEST_PRIORITY >> queue_monitor;
+
   LogType log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
   input_event.SetTimestamp(0);
@@ -40,7 +50,8 @@ TEST(test_file_upload_manager, create_file_upload_manager) {
   file_manager->uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_FAILED, log_data);
   std::thread thread (&FileUploadManager<LogType>::run, file_upload_manager);
   queue_monitor->waitForWork();
-  auto task = queue_monitor->dequeue();
+  TaskPtr<LogType> task;
+  queue_monitor->dequeue(task);
   auto data = task->getBatchData();
   task->onComplete(UploadStatus::SUCCESS);
   thread.join();

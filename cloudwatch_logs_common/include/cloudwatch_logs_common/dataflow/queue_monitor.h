@@ -17,30 +17,16 @@
 #include <vector>
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
 #include <cloudwatch_logs_common/dataflow/observed_queue.h>
+#include <cloudwatch_logs_common/dataflow/pipeline.h>
 
 namespace Aws {
 namespace FileManagement {
 
-enum PriorityLevel : uint {
-  LOWEST_PRIORITY,
-  LOW_PRIORITY,
-  MEDIUM_PRIORITY,
-  HIGH_PRIORITY,
-  HIGHEST_PRIORITY
-};
-
-struct PriorityOptions {
-  explicit PriorityOptions(PriorityLevel level = MEDIUM_PRIORITY) {
-    priority_level = level;
-  }
-  PriorityLevel priority_level;
-};
-
 template <typename T>
-class IQueueMonitor {
+class QueueDemux {
 public:
-  virtual ~IQueueMonitor() = default;
-  virtual void addQueue(std::shared_ptr<ObservedQueue<T>>, PriorityOptions) = 0;
+  virtual ~QueueDemux() = default;
+  virtual void addSink(std::shared_ptr<ObservedQueue<T>>, PriorityOptions) = 0;
 };
 
 /**
@@ -51,14 +37,15 @@ public:
  */
 template <typename T>
 class QueueMonitor :
-  public IQueueMonitor<T>,
-  public MultiStatusConditionMonitor
+  public QueueDemux<T>,
+  public MultiStatusConditionMonitor,
+  public Source<T>
 {
 public:
   QueueMonitor() = default;
   virtual ~QueueMonitor() = default;
 
-  inline void addQueue(
+  inline void addSink(
     std::shared_ptr<ObservedQueue<T>> observed_queue,
     PriorityOptions priority_options) override
   {
@@ -73,15 +60,15 @@ public:
    *
    * @return the dequeue'd data
    */
-  inline T dequeue() {
-    T data;
+  inline bool dequeue(T& data) override {
+    bool is_dequeued = false;
     for (auto &queue : queues_)
     {
-      if (!queue->empty()) {
-        data = queue->dequeue();
+      if (queue->dequeue(data)) {
+        break;
       }
     }
-    return data;
+    return is_dequeued;
   }
 
 protected:

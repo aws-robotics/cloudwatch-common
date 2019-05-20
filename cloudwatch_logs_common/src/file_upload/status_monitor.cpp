@@ -23,14 +23,21 @@ void StatusMonitor::setStatus(const Status &status) {
   }
 }
 
-void MultiStatusConditionMonitor::waitForWork() {
+void ThreadMonitor::notify() {
+  if (hasWork()) {
+    std::lock_guard<std::mutex> lck(idle_mutex_);
+    work_condition_.notify_one();
+  }
+}
+
+void ThreadMonitor::waitForWork() {
   if (!hasWork()) {
     std::unique_lock<std::mutex> lck(idle_mutex_);
     work_condition_.wait(lck);
   }
 }
 
-std::cv_status MultiStatusConditionMonitor::waitForWork(const std::chrono::milliseconds &duration) {
+std::cv_status ThreadMonitor::waitForWork(const std::chrono::milliseconds &duration) {
   std::cv_status status = std::cv_status::no_timeout;
   if (!hasWork()) {
     std::unique_lock<std::mutex> lck(idle_mutex_);
@@ -55,10 +62,7 @@ void MultiStatusConditionMonitor::setStatus(
   } else {
     mask_ &= ~status_monitors_[status_monitor];
   }
-  if (hasWork()) {
-    std::lock_guard<std::mutex> lck(idle_mutex_);
-    work_condition_.notify_one();
-  }
+  notify();
 }
 
 bool MultiStatusConditionMonitor::hasWork() {

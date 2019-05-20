@@ -108,6 +108,9 @@ using FileUploadTaskPtr = std::shared_ptr<FileUploadTask<T>>;
 
 template<typename T>
 using TaskObservedQueue = ObservedQueue<TaskPtr<T>>;
+
+template<typename T>
+using TaskSink = Sink<TaskPtr<T>>;
 //----------------------------------------//
 
 }  // namespace FileManagement

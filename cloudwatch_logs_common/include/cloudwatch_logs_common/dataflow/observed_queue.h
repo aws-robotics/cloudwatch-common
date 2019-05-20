@@ -19,6 +19,8 @@
 #include <functional>
 #include <mutex>
 
+#include <cloudwatch_logs_common/dataflow/sink.h>
+#include <cloudwatch_logs_common/dataflow/source.h>
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
 
 namespace Aws {
@@ -27,11 +29,11 @@ namespace FileManagement {
 template<
   class T,
   class Allocator = std::allocator<T>>
-class IObservedQueue {
+class IObservedQueue:
+  public Sink<T>,
+  public Source<T>
+{
 public:
-  virtual void enqueue(T&& value) = 0;
-  virtual void enqueue(T& value) = 0;
-  virtual T dequeue() = 0;
   virtual bool empty() = 0;
   virtual size_t size() = 0;
   virtual void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
@@ -45,7 +47,8 @@ public:
 template<
   class T,
   class Allocator = std::allocator<T>>
-class ObservedQueue : public IObservedQueue<T, Allocator> {
+class ObservedQueue :
+  public IObservedQueue<T, Allocator> {
 public:
 
   virtual ~ObservedQueue() = default;
@@ -64,9 +67,10 @@ public:
    *
    * @param value to enqueue
    */
-  inline void enqueue(T&& value) override {
+  inline bool enqueue(T&& value) override {
     dequeue_.push_back(value);
     notifyMonitor(AVAILABLE);
+    return true;
   }
 
   /**
@@ -74,9 +78,24 @@ public:
    *
    * @param value to enqueue
    */
-  inline void enqueue(T& value) override {
+  inline bool enqueue(T& value) override {
     dequeue_.push_back(value);
     notifyMonitor(AVAILABLE);
+    return true;
+  }
+
+  inline bool tryEnqueue(
+      T& value,
+      const std::chrono::microseconds &duration) override
+  {
+    return enqueue(value);
+  }
+
+  inline bool tryEnqueue(
+      T&& value,
+      const std::chrono::microseconds &duration) override
+  {
+    return enqueue(value);
   }
 
   /**
@@ -84,13 +103,17 @@ public:
    *
    * @return the front of the dequeue
    */
-  inline T dequeue() override {
-    T front = dequeue_.front();
-    dequeue_.pop_front();
-    if (dequeue_.empty()) {
-      notifyMonitor(UNAVAILABLE);
+  inline bool dequeue(T& data) override {
+    bool is_data = false;
+    if (!dequeue_.empty()) {
+      data = dequeue_.front();
+      dequeue_.pop_front();
+      is_data = true;
+      if (dequeue_.empty()) {
+        notifyMonitor(UNAVAILABLE);
+      }
     }
-    return front;
+    return is_data;
   }
 
   /**
@@ -155,22 +178,27 @@ public:
 
   virtual ~ObservedBlockingQueue() = default;
   /**
-   * Blocking call
-   *
    * Enqueue data and notify the observer of data available.
    *
    * @param value to enqueue
    */
-  inline void enqueue(T&& value) override {
-    enqueueOnCondition(
-      value,
-      std::bind(&ObservedBlockingQueue::wait, std::ref(condition_variable_), std::placeholders::_1));
+  inline bool enqueue(T&& value) override
+  {
+    bool is_queued = false;
+    if (OQ::size() >= max_queue_size_) {
+      OQ::enqueue(value);
+      is_queued = true;
+    }
+    return is_queued;
   }
 
-  inline void enqueue(T& value) override {
-    enqueueOnCondition(
-      value,
-      std::bind(&ObservedBlockingQueue::wait, std::ref(condition_variable_), std::placeholders::_1));
+  inline bool enqueue(T& value) override {
+    bool is_queued = false;
+    if (OQ::size() >= max_queue_size_) {
+      OQ::enqueue(value);
+      is_queued = true;
+    }
+    return is_queued;
   }
 
   /**
@@ -182,7 +210,7 @@ public:
    */
   inline bool tryEnqueue(
     T& value,
-    const std::chrono::microseconds &duration)
+    const std::chrono::microseconds &duration) override
   {
     std::cv_status (std::condition_variable::*wf)(std::unique_lock<std::mutex>&, const std::chrono::microseconds&);
     wf = &std::condition_variable::wait_for;
@@ -193,7 +221,7 @@ public:
 
   inline bool tryEnqueue(
       T&& value,
-      const std::chrono::microseconds &duration)
+      const std::chrono::microseconds &duration) override
   {
     std::cv_status (std::condition_variable::*wf)(std::unique_lock<std::mutex>&, const std::chrono::microseconds&);
     wf = &std::condition_variable::wait_for;
@@ -207,11 +235,13 @@ public:
    *
    * @return the front of the dequeue
    */
-  inline T dequeue() override {
-    auto data = OQ::dequeue();
-    std::unique_lock<std::mutex> lck(enqueue_mutex_);
-    condition_variable_.notify_one();
-    return data;
+  inline bool dequeue(T& data) override {
+    auto is_retrieved = OQ::dequeue(data);
+    if (is_retrieved) {
+      std::unique_lock<std::mutex> lck(enqueue_mutex_);
+      condition_variable_.notify_one();
+    }
+    return is_retrieved;
   }
 
 private:
@@ -238,7 +268,7 @@ private:
    * @param wait_func to wait for availability
    * @return true if the value was enqueued
    */
-  bool enqueueOnCondition(T& value,
+  inline bool enqueueOnCondition(T& value,
     const WaitFunc &wait_func)
   {
     bool can_enqueue = true;

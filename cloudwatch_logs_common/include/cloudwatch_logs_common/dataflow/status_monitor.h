@@ -42,14 +42,14 @@ public:
   virtual ~StatusMonitor() = default;
   void setStatus(const Status &status);
 
-  inline void setStatusObserver(MultiStatusConditionMonitor *multi_status_cond) {
-    multi_status_cond_ = multi_status_cond;
-  }
-
   inline Status getStatus() const {
     return status_;
   }
 private:
+  friend MultiStatusConditionMonitor;
+  inline void setStatusObserver(MultiStatusConditionMonitor *multi_status_cond) {
+    multi_status_cond_ = multi_status_cond;
+  }
   Status status_ = UNAVAILABLE;
   MultiStatusConditionMonitor *multi_status_cond_ = nullptr;
 };
@@ -62,7 +62,7 @@ public:
     while (current_mask == 0) {
       new_mask = (uint64_t) 1 << shift;
       current_mask = !(collective_mask_ & new_mask) ? new_mask : 0;
-      if (shift > 63) {
+      if (shift > sizeof(uint64_t)) {
         throw "No more masks available";
       }
     }
@@ -81,24 +81,30 @@ private:
   uint64_t collective_mask_;
 };
 
+class ThreadMonitor {
+public:
+  void waitForWork();
+  std::cv_status waitForWork(const std::chrono::milliseconds &duration);
+  void notify();
+private:
+  virtual bool hasWork() = 0;
+  std::mutex idle_mutex_;
+  std::condition_variable work_condition_;
+};
 /**
  * Multi Status Condition Monitor listens to N StatusMonitors and determines whether to trigger wait for work
  * based on the hasWork() function.
  */
-class MultiStatusConditionMonitor {
+class MultiStatusConditionMonitor : public ThreadMonitor {
 public:
-  void waitForWork();
-  std::cv_status waitForWork(const std::chrono::milliseconds &duration);
   void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor);
 protected:
   friend StatusMonitor;
   virtual void setStatus(const Status &status, StatusMonitor *status_monitor);
-  virtual bool hasWork();
+  bool hasWork() override;
   MaskFactory mask_factory_;
   std::atomic<uint64_t> mask_;
   std::unordered_map<StatusMonitor*, uint64_t> status_monitors_;
-  std::mutex idle_mutex_;
-  std::condition_variable work_condition_;
 };
 
 }  // namespace FileManagement

@@ -25,6 +25,7 @@ namespace Aws {
 namespace FileManagement {
 
 static const FileManagerOptions kDefaultFileManagerOptions{50, 5};
+
 /**
  * Create a file upload manager complete with a file status monitor attached to the file_manager,
  * and a task based queue.
@@ -37,6 +38,7 @@ template<typename T>
 std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
   std::shared_ptr<FileManager<T>> file_manager, FileManagerOptions file_manager_options = kDefaultFileManagerOptions)
   {
+
   // File Management system
   // Create a file monitor to get notified if a file is ready to be read
   auto file_monitor =
@@ -50,16 +52,11 @@ std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
   // Add the file monitor to the file manager to get notifications
   file_manager->addFileStatusMonitor(file_monitor);
 
-  // Create an observed queue to trigger a publish when data is available
-  auto observed_queue =
-      std::make_shared<TaskObservedQueue<T>>();
-
   // Create a file upload manager to handle uploading a file.
   auto file_upload_manager =
       std::make_shared<Aws::FileManagement::FileUploadManager<T>>(
           multi_status_condition_monitor,
           file_manager,
-          observed_queue,
           file_manager_options.batch_size);
   return file_upload_manager;
 }

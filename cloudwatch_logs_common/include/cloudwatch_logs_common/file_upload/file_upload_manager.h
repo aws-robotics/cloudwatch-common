@@ -20,6 +20,7 @@
 
 #include <aws/core/utils/logging/LogMacros.h>
 
+#include <cloudwatch_logs_common/dataflow/pipeline.h>
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
 #include <cloudwatch_logs_common/dataflow/observed_queue.h>
 #include <cloudwatch_logs_common/dataflow/queue_monitor.h>
@@ -50,7 +51,8 @@ struct FileManagerOptions {
  * @tparam T
  */
 template<typename T>
-class FileUploadManager {
+class FileUploadManager :
+  public OutputStage<TaskPtr<T>> {
 public:
   /**
    * Create a file upload manager.
@@ -63,12 +65,10 @@ public:
   explicit FileUploadManager(
     std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor,
     std::shared_ptr<FileManager<T>> file_manager,
-    std::shared_ptr<TaskObservedQueue<T>> observed_queue,
     size_t batch_size)
   {
     status_condition_monitor_ = status_condition_monitor;
     file_manager_ = file_manager;
-    observed_queue_ = observed_queue;
     batch_size_ = batch_size;
   }
 
@@ -87,15 +87,8 @@ public:
    *
    * @param status_monitor to add
    */
-  void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor) {
+  inline void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor) {
     status_condition_monitor_->addStatusMonitor(status_monitor);
-  }
-
-  void subscribe(
-    IQueueMonitor<TaskPtr<T>> &queue_monitor,
-    PriorityOptions options = PriorityOptions())
-  {
-    queue_monitor.addQueue(observed_queue_, options);
   }
 
   inline void startRun() {
@@ -124,7 +117,9 @@ public:
     auto file_upload_task =
         std::make_shared<FileUploadTaskAsync<T>>(file_object);
     auto future_result = file_upload_task->getResult();
-    observed_queue_->enqueue(file_upload_task);
+    if (OutputStage<TaskPtr<T>>::getSink()) {
+      OutputStage<TaskPtr<T>>::getSink()->enqueue(file_upload_task);
+    }
     future_result.wait();
     if (future_result.valid()) {
       AWS_LOG_INFO(__func__, "Future is valid, call file upload complete status.")
@@ -176,11 +171,6 @@ private:
    * The file manager to read data from.
    */
   std::shared_ptr<FileManager<T>> file_manager_;
-
-  /**
-   * The queue which to add tasks to.
-   */
-  std::shared_ptr<TaskObservedQueue<T>> observed_queue_;
 };
 
 }  // namespace FileManagement
