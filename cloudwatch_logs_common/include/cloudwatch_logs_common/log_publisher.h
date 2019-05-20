@@ -111,8 +111,8 @@ public:
       std::shared_ptr<Aws::FileManagement::StatusMonitor> &network_monitor);
 
   using Task = Aws::FileManagement::Task<LogType>;
-  using LogTaskQueueMonitor = std::shared_ptr<Aws::FileManagement::QueueMonitor<std::shared_ptr<Task>>>;
-  virtual inline void SetQueueMonitor(LogTaskQueueMonitor &queue_monitor) {
+  using LogTaskSource = std::shared_ptr<Aws::FileManagement::Source<std::shared_ptr<Task>>>;
+  virtual inline void SetLogTaskSource(LogTaskSource &queue_monitor) {
     queue_monitor_ = queue_monitor;
   }
 
@@ -127,7 +127,7 @@ private:
 
   FileManagement::UploadStatusFunction<ROSCloudWatchLogsErrors, LogType> upload_status_function_;
   std::shared_ptr<Utils::LogFileManager> log_file_manager_ = nullptr;
-  LogTaskQueueMonitor queue_monitor_;
+  LogTaskSource queue_monitor_;
   std::shared_ptr<Aws::FileManagement::StatusMonitor> network_monitor_ = nullptr;
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
   std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cloudwatch_client_;

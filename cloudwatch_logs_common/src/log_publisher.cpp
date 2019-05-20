@@ -182,8 +182,9 @@ void LogPublisher::SendLogFiles(Aws::String & next_token) {
   if (queue_monitor_) {
     AWS_LOG_INFO(__func__,
                  "Attempting to get data off queue");
-    auto data = queue_monitor_->dequeue();
-    if (data) {
+    std::shared_ptr<Task> data;
+    bool is_taken = queue_monitor_->dequeue(data);
+    if (is_taken) {
       AWS_LOG_INFO(__func__,
                     "Attempting to send log file data");
       LogType batch_data = data->getBatchData();

@@ -17,6 +17,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#include <cloudwatch_logs_common/dataflow/sink.h>
+#include <cloudwatch_logs_common/dataflow/source.h>
 #include <cloudwatch_logs_common/dataflow/observed_queue.h>
 
 using namespace Aws::FileManagement;
@@ -28,7 +30,9 @@ void test_enqueue_dequeue(IObservedQueue<std::string> &observed_queue) {
   EXPECT_EQ(Status::UNAVAILABLE, status_monitor->getStatus());
   observed_queue.enqueue("hello");
   EXPECT_EQ(Status::AVAILABLE, status_monitor->getStatus());
-  EXPECT_EQ("hello", observed_queue.dequeue());
+  std::string data;
+  ASSERT_TRUE(observed_queue.dequeue(data));
+  EXPECT_EQ("hello", data);
   EXPECT_TRUE(observed_queue.empty());
   EXPECT_EQ(Status::UNAVAILABLE, status_monitor->getStatus());
 }
@@ -51,6 +55,8 @@ TEST(blocking_queue_test, enqueue_blocked_dequeue_test) {
   EXPECT_EQ(Status::UNAVAILABLE, status_monitor->getStatus());
   EXPECT_TRUE(observed_queue.tryEnqueue("hello", std::chrono::seconds(0)));
   EXPECT_FALSE(observed_queue.tryEnqueue("fail", std::chrono::seconds(0)));
-  EXPECT_EQ("hello", observed_queue.dequeue());
+  std::string data;
+  ASSERT_TRUE(observed_queue.dequeue(data));
+  EXPECT_EQ("hello", data);
   EXPECT_TRUE(observed_queue.tryEnqueue("hello", std::chrono::seconds(0)));
 }
