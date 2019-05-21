@@ -46,7 +46,7 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
   publisher->SetNetworkMonitor(network_monitor);
 
   auto queue_monitor =
-      std::make_shared<Aws::FileManagement::QueueMonitor<std::shared_ptr<Task<LogType>>>>();
+      std::make_shared<Aws::FileManagement::QueueMonitor<TaskPtr<LogType>>>();
   auto file_upload_manager =
       Aws::FileManagement::createFileUploadManager<LogType>(file_manager);
 

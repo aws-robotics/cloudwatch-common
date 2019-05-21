@@ -34,10 +34,11 @@ class IObservedQueue:
   public Source<T>
 {
 public:
-  virtual bool empty() = 0;
-  virtual size_t size() = 0;
+  virtual bool empty() const = 0;
+  virtual size_t size() const = 0;
   virtual void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
 };
+
 /**
  * An observed queue is a dequeue wrapper which notifies an observer when a task is added.
  *
@@ -119,14 +120,14 @@ public:
   /**
    * @return true if the queue is empty
    */
-  inline bool empty() override {
+  inline bool empty() const override {
     return dequeue_.empty();
   }
 
   /**
    * @return the size of the queue
    */
-  inline size_t size() override {
+  inline size_t size() const override {
     return dequeue_.size();
   }
 
@@ -185,7 +186,7 @@ public:
   inline bool enqueue(T&& value) override
   {
     bool is_queued = false;
-    if (OQ::size() >= max_queue_size_) {
+    if (OQ::size() <= max_queue_size_) {
       OQ::enqueue(value);
       is_queued = true;
     }
@@ -194,7 +195,7 @@ public:
 
   inline bool enqueue(T& value) override {
     bool is_queued = false;
-    if (OQ::size() >= max_queue_size_) {
+    if (OQ::size() <= max_queue_size_) {
       OQ::enqueue(value);
       is_queued = true;
     }
@@ -261,6 +262,7 @@ private:
     condition_variable.wait(lock);
     return std::cv_status::no_timeout;
   }
+
   /**
    * Enqueue on the condition variable.
    *

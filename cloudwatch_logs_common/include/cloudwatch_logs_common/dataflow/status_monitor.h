@@ -60,7 +60,7 @@ public:
     uint64_t current_mask = 0, new_mask;
     short shift = 0;
     while (current_mask == 0) {
-      new_mask = (uint64_t) 1 << shift;
+      new_mask = (uint64_t) 1 << shift++;
       current_mask = !(collective_mask_ & new_mask) ? new_mask : 0;
       if (shift > sizeof(uint64_t)) {
         throw "No more masks available";
@@ -78,7 +78,7 @@ public:
     return collective_mask_;
   }
 private:
-  uint64_t collective_mask_;
+  uint64_t collective_mask_ = 0;
 };
 
 class ThreadMonitor {

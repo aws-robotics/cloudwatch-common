@@ -1,0 +1,98 @@
+/*
+ * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *  http://aws.amazon.com/apache2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
+
+#include <cloudwatch_logs_common/dataflow/observed_queue.h>
+#include <cloudwatch_logs_common/dataflow/queue_monitor.h>
+
+using namespace Aws::FileManagement;
+using namespace ::testing;
+
+class MockObservedQueue :
+  public IObservedQueue<std::string>
+{
+public:
+  /**
+   * Set the observer for the queue.
+   *
+   * @param status_monitor
+   */
+  inline void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
+    status_monitor_ = status_monitor;
+  }
+  MOCK_CONST_METHOD0(size, size_t (void));
+  MOCK_CONST_METHOD0(empty, bool (void));
+  MOCK_METHOD1(dequeue, bool (std::string& data));
+  MOCK_METHOD1(enqueue, bool (std::string& data));
+  MOCK_METHOD2(tryEnqueue,
+    bool (std::string& data,
+    const std::chrono::microseconds &duration));
+  inline bool enqueue(std::string&& value) override {
+    return false;
+  }
+
+  inline bool tryEnqueue(
+      std::string&& value,
+      const std::chrono::microseconds &duration) override
+  {
+    return enqueue(value);
+  }
+
+ /**
+ * The status monitor observer.
+ */
+  std::shared_ptr<StatusMonitor> status_monitor_;
+
+};
+
+TEST(queue_demux_test, single_source_test)
+{
+  auto observed_queue = std::make_shared<MockObservedQueue>();
+  std::shared_ptr<StatusMonitor> monitor;
+  std::string actual = "test_string";
+  auto dequeue_func = [actual](std::string& data) -> bool {
+    data = actual;
+    return true;
+  };
+  EXPECT_CALL(*observed_queue, dequeue(_)).WillOnce(Invoke(dequeue_func));
+  QueueMonitor<std::string> queue_monitor;
+  queue_monitor.addSink(observed_queue, PriorityOptions());
+  std::string data;
+  EXPECT_TRUE(queue_monitor.dequeue(data));
+  EXPECT_EQ(actual, data);
+}
+
+TEST(queue_demux_test, multi_source_test)
+{
+  QueueMonitor<std::string> queue_monitor;
+  auto low_priority_queue = std::make_shared<StrictMock<MockObservedQueue>>();
+  queue_monitor.addSink(low_priority_queue, PriorityOptions(LOWEST_PRIORITY));
+
+  auto high_priority_observed_queue = std::make_shared<StrictMock<MockObservedQueue>>();
+  std::shared_ptr<StatusMonitor> monitor;
+  std::string actual = "test_string";
+  auto dequeue_func = [actual](std::string& data) -> bool {
+    data = actual;
+    return true;
+  };
+  EXPECT_CALL(*high_priority_observed_queue, dequeue(_)).WillOnce(Invoke(dequeue_func));
+  queue_monitor.addSink(high_priority_observed_queue, PriorityOptions(HIGHEST_PRIORITY));
+  std::string data;
+  EXPECT_TRUE(queue_monitor.dequeue(data));
+  EXPECT_EQ(actual, data);
+}
+
