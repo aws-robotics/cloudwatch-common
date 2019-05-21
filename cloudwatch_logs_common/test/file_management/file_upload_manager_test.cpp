@@ -32,8 +32,8 @@ using namespace Aws::FileManagement;
 
 TEST(test_file_upload_manager, create_file_upload_manager) {
   auto file_manager = std::make_shared<LogFileManager>();
-  std::shared_ptr<FileUploadManager<LogType>> file_upload_manager = createFileUploadManager(
-      static_cast<std::shared_ptr<FileManager<LogType>>>(file_manager));
+  std::shared_ptr<FileUploadManager<LogType>> file_upload_manager =
+      createFileUploadManager<LogType>(file_manager);
   auto queue_monitor = std::make_shared<QueueMonitor<TaskPtr<LogType>>>();
   // Create an observed queue to trigger a publish when data is available
   std::shared_ptr<TaskObservedQueue<LogType>> observed_queue =
