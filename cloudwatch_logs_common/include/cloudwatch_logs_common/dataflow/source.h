@@ -17,7 +17,7 @@
 
 
 namespace Aws {
-namespace FileManagement {
+namespace DataFlow {
 
 template <typename T>
 class InputStage;
@@ -28,5 +28,5 @@ class Source {
   virtual bool dequeue(T&) = 0;
 };
 
-}  // namespace FileManagement
+}  // namespace DataFlow
 }  // namespace Aws

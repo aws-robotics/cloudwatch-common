@@ -21,7 +21,7 @@
 #include <cloudwatch_logs_common/dataflow/source.h>
 #include <cloudwatch_logs_common/dataflow/observed_queue.h>
 
-using namespace Aws::FileManagement;
+using namespace Aws::DataFlow;
 
 void test_enqueue_dequeue(IObservedQueue<std::string> &observed_queue) {
   auto status_monitor = std::make_shared<StatusMonitor>();

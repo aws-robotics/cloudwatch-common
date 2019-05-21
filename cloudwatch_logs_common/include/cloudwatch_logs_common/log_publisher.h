@@ -111,7 +111,7 @@ public:
       std::shared_ptr<Aws::FileManagement::StatusMonitor> &network_monitor);
 
   using Task = Aws::FileManagement::Task<LogType>;
-  using LogTaskSource = std::shared_ptr<Aws::FileManagement::Source<std::shared_ptr<Task>>>;
+  using LogTaskSource = std::shared_ptr<Aws::DataFlow::Source<std::shared_ptr<Task>>>;
   virtual inline void SetLogTaskSource(LogTaskSource &queue_monitor) {
     queue_monitor_ = queue_monitor;
   }

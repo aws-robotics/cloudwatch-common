@@ -32,6 +32,9 @@
 namespace Aws {
 namespace FileManagement {
 
+using Aws::DataFlow::MultiStatusConditionMonitor;
+using Aws::DataFlow::OutputStage;
+
 struct FileManagerOptions {
 
   /**

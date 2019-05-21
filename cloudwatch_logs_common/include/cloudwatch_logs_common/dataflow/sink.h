@@ -18,7 +18,7 @@
 #include <chrono>
 
 namespace Aws {
-namespace FileManagement {
+namespace DataFlow {
 
 template<typename T>
 class Sink {
@@ -33,5 +33,5 @@ public:
     const std::chrono::microseconds &duration) = 0;
 };
 
-}  // namespace FileManagement
+}  // namespace DataFlow
 }  // namespace Aws

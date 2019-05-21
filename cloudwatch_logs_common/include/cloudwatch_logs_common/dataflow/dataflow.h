@@ -14,6 +14,7 @@
  */
 
 #pragma once
+
 #include <cloudwatch_logs_common/dataflow/pipeline.h>
 #include <cloudwatch_logs_common/dataflow/source.h>
 #include <cloudwatch_logs_common/dataflow/sink.h>
@@ -22,14 +23,13 @@
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
 
 namespace Aws {
-namespace FileManagement {
+namespace DataFlow {
 
 template<
     typename T,
     class O>
 typename std::enable_if<std::is_base_of<Sink<T>, O>::value, std::shared_ptr<O>>::type
 inline operator >> (OutputStage<T> &output_stage, std::shared_ptr<O> &sink) {
-  //static_assert(std::is_base_of<OutputStage<T>, I>::value, "Derived not derived from BaseClass");
   output_stage.setSink(sink);
   return sink;
 }
@@ -51,5 +51,5 @@ PriorityLevel level) {
 return std::make_tuple(observed_queue, PriorityOptions(level));
 }
 
-}  // namespace FileManagement
+}  // namespace DataFlow
 }  // namespace Aws
