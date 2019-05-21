@@ -21,7 +21,7 @@ namespace Aws {
 namespace FileManagement {
 
 enum PriorityLevel : uint {
-  LOWEST_PRIORITY,
+  LOWEST_PRIORITY = 0,
   LOW_PRIORITY,
   MEDIUM_PRIORITY,
   HIGH_PRIORITY,
@@ -33,6 +33,14 @@ struct PriorityOptions {
     priority_level = level;
   }
   PriorityLevel priority_level;
+
+  inline bool operator > (const PriorityOptions &other) const {
+    return priority_level > other.priority_level;
+  }
+
+  inline bool operator < (const PriorityOptions &other) const {
+    return priority_level < other.priority_level;
+  }
 };
 
 template <typename O>

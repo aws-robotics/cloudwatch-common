@@ -14,7 +14,9 @@
  */
 
 #pragma once
+
 #include <vector>
+
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
 #include <cloudwatch_logs_common/dataflow/observed_queue.h>
 #include <cloudwatch_logs_common/dataflow/pipeline.h>
@@ -26,7 +28,7 @@ template <typename T>
 class QueueDemux {
 public:
   virtual ~QueueDemux() = default;
-  virtual void addSink(std::shared_ptr<ObservedQueue<T>>, PriorityOptions) = 0;
+  virtual void addSink(std::shared_ptr<IObservedQueue<T>>, PriorityOptions) = 0;
 };
 
 /**
@@ -46,13 +48,14 @@ public:
   virtual ~QueueMonitor() = default;
 
   inline void addSink(
-    std::shared_ptr<ObservedQueue<T>> observed_queue,
+    std::shared_ptr<IObservedQueue<T>> observed_queue,
     PriorityOptions priority_options) override
   {
     auto status_monitor = std::make_shared<StatusMonitor>();
     addStatusMonitor(status_monitor);
     observed_queue->setStatusMonitor(status_monitor);
-    queues_.push_back(observed_queue);
+    priority_vector_.push_back(QueuePriorityPair(observed_queue, priority_options));
+    std::sort(priority_vector_.begin(), priority_vector_.end(), std::greater<QueuePriorityPair>());
   }
 
   /**
@@ -62,9 +65,10 @@ public:
    */
   inline bool dequeue(T& data) override {
     bool is_dequeued = false;
-    for (auto &queue : queues_)
+    for (auto &queue : priority_vector_)
     {
-      if (queue->dequeue(data)) {
+      if (queue.observed_queue->dequeue(data)) {
+        is_dequeued = true;
         break;
       }
     }
@@ -80,11 +84,32 @@ protected:
   }
 
 private:
-  using QueuePriorityPair = std::pair<std::shared_ptr<ObservedQueue<T>>, PriorityOptions>;
+
+  struct QueuePriorityPair {
+    std::shared_ptr<IObservedQueue<T>> observed_queue;
+    PriorityOptions priority_options;
+
+    explicit QueuePriorityPair(
+      std::shared_ptr<IObservedQueue<T>> queue,
+      PriorityOptions options)
+    {
+      observed_queue = queue;
+      priority_options = options;
+    }
+
+    inline bool operator > (const QueuePriorityPair &pair) const {
+      return priority_options > pair.priority_options;
+    }
+
+    inline bool operator < (const QueuePriorityPair &pair) const {
+      return priority_options < pair.priority_options;
+    }
+  };
+
   /**
-   * Vector of managed shared queues.
+   * Priority queue of managed shared queues.
    */
-  std::vector<std::shared_ptr<ObservedQueue<T>>> queues_;
+  std::vector<QueuePriorityPair> priority_vector_;
 };
 
 }  // namespace FileManagement

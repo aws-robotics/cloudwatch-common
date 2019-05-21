@@ -34,9 +34,10 @@ static const FileManagerOptions kDefaultFileManagerOptions{50, 5};
  * @param file_manager to use as the source of these messages
  * @return a shared pointer to a configured file upload manager.
  */
-template<typename T,
-    typename O,
-    class = typename std::enable_if<std::is_base_of<FileManager<T>, O>::value, O>::type>
+template<
+  typename T,
+  typename O,
+  class = typename std::enable_if<std::is_base_of<FileManager<T>, O>::value, O>::type>
 std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
   std::shared_ptr<O> file_manager, FileManagerOptions file_manager_options = kDefaultFileManagerOptions)
   {
