@@ -48,8 +48,7 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
   auto queue_monitor =
       std::make_shared<Aws::FileManagement::QueueMonitor<std::shared_ptr<Task<LogType>>>>();
   auto file_upload_manager =
-      Aws::FileManagement::createFileUploadManager(
-          static_cast<std::shared_ptr<CloudWatchLogs::Utils::FileManager<LogType>>>(file_manager));
+      Aws::FileManagement::createFileUploadManager<LogType>(file_manager);
 
   file_upload_manager->addStatusMonitor(network_monitor);
   // Create an observed queue to trigger a publish when data is available
