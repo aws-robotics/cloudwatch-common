@@ -92,8 +92,8 @@ if(GMOCK_LIBRARY)
           test/file_management/file_manager_test.cpp
   #       test/file_manager_strategy_test.cpp
           test/file_management/file_upload_manager_test.cpp
-          test/file_management/observed_queue_test.cpp
-          test/file_management/queue_monitor_test.cpp)
+          test/dataflow/observed_queue_test.cpp
+          test/dataflow/queue_monitor_test.cpp)
   target_include_directories(test_cloudwatch_offline
         PRIVATE include
         PRIVATE ${aws_common_INCLUDE_DIRS}

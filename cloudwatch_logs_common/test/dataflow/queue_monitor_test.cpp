@@ -26,14 +26,7 @@ class MockObservedQueue :
   public IObservedQueue<std::string>
 {
 public:
-  /**
-   * Set the observer for the queue.
-   *
-   * @param status_monitor
-   */
-  inline void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
-    status_monitor_ = status_monitor;
-  }
+
   MOCK_CONST_METHOD0(size, size_t (void));
   MOCK_CONST_METHOD0(empty, bool (void));
   MOCK_METHOD1(dequeue, bool (std::string& data));
@@ -43,6 +36,15 @@ public:
     const std::chrono::microseconds &duration));
   inline bool enqueue(std::string&& value) override {
     return false;
+  }
+
+  /**
+   * Set the observer for the queue.
+   *
+   * @param status_monitor
+   */
+  inline void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
+    status_monitor_ = status_monitor;
   }
 
   inline bool tryEnqueue(
@@ -56,7 +58,6 @@ public:
  * The status monitor observer.
  */
   std::shared_ptr<StatusMonitor> status_monitor_;
-
 };
 
 bool dequeueFunc(std::string& data, std::string actual) {
@@ -74,7 +75,7 @@ TEST(queue_demux_test, single_source_test)
   EXPECT_CALL(*observed_queue, dequeue(_))
     .WillOnce(Invoke(std::bind(dequeueFunc, _1, actual)));
   QueueMonitor<std::string> queue_monitor;
-  queue_monitor.addSink(observed_queue, PriorityOptions());
+  queue_monitor.addSource(observed_queue, PriorityOptions());
   std::string data;
   EXPECT_TRUE(queue_monitor.dequeue(data));
   EXPECT_EQ(actual, data);
@@ -87,14 +88,14 @@ TEST(queue_demux_test, multi_source_test)
   EXPECT_CALL(*low_priority_queue, dequeue(_))
     .WillOnce(Invoke(std::bind(dequeueFunc, _1, "low_priority")))
     .WillRepeatedly(Return(false));
-  queue_monitor.addSink(low_priority_queue, PriorityOptions(LOWEST_PRIORITY));
+  queue_monitor.addSource(low_priority_queue, PriorityOptions(LOWEST_PRIORITY));
 
   auto high_priority_observed_queue = std::make_shared<StrictMock<MockObservedQueue>>();
   std::shared_ptr<StatusMonitor> monitor;
   EXPECT_CALL(*high_priority_observed_queue, dequeue(_))
     .WillOnce(Invoke(std::bind(dequeueFunc, _1, "high_priority")))
     .WillRepeatedly(Return(false));;
-  queue_monitor.addSink(high_priority_observed_queue, PriorityOptions(HIGHEST_PRIORITY));
+  queue_monitor.addSource(high_priority_observed_queue, PriorityOptions(HIGHEST_PRIORITY));
   std::string data;
   EXPECT_TRUE(queue_monitor.dequeue(data));
   EXPECT_EQ("high_priority", data);

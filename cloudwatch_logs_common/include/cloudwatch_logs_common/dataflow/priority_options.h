@@ -13,42 +13,32 @@
  * permissions and limitations under the License.
  */
 
-#pragma once
-#include <cloudwatch_logs_common/dataflow/sink.h>
-#include <cloudwatch_logs_common/dataflow/source.h>
 
+#pragma once
 namespace Aws {
 namespace DataFlow {
 
-template <typename O>
-class OutputStage;
-template <typename I>
-class InputStage;
-
-template <typename O>
-class OutputStage {
-public:
-  std::shared_ptr<Sink<O>> getSink() {
-    return sink_;
-  }
-  inline void setSink(std::shared_ptr<Sink<O>> sink) {
-    sink_ = sink;
-  }
- private:
-  std::shared_ptr<Sink<O>> sink_;
+enum PriorityLevel : uint {
+  LOWEST_PRIORITY = 0,
+  LOW_PRIORITY,
+  MEDIUM_PRIORITY,
+  HIGH_PRIORITY,
+  HIGHEST_PRIORITY
 };
 
-template <typename I>
-class InputStage {
- public:
-  inline std::shared_ptr<Source<I>> getSource() {
-    return source_;
+struct PriorityOptions {
+  explicit PriorityOptions(PriorityLevel level = MEDIUM_PRIORITY) {
+    priority_level = level;
   }
-  inline void setSource(std::shared_ptr<Source<I>> source) {
-    source_ = source;
+  PriorityLevel priority_level;
+
+  inline bool operator > (const PriorityOptions &other) const {
+    return priority_level > other.priority_level;
   }
- private:
-  std::shared_ptr<Source<I>> source_;
+
+  inline bool operator < (const PriorityOptions &other) const {
+    return priority_level < other.priority_level;
+  }
 };
 
 }  // namespace DataFlow

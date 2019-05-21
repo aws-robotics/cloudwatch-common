@@ -15,11 +15,13 @@
 
 #pragma once
 
-#include <cloudwatch_logs_common/dataflow/pipeline.h>
-#include <cloudwatch_logs_common/dataflow/source.h>
-#include <cloudwatch_logs_common/dataflow/sink.h>
+
 #include <cloudwatch_logs_common/dataflow/observed_queue.h>
+#include <cloudwatch_logs_common/dataflow/pipeline.h>
+#include <cloudwatch_logs_common/dataflow/priority_options.h>
 #include <cloudwatch_logs_common/dataflow/queue_monitor.h>
+#include <cloudwatch_logs_common/dataflow/sink.h>
+#include <cloudwatch_logs_common/dataflow/source.h>
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
 
 namespace Aws {
@@ -29,7 +31,10 @@ template<
     typename T,
     class O>
 typename std::enable_if<std::is_base_of<Sink<T>, O>::value, std::shared_ptr<O>>::type
-inline operator >> (OutputStage<T> &output_stage, std::shared_ptr<O> &sink) {
+inline operator >> (
+  OutputStage<T> &output_stage,
+  std::shared_ptr<O> &sink)
+{
   output_stage.setSink(sink);
   return sink;
 }
@@ -38,17 +43,22 @@ template<
     typename T,
     class O>
 typename std::enable_if<std::is_base_of<QueueDemux<T>, O>::value, std::shared_ptr<O>>::type
-inline operator >> (std::tuple<std::shared_ptr<ObservedQueue<T>>, PriorityOptions> observed_queue,
-                    std::shared_ptr<O> sink) {
-  sink->addSink(std::get<0>(observed_queue), std::get<1>(observed_queue));
+inline operator >> (
+  std::tuple<std::shared_ptr<ObservedQueue<T>>,
+  PriorityOptions> observed_queue,
+  std::shared_ptr<O> sink)
+{
+  sink->addSource(std::get<0>(observed_queue), std::get<1>(observed_queue));
   return sink;
 }
 
 template<typename T>
 std::tuple<std::shared_ptr<ObservedQueue<T>>, PriorityOptions>
-inline operator >> (std::shared_ptr<ObservedQueue<T>> observed_queue,
-PriorityLevel level) {
-return std::make_tuple(observed_queue, PriorityOptions(level));
+inline operator >> (
+  std::shared_ptr<ObservedQueue<T>> observed_queue,
+  PriorityLevel level)
+{
+  return std::make_tuple(observed_queue, PriorityOptions(level));
 }
 
 }  // namespace DataFlow
