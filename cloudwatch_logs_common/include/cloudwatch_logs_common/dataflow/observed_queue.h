@@ -24,7 +24,7 @@
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
 
 namespace Aws {
-namespace FileManagement {
+namespace DataFlow {
 
 template<
   class T,
@@ -290,5 +290,5 @@ private:
   std::mutex enqueue_mutex_;
 };
 
-}  // namespace FileManagement
+}  // namespace DataFlow
 }  // namespace Aws

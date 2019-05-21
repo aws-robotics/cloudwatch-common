@@ -15,7 +15,7 @@
 
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
 #include <numeric>
-using namespace Aws::FileManagement;
+using namespace Aws::DataFlow;
 void StatusMonitor::setStatus(const Status &status) {
   status_ = status;
   if (multi_status_cond_) {

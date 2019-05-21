@@ -71,7 +71,7 @@ void LogFileManager::write(const LogType & data) {
   if (FileManager::file_status_monitor_) {
     AWS_LOG_INFO(__func__,
                  "Set file status available");
-    FileManager::file_status_monitor_->setStatus(Aws::FileManagement::Status::AVAILABLE);
+    FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
   }
 }
 

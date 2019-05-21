@@ -22,7 +22,7 @@
 #include <cloudwatch_logs_common/dataflow/pipeline.h>
 
 namespace Aws {
-namespace FileManagement {
+namespace DataFlow {
 
 template <typename T>
 class QueueDemux {
@@ -112,5 +112,5 @@ private:
   std::vector<QueuePriorityPair> priority_vector_;
 };
 
-}  // namespace FileManagement
+}  // namespace DataFlow
 }  // namespace Aws

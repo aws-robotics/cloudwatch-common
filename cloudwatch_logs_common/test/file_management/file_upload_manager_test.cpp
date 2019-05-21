@@ -28,6 +28,7 @@
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
+using namespace Aws::DataFlow;
 
 
 TEST(test_file_upload_manager, create_file_upload_manager) {

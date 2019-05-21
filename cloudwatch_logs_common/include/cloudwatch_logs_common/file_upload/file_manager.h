@@ -26,6 +26,8 @@
 namespace Aws {
 namespace FileManagement {
 
+using Aws::DataFlow::StatusMonitor;
+
 template <typename T>
 class FileObject {
 public:
@@ -73,7 +75,7 @@ public:
   FileInfo read(std::string &data) {
     auto file_info = file_manager_strategy_->read(data);
     if (file_info.file_status == END_OF_READ) {
-      file_status_monitor_->setStatus(Aws::FileManagement::Status::UNAVAILABLE);
+      file_status_monitor_->setStatus(DataFlow::Status::UNAVAILABLE);
     }
     return file_info;
   }
@@ -121,7 +123,7 @@ public:
    * Add a file status monitor to notify observers when there
    * @param status_monitor
    */
-  inline void addFileStatusMonitor(std::shared_ptr<Aws::FileManagement::StatusMonitor> status_monitor) {
+  inline void addFileStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) {
     file_status_monitor_ = status_monitor;
   }
 protected:
@@ -139,7 +141,7 @@ protected:
   /**
    * The status monitor for notifying an observer when files are available.
    */
-  std::shared_ptr<Aws::FileManagement::StatusMonitor> file_status_monitor_;
+  std::shared_ptr<StatusMonitor> file_status_monitor_;
 
 };
 

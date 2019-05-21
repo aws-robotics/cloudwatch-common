@@ -18,7 +18,7 @@
 #include <cloudwatch_logs_common/dataflow/source.h>
 
 namespace Aws {
-namespace FileManagement {
+namespace DataFlow {
 
 enum PriorityLevel : uint {
   LOWEST_PRIORITY = 0,
@@ -81,5 +81,5 @@ public:
   virtual void addSource(std::shared_ptr<Source<I>> source, PriorityOptions priority_options);
 };
 
-}  // namespace FileManagement
+}  // namespace DataFlow
 }  // namespace Aws

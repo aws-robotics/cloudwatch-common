@@ -107,10 +107,10 @@ template<typename T>
 using FileUploadTaskPtr = std::shared_ptr<FileUploadTask<T>>;
 
 template<typename T>
-using TaskObservedQueue = ObservedQueue<TaskPtr<T>>;
+using TaskObservedQueue = Aws::DataFlow::ObservedQueue<TaskPtr<T>>;
 
 template<typename T>
-using TaskSink = Sink<TaskPtr<T>>;
+using TaskSink = Aws::DataFlow::Sink<TaskPtr<T>>;
 //----------------------------------------//
 
 }  // namespace FileManagement

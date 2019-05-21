@@ -46,7 +46,7 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
   publisher->SetNetworkMonitor(network_monitor);
 
   auto queue_monitor =
-      std::make_shared<Aws::FileManagement::QueueMonitor<TaskPtr<LogType>>>();
+      std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
   auto file_upload_manager =
       Aws::FileManagement::createFileUploadManager<LogType>(file_manager);
 
@@ -61,10 +61,10 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
       "Log publisher failed to start a publisher thread, the publisher thread is set to null");
     return nullptr;
   }
-  *file_upload_manager >> observed_queue >> LOWEST_PRIORITY >> queue_monitor;
+  *file_upload_manager >> observed_queue >> Aws::DataFlow::LOWEST_PRIORITY >> queue_monitor;
 
   // @todo(rddesmond) enable the following
-  //  *publisher >> limited_queue >> HIGHEST_PRIORITY >> queue_monitor;
+  // *publisher >> limited_queue >> HIGHEST_PRIORITY >> queue_monitor;
   // queue_monitor >> log_uploader
   auto log_manager = std::make_shared<LogManager>(publisher);
   log_manager->SetFileUploadManager(file_upload_manager);

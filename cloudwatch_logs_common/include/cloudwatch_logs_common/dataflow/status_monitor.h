@@ -22,7 +22,7 @@
 #include <unordered_map>
 
 namespace Aws {
-namespace FileManagement {
+namespace DataFlow {
 
 /**
  * Status.
@@ -107,5 +107,5 @@ protected:
   std::unordered_map<StatusMonitor*, uint64_t> status_monitors_;
 };
 
-}  // namespace FileManagement
+}  // namespace DataFlow
 }  // namespace Aws

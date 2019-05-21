@@ -235,7 +235,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String 
   }
   if (network_monitor_) {
     auto network_status = send_logs_status ?
-                          Aws::FileManagement::Status::UNAVAILABLE : Aws::FileManagement::Status::AVAILABLE;
+                          Aws::DataFlow::Status::UNAVAILABLE : Aws::DataFlow::Status::AVAILABLE;
     network_monitor_->setStatus(network_status);
   }
   return send_logs_status;

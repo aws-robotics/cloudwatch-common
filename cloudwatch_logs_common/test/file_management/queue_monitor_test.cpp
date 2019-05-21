@@ -19,7 +19,7 @@
 #include <cloudwatch_logs_common/dataflow/observed_queue.h>
 #include <cloudwatch_logs_common/dataflow/queue_monitor.h>
 
-using namespace Aws::FileManagement;
+using namespace Aws::DataFlow;
 using namespace ::testing;
 
 class MockObservedQueue :
@@ -78,21 +78,30 @@ TEST(queue_demux_test, single_source_test)
 
 TEST(queue_demux_test, multi_source_test)
 {
+  auto dequeue_func = [](std::string& data, std::string actual) -> bool {
+    data = actual;
+    return true;
+  };
+
   QueueMonitor<std::string> queue_monitor;
   auto low_priority_queue = std::make_shared<StrictMock<MockObservedQueue>>();
+  using std::placeholders::_1;
+  EXPECT_CALL(*low_priority_queue, dequeue(_))
+    .WillOnce(Invoke(std::bind(dequeue_func, _1, "low_priority")))
+    .WillRepeatedly(Return(false));
   queue_monitor.addSink(low_priority_queue, PriorityOptions(LOWEST_PRIORITY));
 
   auto high_priority_observed_queue = std::make_shared<StrictMock<MockObservedQueue>>();
   std::shared_ptr<StatusMonitor> monitor;
-  std::string actual = "test_string";
-  auto dequeue_func = [actual](std::string& data) -> bool {
-    data = actual;
-    return true;
-  };
-  EXPECT_CALL(*high_priority_observed_queue, dequeue(_)).WillOnce(Invoke(dequeue_func));
+  EXPECT_CALL(*high_priority_observed_queue, dequeue(_))
+    .WillOnce(Invoke(std::bind(dequeue_func, _1, "high_priority")))
+    .WillRepeatedly(Return(false));;
   queue_monitor.addSink(high_priority_observed_queue, PriorityOptions(HIGHEST_PRIORITY));
   std::string data;
   EXPECT_TRUE(queue_monitor.dequeue(data));
-  EXPECT_EQ(actual, data);
+  EXPECT_EQ("high_priority", data);
+  EXPECT_TRUE(queue_monitor.dequeue(data));
+  EXPECT_EQ("low_priority", data);
+  EXPECT_FALSE(queue_monitor.dequeue(data));
 }
 

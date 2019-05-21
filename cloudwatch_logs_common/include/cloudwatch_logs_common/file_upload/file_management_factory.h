@@ -45,11 +45,11 @@ std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
   // File Management system
   // Create a file monitor to get notified if a file is ready to be read
   auto file_monitor =
-      std::make_shared<Aws::FileManagement::StatusMonitor>();
+      std::make_shared<Aws::DataFlow::StatusMonitor>();
 
   // Create a multi status condition to trigger on network status and file status
   auto multi_status_condition_monitor =
-      std::make_shared<Aws::FileManagement::MultiStatusConditionMonitor>();
+      std::make_shared<Aws::DataFlow::MultiStatusConditionMonitor>();
   multi_status_condition_monitor->addStatusMonitor(file_monitor);
 
   // Add the file monitor to the file manager to get notifications

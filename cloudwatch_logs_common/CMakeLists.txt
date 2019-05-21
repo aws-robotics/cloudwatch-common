@@ -26,7 +26,7 @@ set(ALL_SRC_FILES
     src/utils/cloudwatch_facade.cpp
     src/utils/log_file_manager.cpp
     src/file_upload/file_manager_strategy.cpp
-    src/file_upload/status_monitor.cpp)
+        src/dataflow/status_monitor.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})
 target_link_libraries(${PROJECT_NAME} ${OUTPUT} stdc++fs)
