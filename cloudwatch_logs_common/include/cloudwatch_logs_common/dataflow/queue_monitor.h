@@ -20,6 +20,7 @@
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
 #include <cloudwatch_logs_common/dataflow/observed_queue.h>
 #include <cloudwatch_logs_common/dataflow/pipeline.h>
+#include <cloudwatch_logs_common/dataflow/priority_options.h>
 
 namespace Aws {
 namespace DataFlow {
@@ -28,7 +29,7 @@ template <typename T>
 class QueueDemux {
 public:
   virtual ~QueueDemux() = default;
-  virtual void addSink(std::shared_ptr<IObservedQueue<T>>, PriorityOptions) = 0;
+  virtual void addSource(std::shared_ptr<IObservedQueue < T>>, PriorityOptions) = 0;
 };
 
 /**
@@ -47,8 +48,8 @@ public:
   QueueMonitor() = default;
   virtual ~QueueMonitor() = default;
 
-  inline void addSink(
-    std::shared_ptr<IObservedQueue<T>> observed_queue,
+  inline void addSource(
+    std::shared_ptr<IObservedQueue < T>>observed_queue,
     PriorityOptions priority_options) override
   {
     auto status_monitor = std::make_shared<StatusMonitor>();
