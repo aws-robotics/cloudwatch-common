@@ -33,8 +33,8 @@ using namespace Aws::DataFlow;
 
 TEST(test_file_upload_manager, create_file_upload_manager) {
   auto file_manager = std::make_shared<LogFileManager>();
-  std::shared_ptr<FileUploadManager<LogType>> file_upload_manager =
-      createFileUploadManager<LogType>(file_manager);
+  std::shared_ptr<FileUploadStreamer<LogType>> file_upload_manager =
+      createFileUploadStreamer<LogType>(file_manager);
   auto queue_monitor = std::make_shared<QueueMonitor<TaskPtr<LogType>>>();
   // Create an observed queue to trigger a publish when data is available
   std::shared_ptr<TaskObservedQueue<LogType>> observed_queue =
@@ -49,7 +49,7 @@ TEST(test_file_upload_manager, create_file_upload_manager) {
   input_event.SetMessage("Hello my name is foo");
   log_data.push_back(input_event);
   file_manager->uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_FAILED, log_data);
-  std::thread thread (&FileUploadManager<LogType>::run, file_upload_manager);
+  std::thread thread (&FileUploadStreamer<LogType>::run, file_upload_manager);
   queue_monitor->waitForWork();
   TaskPtr<LogType> task;
   queue_monitor->dequeue(task);

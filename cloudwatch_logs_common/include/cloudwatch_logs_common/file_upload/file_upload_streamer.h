@@ -54,7 +54,7 @@ struct FileManagerOptions {
  * @tparam T
  */
 template<typename T>
-class FileUploadManager :
+class FileUploadStreamer :
   public OutputStage<TaskPtr<T>> {
 public:
   /**
@@ -65,7 +65,7 @@ public:
    * @param observed_queue
    * @param batch_size
    */
-  explicit FileUploadManager(
+  explicit FileUploadStreamer(
     std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor,
     std::shared_ptr<FileManager<T>> file_manager,
     size_t batch_size)
@@ -75,7 +75,7 @@ public:
     batch_size_ = batch_size;
   }
 
-  virtual ~FileUploadManager() {
+  virtual ~FileUploadStreamer() {
     if (thread) {
       AWS_LOG_INFO(__func__,
                    "Shutting down FileUploader thread.");
@@ -137,7 +137,7 @@ public:
    * Start the upload thread.
    */
   void start() {
-    thread = std::make_shared<std::thread>(std::bind(&FileUploadManager::startRun, this));
+    thread = std::make_shared<std::thread>(std::bind(&FileUploadStreamer::startRun, this));
   }
 
   /**

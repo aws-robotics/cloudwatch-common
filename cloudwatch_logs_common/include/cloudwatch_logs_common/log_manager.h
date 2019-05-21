@@ -21,7 +21,7 @@
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/shared_object.h>
-#include <cloudwatch_logs_common/file_upload/file_upload_manager.h>
+#include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 
 #include <iostream>
@@ -71,12 +71,12 @@ public:
    */
   virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors Service();
 
-  virtual void SetFileUploadManager(std::shared_ptr<Aws::FileManagement::FileUploadManager<Utils::LogType>> manager) {
+  virtual void SetFileUploadStreamer(std::shared_ptr<Aws::FileManagement::FileUploadStreamer<Utils::LogType>> manager) {
     file_upload_manager_ = manager;
   }
 
 private:
-  std::shared_ptr<Aws::FileManagement::FileUploadManager<Utils::LogType>> file_upload_manager_;
+  std::shared_ptr<Aws::FileManagement::FileUploadStreamer<Utils::LogType>> file_upload_manager_;
   std::shared_ptr<LogPublisher> log_publisher_ = nullptr;
   Aws::CloudWatchLogs::Utils::SharedObject<std::list<Aws::CloudWatchLogs::Model::InputLogEvent> *>
     shared_object_;

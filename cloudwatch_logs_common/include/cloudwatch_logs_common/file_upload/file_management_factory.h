@@ -17,7 +17,7 @@
 
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
-#include <cloudwatch_logs_common/file_upload/file_upload_manager.h>
+#include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
 #include <cloudwatch_logs_common/dataflow/observed_queue.h>
 #include <cloudwatch_logs_common/dataflow/queue_monitor.h>
 
@@ -38,7 +38,7 @@ template<
   typename T,
   typename O,
   class = typename std::enable_if<std::is_base_of<FileManager<T>, O>::value, O>::type>
-std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
+std::shared_ptr<FileUploadStreamer<T>> createFileUploadStreamer(
   std::shared_ptr<O> file_manager, FileManagerOptions file_manager_options = kDefaultFileManagerOptions)
   {
 
@@ -57,7 +57,7 @@ std::shared_ptr<FileUploadManager<T>> createFileUploadManager(
 
   // Create a file upload manager to handle uploading a file.
   auto file_upload_manager =
-      std::make_shared<Aws::FileManagement::FileUploadManager<T>>(
+      std::make_shared<Aws::FileManagement::FileUploadStreamer<T>>(
           multi_status_condition_monitor,
           file_manager,
           file_manager_options.batch_size);

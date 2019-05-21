@@ -86,6 +86,9 @@ protected:
 
 private:
 
+  /**
+   * Private class for handling priority options and queues.
+   */
   struct QueuePriorityPair {
     std::shared_ptr<IObservedQueue<T>> observed_queue;
     PriorityOptions priority_options;

@@ -48,7 +48,7 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
   auto queue_monitor =
       std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
   auto file_upload_manager =
-      Aws::FileManagement::createFileUploadManager<LogType>(file_manager);
+      Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager);
 
   file_upload_manager->addStatusMonitor(network_monitor);
   // Create an observed queue to trigger a publish when data is available
@@ -67,7 +67,7 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
   // *publisher >> limited_queue >> HIGHEST_PRIORITY >> queue_monitor;
   // queue_monitor >> log_uploader
   auto log_manager = std::make_shared<LogManager>(publisher);
-  log_manager->SetFileUploadManager(file_upload_manager);
+  log_manager->SetFileUploadStreamer(file_upload_manager);
 
   file_upload_manager->start();
   return log_manager;
