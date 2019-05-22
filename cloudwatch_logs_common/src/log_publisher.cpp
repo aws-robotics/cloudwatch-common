@@ -183,7 +183,7 @@ void LogPublisher::SendLogFiles(Aws::String & next_token) {
     AWS_LOG_INFO(__func__,
                  "Attempting to get data off queue");
     std::shared_ptr<Task> data;
-    bool is_taken = queue_monitor_->dequeue(data);
+    bool is_taken = queue_monitor_->dequeue(data, std::chrono::microseconds(0));
     if (is_taken) {
       AWS_LOG_INFO(__func__,
                     "Attempting to send log file data");

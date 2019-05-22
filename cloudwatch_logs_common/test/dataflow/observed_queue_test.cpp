@@ -31,7 +31,7 @@ void test_enqueue_dequeue(IObservedQueue<std::string> &observed_queue) {
   observed_queue.enqueue("hello");
   EXPECT_EQ(Status::AVAILABLE, status_monitor->getStatus());
   std::string data;
-  ASSERT_TRUE(observed_queue.dequeue(data));
+  ASSERT_TRUE(observed_queue.dequeue(data), std::chrono::microseconds(0));
   EXPECT_EQ("hello", data);
   EXPECT_TRUE(observed_queue.empty());
   EXPECT_EQ(Status::UNAVAILABLE, status_monitor->getStatus());
@@ -56,7 +56,7 @@ TEST(blocking_queue_test, enqueue_blocked_dequeue_test) {
   EXPECT_TRUE(observed_queue.tryEnqueue("hello", std::chrono::seconds(0)));
   EXPECT_FALSE(observed_queue.tryEnqueue("fail", std::chrono::seconds(0)));
   std::string data;
-  ASSERT_TRUE(observed_queue.dequeue(data));
+  ASSERT_TRUE(observed_queue.dequeue(data), std::chrono::microseconds(0));
   EXPECT_EQ("hello", data);
   EXPECT_TRUE(observed_queue.tryEnqueue("hello", std::chrono::seconds(0)));
 }

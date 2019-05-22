@@ -104,7 +104,10 @@ public:
    *
    * @return the front of the dequeue
    */
-  inline bool dequeue(T& data) override {
+  inline bool dequeue(
+    T& data,
+    std::chrono::microseconds duration = std::chrono::microseconds(0)) override
+  {
     bool is_data = false;
     if (!dequeue_.empty()) {
       data = dequeue_.front();
@@ -236,8 +239,8 @@ public:
    *
    * @return the front of the dequeue
    */
-  inline bool dequeue(T& data) override {
-    auto is_retrieved = OQ::dequeue(data);
+  inline bool dequeue(T& data, std::chrono::microseconds duration = std::chrono::microseconds(0)) override {
+    auto is_retrieved = OQ::dequeue(data, duration);
     if (is_retrieved) {
       std::unique_lock<std::mutex> lck(enqueue_mutex_);
       condition_variable_.notify_one();
