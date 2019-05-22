@@ -23,7 +23,7 @@
 using namespace Aws::CloudWatchLogs;
 
 constexpr int WAIT_TIME =
-  2000;  // the amount of time (ms) to wait for publisher thread to do its work
+  5000;  // the amount of time (ms) to wait for publisher thread to do its work
 
 class MockCloudWatchFacade : public Aws::CloudWatchLogs::Utils::CloudWatchFacade
 {
