@@ -77,7 +77,7 @@ TEST(queue_demux_test, single_source_test)
   QueueMonitor<std::string> queue_monitor;
   queue_monitor.addSource(observed_queue, PriorityOptions());
   std::string data;
-  EXPECT_TRUE(queue_monitor.dequeue(data));
+  EXPECT_TRUE(queue_monitor.dequeue(data), std::chrono::microseconds(0));
   EXPECT_EQ(actual, data);
 }
 
@@ -97,10 +97,10 @@ TEST(queue_demux_test, multi_source_test)
     .WillRepeatedly(Return(false));;
   queue_monitor.addSource(high_priority_observed_queue, PriorityOptions(HIGHEST_PRIORITY));
   std::string data;
-  EXPECT_TRUE(queue_monitor.dequeue(data));
+  EXPECT_TRUE(queue_monitor.dequeue(data), std::chrono::microseconds(0));
   EXPECT_EQ("high_priority", data);
-  EXPECT_TRUE(queue_monitor.dequeue(data));
+  EXPECT_TRUE(queue_monitor.dequeue(data), std::chrono::microseconds(0));
   EXPECT_EQ("low_priority", data);
-  EXPECT_FALSE(queue_monitor.dequeue(data));
+  EXPECT_FALSE(queue_monitor.dequeue(data), std::chrono::microseconds(0));
 }
 

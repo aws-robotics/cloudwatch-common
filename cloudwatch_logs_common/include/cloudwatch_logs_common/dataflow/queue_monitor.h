@@ -64,11 +64,14 @@ public:
    *
    * @return the dequeue'd data
    */
-  inline bool dequeue(T& data) override {
+  inline bool dequeue(
+    T& data,
+    std::chrono::microseconds duration = std::chrono::microseconds(0)) override
+{
     bool is_dequeued = false;
     for (auto &queue : priority_vector_)
     {
-      if (queue.observed_queue->dequeue(data)) {
+      if (queue.observed_queue->dequeue(data), std::chrono::microseconds(0)) {
         is_dequeued = true;
         break;
       }
