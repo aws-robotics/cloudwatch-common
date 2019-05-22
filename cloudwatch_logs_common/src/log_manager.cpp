@@ -32,16 +32,16 @@
 
 using namespace Aws::CloudWatchLogs;
 
-LogManager::LogManager(const std::shared_ptr<LogPublisher> log_publisher)
+LogManager::LogManager(const std::shared_ptr<ILogPublisher> log_publisher)
 {
   this->log_publisher_ = log_publisher;
 }
 
-LogManager::~LogManager()
-{
-  this->log_buffers_[0].clear();
-  this->log_buffers_[1].clear();
-}
+LogManager::~LogManager() = default;
+
+using Aws::FileManagement::BasicTask;
+using Aws::FileManagement::UploadStatus;
+using Aws::FileManagement::UploadStatusFunction;
 
 Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogManager::RecordLog(
   const std::string & log_msg_formatted)
@@ -52,40 +52,27 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogManager::RecordLog(
   milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
   log_event.SetMessage(log_msg_formatted.c_str());
   log_event.SetTimestamp(ms.count());
-  this->log_buffers_[active_buffer_indx_].push_back(log_event);
+  if (!current_task_) {
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+    Utils::LogType logs;
+    BasicTask<Utils::LogType> data(logs,
+      std::bind(&Utils::LogFileManager::uploadCompleteStatus, log_file_manager_, _1, _2));
+    current_task_ = std::make_shared<BasicTask<Utils::LogType>>(logs,
+      std::bind(&Utils::LogFileManager::uploadCompleteStatus, log_file_manager_, _1, _2));
+  }
+  current_task_->getBatchData().push_back(log_event);
   return status;
 }
 
 Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogManager::Service()
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
-
-  // If the shared object is not still locked for publishing, then swap the buffers and publish the
-  // new metrics
-  if (!this->shared_object_.isDataAvailable()) {
-    uint8_t new_active_buffer_indx = 1 - active_buffer_indx_;
-    // Clean any old metrics out the buffer that previously used for publishing
-    this->log_buffers_[new_active_buffer_indx].clear();
-
-    status =
-      this->shared_object_.setDataAndMarkReady(&this->log_buffers_[this->active_buffer_indx_]);
-    // After this point no changes should be made to the active_buffer until it is swapped with the
-    // secondary buffer
-
-    if (CW_LOGS_SUCCEEDED == status) {
-      status = this->log_publisher_->PublishLogs(&this->shared_object_);
-
-      if (CW_LOGS_SUCCEEDED != status) {
-        // For some reason we failed to publish, so mark the shared object as free so we can try
-        // again later
-        this->shared_object_.freeDataAndUnlock();
-      } else {
-        // If everything has been successful for publishing the buffer, then swap to the new buffer.
-        this->active_buffer_indx_ = new_active_buffer_indx;
-      }
-    } else {
-      AWS_LOG_ERROR(__func__, "Failed to set share object ready");
-    }
+  if (getSink()) {
+    getSink()->enqueue(current_task_);
+    current_task_ = nullptr;
+  } else {
+    status = CW_LOGS_PUBLISHER_THREAD_NOT_INITIALIZED;
   }
   return status;
 }

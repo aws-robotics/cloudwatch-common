@@ -54,7 +54,9 @@ enum ROSCloudWatchLogsErrors {
   /** An error indicating that a log group cannot be found. */
   CW_LOGS_LOG_GROUP_NOT_FOUND,
   /** An error indicating that a log stream cannot be found in a log group. */
-  CW_LOGS_LOG_STREAM_NOT_FOUND
+  CW_LOGS_LOG_STREAM_NOT_FOUND,
+  /** Log stream was not configured properly. */
+  CW_LOGS_LOG_STREAM_NOT_CONFIGURED
 };
 
 }  // namespace CloudWatchLogs
