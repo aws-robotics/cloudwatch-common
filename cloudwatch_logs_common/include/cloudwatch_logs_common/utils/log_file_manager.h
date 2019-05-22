@@ -58,8 +58,8 @@ class LogFileManager :
    * @param log_messages the data which was attempted to be uploaded
    */
   void uploadCompleteStatus(
-      const ROSCloudWatchLogsErrors& upload_status,
-      const LogType &log_messages);
+    const FileManagement::UploadStatus& upload_status,
+    const LogType &log_messages);
 
   void write(const LogType & data) override;
 

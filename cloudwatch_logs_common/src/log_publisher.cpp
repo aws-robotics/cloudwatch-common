@@ -258,7 +258,11 @@ void LogPublisher::SendLogs(Aws::String & next_token)
     if (this->upload_status_function_) {
       AWS_LOG_INFO(__func__,
                     "Calling callback function with logs of size %i", logs->size());
-      upload_status_function_(send_logs_status, *logs);
+      FileManagement::UploadStatus status = FileManagement::FAIL;
+      if (send_logs_status == CW_LOGS_SUCCEEDED) {
+        status = FileManagement::SUCCESS;
+      }
+      upload_status_function_(status, *logs);
     }
     /* Null out the class reference before unlocking the object. The external thread will be
        looking to key off if the shared object is locked or not to know it can start again, but

@@ -34,7 +34,15 @@
 namespace Aws {
 namespace CloudWatchLogs {
 
-class LogManager
+class LogStreamer {
+  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors RecordLog(
+    const std::string & log_msg_formatted) = 0;
+  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors Service() = 0;
+};
+
+class LogManager :
+  public Aws::DataFlow::OutputStage<Aws::FileManagement::TaskPtr<Utils::LogType>>,
+  public LogStreamer
 {
 public:
   /**
@@ -45,7 +53,7 @@ public:
    *  @param log_publisher A shared pointer to a LogPublisher that will be used to publish the
    * buffered logs
    */
-  LogManager(const std::shared_ptr<LogPublisher> log_publisher);
+  explicit LogManager(std::shared_ptr<ILogPublisher> log_publisher);
 
   /**
    *  @brief Tears down a LogManager object
@@ -71,17 +79,23 @@ public:
    */
   virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors Service();
 
-  virtual void SetFileUploadStreamer(std::shared_ptr<Aws::FileManagement::FileUploadStreamer<Utils::LogType>> manager) {
-    file_upload_manager_ = manager;
+  virtual void SetLogFileManager(
+    std::shared_ptr<Utils::LogFileManager> &log_file_manager)
+  {
+    log_file_manager_ = log_file_manager;
+  }
+
+  virtual void SetFileUploadStreamer(
+    std::shared_ptr<Aws::FileManagement::FileUploadStreamer<Utils::LogType>> &streamer)
+  {
+    file_upload_streamer_ = streamer;
   }
 
 private:
-  std::shared_ptr<Aws::FileManagement::FileUploadStreamer<Utils::LogType>> file_upload_manager_;
-  std::shared_ptr<LogPublisher> log_publisher_ = nullptr;
-  Aws::CloudWatchLogs::Utils::SharedObject<std::list<Aws::CloudWatchLogs::Model::InputLogEvent> *>
-    shared_object_;
-  std::list<Aws::CloudWatchLogs::Model::InputLogEvent> log_buffers_[2];
-  uint8_t active_buffer_indx_ = 0;
+  std::shared_ptr<Aws::FileManagement::FileUploadStreamer<Utils::LogType>> file_upload_streamer_;
+  std::shared_ptr<ILogPublisher> log_publisher_ = nullptr;
+  std::shared_ptr<Utils::LogFileManager> log_file_manager_;
+  Aws::FileManagement::TaskPtr<Utils::LogType> current_task_;
 };
 
 }  // namespace CloudWatchLogs

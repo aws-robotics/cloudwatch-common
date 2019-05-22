@@ -41,19 +41,23 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
     std::make_shared<LogFileManager>();
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, cloudwatch_facade);
   publisher->SetLogFileManager(file_manager);
+
   auto network_monitor=
       std::make_shared<Aws::FileManagement::StatusMonitor>();
   publisher->SetNetworkMonitor(network_monitor);
 
   auto queue_monitor =
       std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
-  auto file_upload_manager =
+  auto file_upload_streamer =
       Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager);
 
-  file_upload_manager->addStatusMonitor(network_monitor);
+  file_upload_streamer->addStatusMonitor(network_monitor);
   // Create an observed queue to trigger a publish when data is available
-  auto observed_queue =
+  auto file_data_queue =
       std::make_shared<TaskObservedQueue<LogType>>();
+
+  auto stream_data_queue =
+    std::make_shared<TaskObservedQueue<LogType>>();
 
   if (CW_LOGS_SUCCEEDED != publisher->StartPublisherThread()) {
     AWS_LOG_FATAL(
@@ -61,14 +65,16 @@ std::shared_ptr<LogManager> LogManagerFactory::CreateLogManager(
       "Log publisher failed to start a publisher thread, the publisher thread is set to null");
     return nullptr;
   }
-  *file_upload_manager >> observed_queue >> Aws::DataFlow::LOWEST_PRIORITY >> queue_monitor;
 
-  // @todo(rddesmond) enable the following
-  // *publisher >> limited_queue >> HIGHEST_PRIORITY >> queue_monitor;
-  // queue_monitor >> log_uploader
   auto log_manager = std::make_shared<LogManager>(publisher);
-  log_manager->SetFileUploadStreamer(file_upload_manager);
+  log_manager->SetFileUploadStreamer(file_upload_streamer);
+  log_manager->SetLogFileManager(file_manager);
 
-  file_upload_manager->start();
+  // @todo(rddesmond)  the following
+  *file_upload_streamer >> file_data_queue >> Aws::DataFlow::LOWEST_PRIORITY >> queue_monitor;
+  *log_manager >> stream_data_queue >> Aws::DataFlow::HIGHEST_PRIORITY >> queue_monitor;
+  // queue_monitor >> publisher;
+
+  file_upload_streamer->start();
   return log_manager;
 }

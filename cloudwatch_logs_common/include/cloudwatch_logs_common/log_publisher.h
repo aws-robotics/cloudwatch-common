@@ -44,6 +44,10 @@ enum LogPublisherRunState {
   LOG_PUBLISHER_RUN_SEND_LOGS
 };
 
+class ILogPublisher {
+  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors StartPublisherThread() = 0;
+  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors StopPublisherThread() = 0;
+};
 /**
  *  @brief Class that handles sending logs data to CloudWatch
  *  This class is responsible for emitting all the stored logs to AWS CloudWatch.
@@ -51,7 +55,8 @@ enum LogPublisherRunState {
  *  variable and is signaled (by AWSCloudWatchLogManager) whenever new logs are
  *  available.
  */
-class LogPublisher
+class LogPublisher :
+  public ILogPublisher
 {
 public:
   using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
@@ -125,7 +130,7 @@ private:
   void Run();
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, LogTypePtr logs);
 
-  FileManagement::UploadStatusFunction<ROSCloudWatchLogsErrors, LogType> upload_status_function_;
+  FileManagement::UploadStatusFunction<FileManagement::UploadStatus, LogType> upload_status_function_;
   std::shared_ptr<Utils::LogFileManager> log_file_manager_ = nullptr;
   LogTaskSource queue_monitor_;
   std::shared_ptr<Aws::FileManagement::StatusMonitor> network_monitor_ = nullptr;

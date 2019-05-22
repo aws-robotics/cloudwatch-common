@@ -56,7 +56,7 @@ TEST_F(FileManagerTest, file_manager_write_on_fail) {
   input_event.SetTimestamp(0);
   input_event.SetMessage("Hello my name is foo");
   log_data.push_back(input_event);
-  file_manager.uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_FAILED, log_data);
+  file_manager.uploadCompleteStatus(Aws::FileManagement::FAIL, log_data);
   std::string fileName = file_manager_strategy->getFileToRead();
   std::string line;
   file_manager_strategy->read(line);
@@ -76,7 +76,7 @@ TEST_F(FileManagerTest, file_manager_no_write_on_success) {
   input_event.SetTimestamp(0);
   input_event.SetMessage("Hello my name is bar");
   log_data.push_back(input_event);
-  file_manager.uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED, log_data);
+  file_manager.uploadCompleteStatus(Aws::FileManagement::SUCCESS, log_data);
   std::string line;
   EXPECT_ANY_THROW(file_manager_strategy->read(line));
 }

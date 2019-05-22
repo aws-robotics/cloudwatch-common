@@ -34,6 +34,33 @@ class Task {
   virtual void onComplete(const UploadStatus &upload_status) = 0;
 };
 
+template<typename T>
+class BasicTask :
+  public Task<T> {
+public:
+  explicit BasicTask(
+    T batch_data,
+    UploadStatusFunction<UploadStatus, T> upload_status_function)
+  {
+    this->batch_data_ = batch_data;
+    this->upload_status_function_ = upload_status_function;
+  }
+
+  virtual ~BasicTask() = default;
+
+  inline T& getBatchData() override {
+    return batch_data_;
+  }
+
+  inline void onComplete(const UploadStatus &upload_status) override {
+    upload_status_function_(upload_status, batch_data_);
+  }
+
+private:
+  T batch_data_;
+  UploadStatusFunction<UploadStatus, T> upload_status_function_;
+};
+
 /**
  * The file upload task which calls the upload status callback with the data from the initial task.
  *

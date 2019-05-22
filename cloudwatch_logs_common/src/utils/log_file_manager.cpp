@@ -12,7 +12,7 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-
+#include <memory>
 #include <iostream>
 #include <fstream>
 #include "cloudwatch_logs_common/utils/log_file_manager.h"
@@ -25,11 +25,11 @@ namespace CloudWatchLogs {
 namespace Utils {
 
 void LogFileManager::uploadCompleteStatus(
-  const ROSCloudWatchLogsErrors& upload_status,
+  const FileManagement::UploadStatus& upload_status,
   const LogType &log_messages)
 {
   if (!log_messages.empty()) {
-    if (ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED != upload_status) {
+    if (FileManagement::SUCCESS != upload_status) {
       AWS_LOG_INFO(__func__, "Writing logs to file");
       write(log_messages);
     }
