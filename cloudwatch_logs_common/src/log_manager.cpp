@@ -72,7 +72,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogManager::Service()
     getSink()->enqueue(current_task_);
     current_task_ = nullptr;
   } else {
-    status = CW_LOGS_PUBLISHER_THREAD_NOT_INITIALIZED;
+    status = CW_LOGS_LOG_STREAM_NOT_CONFIGURED;
   }
   return status;
 }
