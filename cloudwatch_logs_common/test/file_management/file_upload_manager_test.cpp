@@ -48,7 +48,7 @@ TEST(test_file_upload_manager, create_file_upload_manager) {
   input_event.SetTimestamp(0);
   input_event.SetMessage("Hello my name is foo");
   log_data.push_back(input_event);
-  file_manager->uploadCompleteStatus(ROSCloudWatchLogsErrors::CW_LOGS_FAILED, log_data);
+  file_manager->uploadCompleteStatus(UploadStatus::FAIL, log_data);
   std::thread thread (&FileUploadStreamer<LogType>::run, file_upload_manager);
   queue_monitor->waitForWork();
   TaskPtr<LogType> task;
