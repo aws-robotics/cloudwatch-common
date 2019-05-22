@@ -66,5 +66,5 @@ void MultiStatusConditionMonitor::setStatus(
 }
 
 bool MultiStatusConditionMonitor::hasWork() {
-  return static_cast<bool>(mask_factory_.getTotalMask() & mask_);
+  return static_cast<bool>(mask_factory_.getCollectiveMask() & mask_);
 }

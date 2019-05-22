@@ -56,13 +56,19 @@ private:
 
 class MaskFactory {
 public:
+
+  /**
+   * Generate a new mask that is no longer in use by this factor.
+   *
+   * @return mask
+   */
   uint64_t getNewMask() {
     uint64_t current_mask = 0, new_mask;
     short shift = 0;
     while (current_mask == 0) {
       new_mask = (uint64_t) 1 << shift++;
       current_mask = !(collective_mask_ & new_mask) ? new_mask : 0;
-      if (shift > sizeof(uint64_t)) {
+      if (shift > max_size) {
         throw "No more masks available";
       }
     }
@@ -70,14 +76,23 @@ public:
     return current_mask;
   }
 
+  /**
+   * Remove a mask from use.
+   *
+   * @param mask to remove
+   */
   void removeMask(uint64_t mask) {
     collective_mask_ &= ~mask;
   }
 
-  uint64_t getTotalMask() const {
+  /**
+   * @return Get the collective mask.
+   */
+  uint64_t getCollectiveMask() const {
     return collective_mask_;
   }
 private:
+  static constexpr size_t max_size = sizeof(uint64_t) * 8;
   uint64_t collective_mask_ = 0;
 };
 
@@ -91,6 +106,7 @@ private:
   std::mutex idle_mutex_;
   std::condition_variable work_condition_;
 };
+
 /**
  * Multi Status Condition Monitor listens to N StatusMonitors and determines whether to trigger wait for work
  * based on the hasWork() function.
