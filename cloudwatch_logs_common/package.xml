@@ -9,7 +9,7 @@
 
   <license>Apache 2.0</license>
 
-  <depend version_lt='2.0.0'>aws_common</depend>
+  <depend version_lt='3.0.0'>aws_common</depend>
   <buildtool_depend>cmake</buildtool_depend>
   <test_depend>gtest</test_depend>
 
