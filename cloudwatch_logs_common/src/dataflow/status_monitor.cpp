@@ -37,7 +37,7 @@ void ThreadMonitor::waitForWork() {
   }
 }
 
-std::cv_status ThreadMonitor::waitForWork(const std::chrono::milliseconds &duration) {
+std::cv_status ThreadMonitor::waitForWork(const std::chrono::microseconds& duration) {
   std::cv_status status = std::cv_status::no_timeout;
   if (!hasWork()) {
     std::unique_lock<std::mutex> lck(idle_mutex_);

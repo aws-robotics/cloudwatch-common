@@ -25,7 +25,7 @@ class InputStage;
 template<typename T>
 class Source {
  public:
-  virtual bool dequeue(T&, std::chrono::microseconds duration) = 0;
+  virtual bool dequeue(T&, const std::chrono::microseconds &duration) = 0;
 };
 
 }  // namespace DataFlow

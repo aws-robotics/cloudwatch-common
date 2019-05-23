@@ -106,7 +106,7 @@ public:
    */
   inline bool dequeue(
     T& data,
-    std::chrono::microseconds duration = std::chrono::microseconds(0)) override
+    const std::chrono::microseconds &duration) override
   {
     bool is_data = false;
     if (!dequeue_.empty()) {
@@ -239,7 +239,7 @@ public:
    *
    * @return the front of the dequeue
    */
-  inline bool dequeue(T& data, std::chrono::microseconds duration = std::chrono::microseconds(0)) override {
+  inline bool dequeue(T& data, const std::chrono::microseconds &duration) override {
     auto is_retrieved = OQ::dequeue(data, duration);
     if (is_retrieved) {
       std::unique_lock<std::mutex> lck(enqueue_mutex_);
