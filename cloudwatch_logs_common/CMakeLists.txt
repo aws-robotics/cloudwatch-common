@@ -4,15 +4,14 @@ set(CLOUDWATCH_LOGS_COMMON_VERSION 1.0.0)
 
 # Default to C11
 if(NOT CMAKE_C_STANDARD)
-    set(CMAKE_C_STANDARD 11)
+  set(CMAKE_C_STANDARD 11)
 endif()
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD 14)
 endif()
 
 find_package(aws_common REQUIRED)
-
 if(AWSSDK_FOUND)
   set(SERVICE logs)
   AWSSDK_DETERMINE_LIBS_TO_LINK(SERVICE OUTPUT)
@@ -25,8 +24,8 @@ add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})
 target_link_libraries(${PROJECT_NAME} ${OUTPUT})
 target_include_directories(${PROJECT_NAME} PRIVATE ${AWSSDK_INCLUDE_DIRS} include ${aws_common_INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME} PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>)
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 
 
 #############
@@ -61,22 +60,21 @@ INSTALL(EXPORT ${PROJECT_NAME}-targets DESTINATION share/${PROJECT_NAME}/cmake)
 
 enable_testing()
 find_common_test_packages()
-if(GMOCK_LIBRARIES)
-  add_executable(test_cloudwatch_logs_common
-    test/main_test.cpp
-    test/shared_object_test.cpp
-    test/log_manager_test.cpp
-    test/log_publisher_test.cpp
-    test/cloudwatch_facade_test.cpp)
-  target_include_directories(test_cloudwatch_logs_common
-        PRIVATE include
-        PRIVATE ${aws_common_INCLUDE_DIRS}
-        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
-        )
-  target_link_libraries(test_cloudwatch_logs_common
-        ${GTEST_LIBRARIES}
-        pthread
-        libgmock
-        ${PROJECT_NAME})
-  add_test(NAME test_cloudwatch_logs_common COMMAND test_cloudwatch_logs_common --gtest_output=xml:test_results/)
-endif()
+add_common_gtest(test_cloudwatch_logs_common
+  test/main_test.cpp
+  test/shared_object_test.cpp
+  test/log_manager_test.cpp
+  test/log_publisher_test.cpp
+  test/cloudwatch_facade_test.cpp
+)
+target_include_directories(test_cloudwatch_logs_common PRIVATE
+  include
+  ${aws_common_INCLUDE_DIRS}
+  ${PROJECT_SOURCE_DIR}/test/include
+)
+target_link_libraries(test_cloudwatch_logs_common
+  ${PROJECT_NAME}
+  ${aws_common_LIBRARIES}
+  ${GMOCK_LIBRARY}
+  pthread
+)

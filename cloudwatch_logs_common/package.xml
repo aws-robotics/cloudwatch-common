@@ -9,9 +9,10 @@
 
   <license>Apache 2.0</license>
 
-  <depend>aws_common</depend>
   <buildtool_depend>cmake</buildtool_depend>
-  
+
+  <depend>aws_common</depend>
+
   <test_depend condition="$ROS_VERSION == 1">gtest</test_depend>
   <test_depend condition="$ROS_VERSION == 1">google-mock</test_depend>
   <test_depend condition="$ROS_VERSION == 2">ament_cmake_gtest</test_depend>
