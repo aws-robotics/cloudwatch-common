@@ -99,7 +99,7 @@ private:
 class ThreadMonitor {
 public:
   void waitForWork();
-  std::cv_status waitForWork(const std::chrono::milliseconds &duration);
+  std::cv_status waitForWork(const std::chrono::microseconds &duration);
   void notify();
 private:
   virtual bool hasWork() = 0;

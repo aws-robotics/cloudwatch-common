@@ -66,13 +66,15 @@ public:
    */
   inline bool dequeue(
     T& data,
-    std::chrono::microseconds duration = std::chrono::microseconds(0)) override
+    const std::chrono::microseconds &duration) override
 {
+    ThreadMonitor::waitForWork(duration);
     bool is_dequeued = false;
     for (auto &queue : priority_vector_)
     {
-      if (queue.observed_queue->dequeue(data), std::chrono::microseconds(0)) {
-        is_dequeued = true;
+      is_dequeued = queue.observed_queue->dequeue(data, std::chrono::microseconds(0));
+      if (is_dequeued)
+      {
         break;
       }
     }

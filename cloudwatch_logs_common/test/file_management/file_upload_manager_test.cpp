@@ -50,9 +50,8 @@ TEST(test_file_upload_manager, create_file_upload_manager) {
   log_data.push_back(input_event);
   file_manager->uploadCompleteStatus(UploadStatus::FAIL, log_data);
   std::thread thread (&FileUploadStreamer<LogType>::run, file_upload_manager);
-  queue_monitor->waitForWork();
   TaskPtr<LogType> task;
-  queue_monitor->dequeue(task, std::chrono::microseconds(0));
+  ASSERT_TRUE(queue_monitor->dequeue(task, std::chrono::milliseconds(100)));
   auto data = task->getBatchData();
   task->onComplete(UploadStatus::SUCCESS);
   thread.join();
