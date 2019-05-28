@@ -63,17 +63,23 @@ find_package(GTest QUIET)
 if(NOT GTEST_FOUND)
   message(WARNING "Could not find GTest. Not building unit tests.")
 else()
+  include_directories(/usr/include/gmock /usr/src/gmock)
+  add_library(libgmock /usr/src/gmock/src/gmock-all.cc)
   add_executable(test_cloudwatch_logs_common
     test/main_test.cpp
     test/shared_object_test.cpp
     test/log_manager_test.cpp
-    test/log_publisher_test.cpp)
+    test/log_publisher_test.cpp
+    test/cloudwatch_facade_test.cpp)
   target_include_directories(test_cloudwatch_logs_common
         PRIVATE include
-        PRIVATE ${aws_common_INCLUDE_DIRS})
+        PRIVATE ${aws_common_INCLUDE_DIRS}
+        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+        )
   target_link_libraries(test_cloudwatch_logs_common
         ${GTEST_LIBRARIES}
         pthread
+        libgmock
         ${PROJECT_NAME})
   add_test(NAME test_cloudwatch_logs_common COMMAND test_cloudwatch_logs_common --gtest_output=xml:test_results/)
 endif()
