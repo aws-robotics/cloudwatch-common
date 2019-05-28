@@ -39,46 +39,48 @@ enum FileStatus {
  * File information struct.
  */
 class FileInfo {
- public:
+public:
   std::string file_location;
   std::string file_name;
   FileStatus file_status;
 };
 
 enum TokenStatus {
-    ACTIVE,
-    INACTIVE
+  ACTIVE,
+  INACTIVE
 };
 
 
 using DataToken = uint64_t;
 
-class TokenInfo {
+class FileTokenInfo {
 public:
-    TokenInfo() = default;
-    TokenInfo(std::string file_name) : file_name_{file_name} {};
-    std::string file_name_;
+  FileTokenInfo() = default;
+  explicit FileTokenInfo(std::string file_name) : file_name_{std::move(file_name)} {};
+  std::string file_name_;
 };
 
 class DataManagerStrategy {
 public:
-    DataManagerStrategy() = default;
-    ~DataManagerStrategy() = default;
+  DataManagerStrategy() = default;
+  ~DataManagerStrategy() = default;
 
-    virtual void initialize() = 0;
+  virtual void initialize() = 0;
 
-    virtual bool isDataAvailable() = 0;
+  virtual bool isDataAvailable() = 0;
 
-    virtual DataToken read(std::string &data) = 0;
+  virtual void onShutdown() = 0;
 
-    virtual void write(const std::string &data) = 0;
+  virtual DataToken read(std::string &data) = 0;
 
-    /**
-     * Mark a token as 'done' so the DataManager knows the piece of
-     * data associated with that token can be cleaned up.
-     * @param token
-     */
-    virtual void resolve(const DataToken &token) = 0;
+  virtual void write(const std::string &data) = 0;
+
+  /**
+   * Mark a token as 'done' so the DataManager knows the piece of
+   * data associated with that token can be cleaned up.
+   * @param token
+   */
+  virtual void resolve(const DataToken &token) = 0;
 };
 
 /**
@@ -86,66 +88,67 @@ public:
  */
 class FileManagerStrategy : public DataManagerStrategy {
 public:
-    FileManagerStrategy();
+  FileManagerStrategy();
 
-    ~FileManagerStrategy() = default;
+  ~FileManagerStrategy() = default;
 
-    void initialize();
+  void initialize() override;
 
-    bool isDataAvailable();
+  bool isDataAvailable() override;
 
-    DataToken read(std::string &data);
+  DataToken read(std::string &data) override;
 
-    void write(const std::string &data);
+  void write(const std::string &data) override;
 
-    void resolve(const DataToken &token);
+  void resolve(const DataToken &token) override;
 
-    void resolve(const std::list<DataToken> &tokens);
+  void resolve(const std::list<DataToken> &tokens);
+
+  void onShutdown() override;
 
 private:
-    void discoverStoredFiles();
+  void discoverStoredFiles();
 
-    void deleteFile(const std::string &file_name);
+  void deleteFile(const std::string &file_name);
 
-    std::string getFileToRead();
+  std::string getFileToRead();
 
-    void rotateWriteFile();
+  void rotateWriteFile();
 
-    void checkIfFileShouldRotate(const std::string &data);
+  void checkIfFileShouldRotate(const std::string &data);
 
-    void addFileNameToStorage(const std::string &file_name);
+  void addFileNameToStorage(const std::string &file_name);
 
-    DataToken createToken(const std::string &file_name);
+  DataToken createToken(const std::string &file_name);
 
-    /**
-     * Current file name to write to.
-     */
-    std::list<std::string> stored_files_;
+  /**
+   * Current file name to write to.
+   */
+  std::list<std::string> stored_files_;
 
-    std::string active_write_file_;
-    uint active_write_file_size_;
+  std::string active_write_file_;
+  uint active_write_file_size_;
 
-    std::string active_read_file_;
-    std::unique_ptr<std::ifstream> active_read_file_stream_ = nullptr;
+  std::string active_read_file_;
+  std::unique_ptr<std::ifstream> active_read_file_stream_ = nullptr;
 
-    /**
-     * User configurable settings
-     */
-    std::string storage_directory_ = "/tmp/";
-    std::string file_extension_ = ".cwlog";
-    uint maximum_file_size_in_bytes_ = 1024 * 1024;
+  /**
+   * User configurable settings
+   */
+  std::string storage_directory_ = "/tmp/";
+  std::string file_extension_ = ".log";
+  uint maximum_file_size_in_bytes_ = 1024 * 1024;
 
-    /**
-     * Size of each batch when reading from a file.
-     * The Size corrosponds to the number of lines read from the file
-     */
-    uint8_t batch_size = 1;
+  /**
+   * Size of each batch when reading from a file.
+   * The Size corresponds to the number of lines read from the file
+   */
+  uint8_t batch_size = 1;
 
-    std::unordered_map<DataToken, TokenInfo> token_store_;
-    std::unordered_map<std::string, std::set<DataToken>> file_tokens_;
+  std::unordered_map<DataToken, FileTokenInfo> token_store_;
+  std::unordered_map<std::string, std::set<DataToken>> file_tokens_;
 
 };
-
 
 }  // namespace FileManagement
 }  // namespace Aws

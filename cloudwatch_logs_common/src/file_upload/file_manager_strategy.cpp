@@ -36,7 +36,7 @@ bool FileManagerStrategy::isDataAvailable() {
 
 DataToken FileManagerStrategy::read(std::string &data) {
   AWS_LOG_INFO(__func__,
-                      "Reading from active log");
+               "Reading from active log");
   if (active_read_file_.empty()) {
     active_read_file_ = getFileToRead();
     active_read_file_stream_ = std::make_unique<std::ifstream>(active_read_file_);
@@ -64,7 +64,7 @@ void FileManagerStrategy::resolve(const DataToken &token) {
   if (token_store_.find(token) == token_store_.end()) {
     throw std::runtime_error("DataToken not found");
   }
-  TokenInfo token_info = token_store_[token];
+  FileTokenInfo token_info = token_store_[token];
   std::string &file_name = token_info.file_name_;
 
   if (file_tokens_.find(file_name) == file_tokens_.end()) {
@@ -78,13 +78,17 @@ void FileManagerStrategy::resolve(const DataToken &token) {
 }
 
 void FileManagerStrategy::resolve(const std::list<DataToken> &tokens) {
-  for (const auto& token : tokens) {
+  for (const auto &token : tokens) {
     resolve(token);
   }
 }
 
+void FileManagerStrategy::onShutdown() {
+  // @todo: implement
+}
+
 void FileManagerStrategy::discoverStoredFiles() {
-  for (const auto & entry : fs::directory_iterator(storage_directory_)) {
+  for (const auto &entry : fs::directory_iterator(storage_directory_)) {
     const fs::path &path = entry.path();
     if (path.extension() == file_extension_) {
       addFileNameToStorage(path.relative_path());
@@ -138,7 +142,7 @@ void FileManagerStrategy::checkIfFileShouldRotate(const std::string &data) {
 
 DataToken FileManagerStrategy::createToken(const std::string &file_name) {
   DataToken token = std::rand() % UINT64_MAX;
-  TokenInfo token_info = TokenInfo(file_name);
+  FileTokenInfo token_info = FileTokenInfo(file_name);
   token_store_[token] = token_info;
   if (file_tokens_.find(file_name) == file_tokens_.end()) {
     file_tokens_[file_name] = std::set<DataToken>();

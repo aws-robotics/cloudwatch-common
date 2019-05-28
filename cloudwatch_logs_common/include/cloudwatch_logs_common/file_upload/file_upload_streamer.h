@@ -28,7 +28,6 @@
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_task.h>
 
-
 namespace Aws {
 namespace FileManagement {
 
@@ -42,12 +41,12 @@ struct FileManagerOptions {
   /**
    * Max number of data processed per read.
    */
- size_t batch_size;
+  size_t batch_size;
 
- /**
-  * Max number of elements in the queue.
-  */
- size_t queue_size;
+  /**
+   * Max number of elements in the queue.
+   */
+  size_t queue_size;
 };
 
 /**
@@ -125,7 +124,7 @@ public:
     FileObject<T> file_object = data_reader_->readBatch(batch_size_);
     total_logs_uploaded += file_object.batch_size;
     auto file_upload_task =
-        std::make_shared<FileUploadTaskAsync<T>>(file_object);
+      std::make_shared<FileUploadTaskAsync<T>>(file_object);
     auto future_result = file_upload_task->getResult();
     auto is_accepted = OutputStage<TaskPtr<T>>::getSink()->enqueue(file_upload_task);
     std::future_status status = std::future_status::timeout;
@@ -153,8 +152,8 @@ public:
    */
   void join() {
     if (thread) {
-        thread->join();
-      }
+      thread->join();
+    }
   }
 
 private:
