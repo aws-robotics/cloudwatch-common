@@ -18,6 +18,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdio>
+#include <experimental/filesystem>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -37,28 +38,47 @@ public:
 
   void TearDown() override
   {
-    remove(test_file_name.c_str());
+    std::experimental::filesystem::path("log_tests").remove_filename();
   }
 
 protected:
-  std::string test_file_name = "test_file.txt";
+  FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024};
 };
 
+TEST_F(FileManagerStrategyTest, restart_without_token) {
+  std::string data1 = "test_data_1";
+  std::string data2 = "test_data_2";
+  {
+    FileManagerStrategy file_manager_strategy(options);
+    EXPECT_NO_THROW(file_manager_strategy.initialize());
+    file_manager_strategy.write(data1);
+    file_manager_strategy.write(data2);
+  }
+  {
+    FileManagerStrategy file_manager_strategy(options);
+    EXPECT_NO_THROW(file_manager_strategy.initialize());
+    std::string result1, result2;
+    file_manager_strategy.read(result1);
+    file_manager_strategy.read(result2);
+    EXPECT_EQ(data1, result1);
+    EXPECT_EQ(data2, result2);
+  }
+}
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
-TEST_F(FileManagerStrategyTest, initializeWorks) {
-  FileManagerStrategy file_manager_strategy;
+TEST_F(FileManagerStrategyTest, initialize_success) {
+  FileManagerStrategy file_manager_strategy(options);
   EXPECT_NO_THROW(file_manager_strategy.initialize());
 }
 
-TEST_F(FileManagerStrategyTest, discoverStoredFiles) {
+TEST_F(FileManagerStrategyTest, discover_stored_files) {
   const std::string file_name = "/tmp/test_file.cwlog";
   std::ofstream write_stream(file_name);
   std::string test_data = "Some test log";
   write_stream << test_data << std::endl;
   write_stream.close();
-  FileManagerStrategy file_manager_strategy;
+  FileManagerStrategy file_manager_strategy(options);
   file_manager_strategy.initialize();
   const bool is_data_available = file_manager_strategy.isDataAvailable();
   EXPECT_EQ(is_data_available, true);

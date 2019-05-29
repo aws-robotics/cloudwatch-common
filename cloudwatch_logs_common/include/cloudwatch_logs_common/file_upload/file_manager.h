@@ -76,7 +76,8 @@ public:
    * Default constructor.
    */
   FileManager() {
-    file_manager_strategy_ = std::make_shared<FileManagerStrategy>();
+    FileManagerStrategyOptions options{"cloudwatchlogs", "/tmp/", ".log", 1024*1024};
+    file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }
 
   /**
@@ -84,7 +85,7 @@ public:
    *
    * @param file_manager_strategy custom strategy.
    */
-  FileManager(std::shared_ptr<FileManagerStrategy> &file_manager_strategy) {
+  explicit FileManager(std::shared_ptr<DataManagerStrategy> file_manager_strategy) {
     file_manager_strategy_ = file_manager_strategy;
   }
 
@@ -125,7 +126,9 @@ public:
                    "Total logs uploaded: %i",
                    total_logs_uploaded_);
       // Delete file if empty log_messages.file_location.
-      file_manager_strategy_->resolve(log_messages.data_tokens);
+      for (const auto &token : log_messages.data_tokens) {
+        file_manager_strategy_->resolve(token);
+      }
     } else {
       // Set last read location for this file.
     }
@@ -148,7 +151,7 @@ protected:
   /**
    * The file manager strategy to use for handling files.
    */
-  std::shared_ptr<FileManagerStrategy> file_manager_strategy_;
+  std::shared_ptr<DataManagerStrategy> file_manager_strategy_;
 
   /**
    * The status monitor for notifying an observer when files are available.
