@@ -1,8 +1,26 @@
+/*
+ * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *  http://aws.amazon.com/apache2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
+#include <chrono>
 #include <iostream>
+#include <regex>
 #include <experimental/filesystem>
 #include <fstream>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <aws/core/utils/logging/LogMacros.h>
+#include <iomanip>
 #include "cloudwatch_logs_common/file_upload/file_manager_strategy.h"
 
 namespace fs = std::experimental::filesystem;
@@ -10,12 +28,21 @@ namespace fs = std::experimental::filesystem;
 namespace Aws {
 namespace FileManagement {
 
-FileManagerStrategy::FileManagerStrategy() {
+FileManagerStrategy::FileManagerStrategy(const FileManagerStrategyOptions &options) {
+  options_ = options;
   rotateWriteFile();
 }
 
 void FileManagerStrategy::initialize() {
+  validateOptions();
   discoverStoredFiles();
+}
+
+void FileManagerStrategy::validateOptions() {
+  auto storage = std::experimental::filesystem::path(options_.storage_directory);
+  if (!std::experimental::filesystem::exists(storage)) {
+    std::experimental::filesystem::create_directory(storage);
+  }
 }
 
 bool FileManagerStrategy::isDataAvailable() {
@@ -27,7 +54,7 @@ bool FileManagerStrategy::isDataAvailable() {
     return true;
   }
 
-  if (active_write_file_size_) {
+  if (active_write_file_size_ > 0) {
     return true;
   }
 
@@ -41,8 +68,7 @@ DataToken FileManagerStrategy::read(std::string &data) {
     active_read_file_ = getFileToRead();
     active_read_file_stream_ = std::make_unique<std::ifstream>(active_read_file_);
   }
-  const std::string file_name = active_read_file_;
-  DataToken token = createToken(file_name);
+  DataToken token = createToken(active_read_file_);
   std::getline(*active_read_file_stream_, data);
   if (active_read_file_stream_->eof()) {
     active_read_file_.clear();
@@ -77,21 +103,19 @@ void FileManagerStrategy::resolve(const DataToken &token) {
   token_store_.erase(token);
 }
 
-void FileManagerStrategy::resolve(const std::list<DataToken> &tokens) {
-  for (const auto &token : tokens) {
-    resolve(token);
-  }
-}
-
 void FileManagerStrategy::onShutdown() {
   // @todo: implement
 }
 
 void FileManagerStrategy::discoverStoredFiles() {
-  for (const auto &entry : fs::directory_iterator(storage_directory_)) {
+  for (const auto &entry : fs::directory_iterator(options_.storage_directory)) {
     const fs::path &path = entry.path();
-    if (path.extension() == file_extension_) {
-      addFileNameToStorage(path.relative_path());
+    std::regex name_expr(
+      options_.file_prefix +
+      "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}" +
+      options_.file_extension);
+    if (std::regex_match(path.filename().string(), name_expr)) {
+      addFileNameToStorage(path);
     }
   }
 }
@@ -125,17 +149,18 @@ void FileManagerStrategy::addFileNameToStorage(const std::string &file_name) {
 
 void FileManagerStrategy::rotateWriteFile() {
   // TODO create using UUID or something.
-  uint64_t file_id = std::rand() % UINT64_MAX;
-  std::stringstream conversion_stream;
-  conversion_stream << std::hex << file_id;
-  std::string file_name(conversion_stream.str());
-  active_write_file_ = file_name;
+  using std::chrono::system_clock;
+  time_t tt = system_clock::to_time_t (system_clock::now());
+  std::ostringstream oss;
+  auto tm = *std::localtime(&tt);
+  oss << std::put_time(&tm, "%F_%H-%M-%S");
+  active_write_file_ = options_.storage_directory + options_.file_prefix + oss.str() + options_.file_extension;
   active_write_file_size_ = 0;
 }
 
 void FileManagerStrategy::checkIfFileShouldRotate(const std::string &data) {
   const uintmax_t new_file_size = active_write_file_size_ + data.size();
-  if (new_file_size >= maximum_file_size_in_bytes_) {
+  if (new_file_size >= options_.maximum_file_size_in_bytes) {
     rotateWriteFile();
   }
 }

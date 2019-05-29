@@ -63,13 +63,11 @@ public:
 class DataManagerStrategy {
 public:
   DataManagerStrategy() = default;
-  ~DataManagerStrategy() = default;
+  virtual ~DataManagerStrategy() = default;
 
   virtual void initialize() = 0;
 
   virtual bool isDataAvailable() = 0;
-
-  virtual void onShutdown() = 0;
 
   virtual DataToken read(std::string &data) = 0;
 
@@ -84,13 +82,27 @@ public:
 };
 
 /**
+ * File manager strategy options.
+ */
+struct FileManagerStrategyOptions {
+  std::string file_prefix;
+  std::string storage_directory;
+  std::string file_extension;
+  uint maximum_file_size_in_bytes;
+};
+
+/**
  * Manages how files are split up, which files to write to and read when requested.
  */
 class FileManagerStrategy : public DataManagerStrategy {
 public:
-  FileManagerStrategy();
+  explicit FileManagerStrategy(const FileManagerStrategyOptions &options);
 
-  ~FileManagerStrategy() = default;
+  ~FileManagerStrategy() override {
+    onShutdown();
+  }
+
+  void validateOptions();
 
   void initialize() override;
 
@@ -102,9 +114,7 @@ public:
 
   void resolve(const DataToken &token) override;
 
-  void resolve(const std::list<DataToken> &tokens);
-
-  void onShutdown() override;
+  void onShutdown();
 
 private:
   void discoverStoredFiles();
@@ -135,9 +145,7 @@ private:
   /**
    * User configurable settings
    */
-  std::string storage_directory_ = "/tmp/";
-  std::string file_extension_ = ".log";
-  uint maximum_file_size_in_bytes_ = 1024 * 1024;
+  FileManagerStrategyOptions options_;
 
   /**
    * Size of each batch when reading from a file.
