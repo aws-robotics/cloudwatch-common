@@ -62,11 +62,11 @@ inline operator >> (
 }
 
 template<
-  typename T,
-  class O>
-typename std::enable_if<std::is_base_of<Source<T>, O>::value, std::shared_ptr<O>>::type
-inline operator >> (
-  std::shared_ptr<O> &source,
+  typename O,
+  class T,
+  class = typename std::enable_if<std::is_base_of<Source<T>, O>::value, std::shared_ptr<O>>::type>
+inline InputStage<T>& operator >> (
+  std::shared_ptr<O> source,
   InputStage<T> &inputStage)
 {
   inputStage.setSource(source);
