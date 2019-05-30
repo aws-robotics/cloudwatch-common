@@ -37,7 +37,7 @@ static const FileManagerOptions kDefaultFileManagerOptions{50, 5};
 template<
   typename T,
   typename O,
-  class = typename std::enable_if<std::is_base_of<FileManager<T>, O>::value, O>::type>
+  class = typename std::enable_if<std::is_base_of<DataReader<T>, O>::value, O>::type>
 std::shared_ptr<FileUploadStreamer<T>> createFileUploadStreamer(
   std::shared_ptr<O> file_manager, FileManagerOptions file_manager_options = kDefaultFileManagerOptions)
   {
@@ -53,7 +53,7 @@ std::shared_ptr<FileUploadStreamer<T>> createFileUploadStreamer(
   multi_status_condition_monitor->addStatusMonitor(file_monitor);
 
   // Add the file monitor to the file manager to get notifications
-  file_manager->addFileStatusMonitor(file_monitor);
+  file_manager->setStatusMonitor(file_monitor);
 
   // Create a file upload manager to handle uploading a file.
   auto file_upload_manager =

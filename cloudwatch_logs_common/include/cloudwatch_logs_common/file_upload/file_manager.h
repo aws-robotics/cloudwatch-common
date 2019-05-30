@@ -41,12 +41,36 @@ enum UploadStatus {
   SUCCESS
 };
 
+template <typename T>
+class DataReader {
+public:
+  /**
+  * Read a specific amount of data from a file.
+  * @param batch_size to read
+  * @return a FileObject containing the data read plus some metadata about the file read
+  */
+  virtual FileObject<T> readBatch(size_t batch_size) = 0;
+
+  /**
+   * Handle an upload complete status.
+   *
+   * @param upload_status the status of an attempted upload of data
+   * @param log_messages the data which was attempted to be uploaded
+   */
+  virtual void fileUploadCompleteStatus(
+    const UploadStatus& upload_status,
+    const FileObject<T> &log_messages) = 0;
+
+  virtual void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
+};
+
 /**
  * File manager specific to the type of data to write to files.
  * @tparam T type of data to handle
  */
 template <typename T>
-class FileManager {
+class FileManager :
+  public DataReader <T>{
 public:
   /**
    * Default constructor.
@@ -86,13 +110,6 @@ public:
    */
   virtual void write(const T & data) = 0;
 
-  /**
-   * Read a specific amount of data from a file.
-   * @param batch_size to read
-   * @return a FileObject containing the data read plus some metadata about the file read
-   */
-  virtual FileObject<T> readBatch(size_t batch_size) = 0;
-
 /**
  * Handle an upload complete status.
  *
@@ -101,7 +118,7 @@ public:
  */
   inline void fileUploadCompleteStatus(
       const UploadStatus& upload_status,
-      const FileObject<T> &log_messages) {
+      const FileObject<T> &log_messages) override {
     if (UploadStatus::SUCCESS == upload_status) {
       total_logs_uploaded_ += log_messages.batch_size;
       AWS_LOG_INFO(__func__,
@@ -123,7 +140,7 @@ public:
    * Add a file status monitor to notify observers when there
    * @param status_monitor
    */
-  inline void addFileStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) {
+  inline void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
     file_status_monitor_ = status_monitor;
   }
 protected:

@@ -42,6 +42,13 @@ public:
     return false;
   }
 
+  inline bool tryEnqueue(
+      std::string&& value,
+      const std::chrono::microseconds &duration) override
+  {
+    return enqueue(value);
+  }
+
   /**
    * Set the observer for the queue.
    *
@@ -51,16 +58,9 @@ public:
     status_monitor_ = status_monitor;
   }
 
-  inline bool tryEnqueue(
-      std::string&& value,
-      const std::chrono::microseconds &duration) override
-  {
-    return enqueue(value);
-  }
-
- /**
- * The status monitor observer.
- */
+   /**
+   * The status monitor observer.
+   */
   std::shared_ptr<StatusMonitor> status_monitor_;
 };
 
