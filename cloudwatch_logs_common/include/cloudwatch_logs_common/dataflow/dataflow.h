@@ -61,5 +61,17 @@ inline operator >> (
   return std::make_tuple(observed_queue, PriorityOptions(level));
 }
 
+template<
+  typename T,
+  class O>
+typename std::enable_if<std::is_base_of<Source<T>, O>::value, std::shared_ptr<O>>::type
+inline operator >> (
+  std::shared_ptr<O> &source,
+  InputStage<T> &inputStage)
+{
+  inputStage.setSource(source);
+  return inputStage;
+}
+
 }  // namespace DataFlow
 }  // namespace Aws
