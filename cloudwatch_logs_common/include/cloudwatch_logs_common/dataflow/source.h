@@ -19,12 +19,10 @@
 namespace Aws {
 namespace DataFlow {
 
-template <typename T>
-class InputStage;
-
 template<typename T>
 class Source {
  public:
+  virtual ~Source() = default;
   virtual bool dequeue(T&, const std::chrono::microseconds &duration) = 0;
 };
 
