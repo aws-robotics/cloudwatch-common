@@ -35,6 +35,8 @@ namespace FileManagement {
 using Aws::DataFlow::MultiStatusConditionMonitor;
 using Aws::DataFlow::OutputStage;
 
+static constexpr std::chrono::milliseconds kTimeout = std::chrono::milliseconds(100);
+
 struct FileManagerOptions {
 
   /**
@@ -67,11 +69,11 @@ public:
    */
   explicit FileUploadStreamer(
     std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor,
-    std::shared_ptr<FileManager<T>> file_manager,
+    std::shared_ptr<DataReader<T>> file_manager,
     size_t batch_size)
   {
     status_condition_monitor_ = status_condition_monitor;
-    file_manager_ = file_manager;
+    data_reader_ = file_manager;
     batch_size_ = batch_size;
   }
 
@@ -109,25 +111,31 @@ public:
    * 4. Wait for the task to be completed to continue.
    */
   inline void run() {
-    // @todo(rddesmon): add timeout on wait for work and break out if the thread is cancelled.
     AWS_LOG_INFO(__func__,
                  "Waiting for files and work.");
-    status_condition_monitor_->waitForWork();
+    auto wait_result = status_condition_monitor_->waitForWork(kTimeout);
+    if (wait_result == std::cv_status::timeout) {
+      return;
+    }
+    if (!OutputStage<TaskPtr<T>>::getSink()) {
+      return;
+    }
     AWS_LOG_INFO(__func__,
                  "Found work! Batching");
-    FileObject<T> file_object = file_manager_->readBatch(batch_size_);
+    FileObject<T> file_object = data_reader_->readBatch(batch_size_);
     total_logs_uploaded += file_object.batch_size;
     auto file_upload_task =
         std::make_shared<FileUploadTaskAsync<T>>(file_object);
     auto future_result = file_upload_task->getResult();
-    if (OutputStage<TaskPtr<T>>::getSink()) {
-      OutputStage<TaskPtr<T>>::getSink()->enqueue(file_upload_task);
+    auto is_accepted = OutputStage<TaskPtr<T>>::getSink()->enqueue(file_upload_task);
+    std::future_status status = std::future_status::timeout;
+    if (is_accepted) {
+      status = future_result.wait_for(kTimeout);
     }
-    future_result.wait();
-    if (future_result.valid()) {
+    if (status == std::future_status::ready) {
       AWS_LOG_INFO(__func__, "Future is valid, call file upload complete status.")
       auto result = future_result.get();
-      file_manager_->fileUploadCompleteStatus(result.second, result.first);
+      data_reader_->fileUploadCompleteStatus(result.second, result.first);
     }
     AWS_LOG_INFO(__func__,
                  "Total logs from file completed %i", total_logs_uploaded);
@@ -173,7 +181,7 @@ private:
   /**
    * The file manager to read data from.
    */
-  std::shared_ptr<FileManager<T>> file_manager_;
+  std::shared_ptr<DataReader<T>> data_reader_;
 };
 
 }  // namespace FileManagement
