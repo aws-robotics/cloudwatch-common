@@ -16,7 +16,6 @@
 #include <chrono>
 #include <iostream>
 #include <regex>
-#include <experimental/filesystem>
 #include <fstream>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <aws/core/utils/logging/LogMacros.h>
@@ -91,14 +90,15 @@ void FileManagerStrategy::resolve(const DataToken &token) {
     throw std::runtime_error("DataToken not found");
   }
   FileTokenInfo token_info = token_store_[token];
-  std::string &file_name = token_info.file_name_;
+  std::string &file_path = token_info.file_path_;
 
-  if (file_tokens_.find(file_name) == file_tokens_.end()) {
-    throw std::runtime_error("Could not find token set for file: " + file_name);
+  if (file_tokens_.find(file_path) == file_tokens_.end()) {
+    throw std::runtime_error("Could not find token set for file: " + file_path);
   }
-  file_tokens_[file_name].erase(token);
-  if (file_tokens_.empty()) {
-    deleteFile(file_name);
+  file_tokens_[file_path].erase(token);
+  if (file_tokens_[file_path].empty()) {
+    deleteFile(file_path);
+    file_tokens_.erase(file_path);
   }
   token_store_.erase(token);
 }
@@ -115,13 +115,13 @@ void FileManagerStrategy::discoverStoredFiles() {
       "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}" +
       options_.file_extension);
     if (std::regex_match(path.filename().string(), name_expr)) {
-      addFileNameToStorage(path);
+      addFilePathToStorage(path);
     }
   }
 }
 
-void FileManagerStrategy::deleteFile(const std::string &file_name) {
-  std::remove(file_name.c_str());
+void FileManagerStrategy::deleteFile(const std::string &file_path) {
+  fs::remove(file_path);
 }
 
 std::string FileManagerStrategy::getFileToRead() {
@@ -143,8 +143,8 @@ std::string FileManagerStrategy::getFileToRead() {
   throw "No files available for reading";
 }
 
-void FileManagerStrategy::addFileNameToStorage(const std::string &file_name) {
-  stored_files_.push_back(file_name);
+void FileManagerStrategy::addFilePathToStorage(const fs::path &file_path) {
+  stored_files_.push_back(file_path);
 }
 
 void FileManagerStrategy::rotateWriteFile() {
