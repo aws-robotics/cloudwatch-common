@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <set>
 #include <memory>
+#include <experimental/filesystem>
 #include "cloudwatch_logs_common/file_upload/task_utils.h"
 
 namespace Aws {
@@ -56,8 +57,8 @@ using DataToken = uint64_t;
 class FileTokenInfo {
 public:
   FileTokenInfo() = default;
-  explicit FileTokenInfo(std::string file_name) : file_name_{std::move(file_name)} {};
-  std::string file_name_;
+  explicit FileTokenInfo(std::string file_path) : file_path_{std::move(file_path)} {};
+  std::string file_path_;
 };
 
 class DataManagerStrategy {
@@ -119,7 +120,7 @@ public:
 private:
   void discoverStoredFiles();
 
-  void deleteFile(const std::string &file_name);
+  void deleteFile(const std::string &file_path);
 
   std::string getFileToRead();
 
@@ -127,9 +128,9 @@ private:
 
   void checkIfFileShouldRotate(const std::string &data);
 
-  void addFileNameToStorage(const std::string &file_name);
+  void addFilePathToStorage(const std::experimental::filesystem::path &file_path);
 
-  DataToken createToken(const std::string &file_name);
+  DataToken createToken(const std::string &file_path);
 
   /**
    * Current file name to write to.
