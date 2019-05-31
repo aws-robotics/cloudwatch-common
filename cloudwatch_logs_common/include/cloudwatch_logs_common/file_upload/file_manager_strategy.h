@@ -90,6 +90,7 @@ struct FileManagerStrategyOptions {
   std::string storage_directory;
   std::string file_extension;
   uint maximum_file_size_in_bytes;
+  uint storage_limit_in_bytes;
 };
 
 /**
@@ -124,9 +125,13 @@ private:
 
   std::string getFileToRead();
 
+  void checkIfFileShouldRotate(const uintmax_t &new_data_size);
+
   void rotateWriteFile();
 
-  void checkIfFileShouldRotate(const std::string &data);
+  void checkIfStorageLimitHasBeenReached(const uintmax_t &new_data_size);
+
+  void deleteOldestFile();
 
   void addFilePathToStorage(const std::experimental::filesystem::path &file_path);
 
@@ -136,6 +141,7 @@ private:
    * Current file name to write to.
    */
   std::list<std::string> stored_files_;
+  uintmax_t  storage_size_; // size of all stored files, does not include active write file size.
 
   std::string active_write_file_;
   uint active_write_file_size_;

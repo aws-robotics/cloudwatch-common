@@ -49,7 +49,8 @@ protected:
   std::string folder = "log_tests/";
   std::string extension = ".log";
   uint max_file_size = 1024 * 1024;
-  FileManagerStrategyOptions options{prefix, folder, extension, max_file_size};
+  uint storage_limit = max_file_size * 10;
+  FileManagerStrategyOptions options{prefix, folder, extension, max_file_size, storage_limit};
 };
 
 TEST_F(FileManagerStrategyTest, restart_without_token) {
@@ -109,7 +110,6 @@ TEST_F(FileManagerStrategyTest, rotate_large_files) {
     file_manager_strategy.write(data1);
     long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
     EXPECT_EQ(1, file_count);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Sleep for 1 second to get new filename
     std::string data2 = "This is some additional data that is also longer than 10 bytes";
     file_manager_strategy.write(data2);
     file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
@@ -133,5 +133,49 @@ TEST_F(FileManagerStrategyTest, resolve_token_deletes_file) {
     FileManagerStrategy file_manager_strategy(options);
     file_manager_strategy.initialize();
     EXPECT_FALSE(file_manager_strategy.isDataAvailable());
+  }
+}
+
+TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
+  namespace fs = std::experimental::filesystem;
+  const uint max_file_size_in_bytes = 50;
+  const uint storage_limit = 150;
+  options.maximum_file_size_in_bytes = max_file_size_in_bytes;
+  options.storage_limit_in_bytes = storage_limit;
+  {
+    FileManagerStrategy file_manager_strategy(options);
+    file_manager_strategy.initialize();
+    const std::string string_25_bytes = "This is 25 bytes of data.";
+    file_manager_strategy.write(string_25_bytes);
+    long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
+    EXPECT_EQ(1, file_count);
+    for (const auto &entry : fs::directory_iterator(folder)) {
+      const fs::path &path = entry.path();
+    }
+
+    for (int i = 0; i < 5; i++) {
+      file_manager_strategy.write(string_25_bytes);
+    }
+
+    file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
+    EXPECT_EQ(3, file_count);
+
+    std::vector<std::string> file_paths;
+    for (const auto &entry : fs::directory_iterator(folder)) {
+      const fs::path &path = entry.path();
+      file_paths.push_back(path);
+    }
+
+    std::sort(file_paths.begin(), file_paths.end());
+    const std::string file_to_be_deleted = file_paths[0];
+
+    file_manager_strategy.write(string_25_bytes);
+    file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
+    EXPECT_EQ(3, file_count);
+
+    for (const auto &entry : fs::directory_iterator(folder)) {
+      const std::string file_path = entry.path();
+      EXPECT_TRUE(file_path != file_to_be_deleted);
+    }
   }
 }
