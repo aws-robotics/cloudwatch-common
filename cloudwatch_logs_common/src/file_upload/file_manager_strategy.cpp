@@ -29,6 +29,8 @@ namespace FileManagement {
 
 FileManagerStrategy::FileManagerStrategy(const FileManagerStrategyOptions &options) {
   options_ = options;
+  storage_size_ = 0;
+  active_write_file_size_ = 0;
   rotateWriteFile();
 }
 
@@ -77,7 +79,9 @@ DataToken FileManagerStrategy::read(std::string &data) {
 }
 
 void FileManagerStrategy::write(const std::string &data) {
-  checkIfFileShouldRotate(data);
+  checkIfFileShouldRotate(data.size());
+  checkIfStorageLimitHasBeenReached(data.size());
+
   std::ofstream log_file;
   log_file.open(active_write_file_, std::ios_base::app);
   log_file << data << std::endl;
@@ -112,7 +116,7 @@ void FileManagerStrategy::discoverStoredFiles() {
     const fs::path &path = entry.path();
     std::regex name_expr(
       options_.file_prefix +
-      "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}" +
+      "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{1}" +
       options_.file_extension);
     if (std::regex_match(path.filename().string(), name_expr)) {
       addFilePathToStorage(path);
@@ -121,13 +125,16 @@ void FileManagerStrategy::discoverStoredFiles() {
 }
 
 void FileManagerStrategy::deleteFile(const std::string &file_path) {
+  const uintmax_t file_size = fs::file_size(file_path);
   fs::remove(file_path);
+  storage_size_ -= file_size;
 }
 
 std::string FileManagerStrategy::getFileToRead() {
   // if we have stored files, pop from the start of the list and return that filename
   // if we do not have stored files, and the active file has data, switch active file and return the existing active file.
   if (!stored_files_.empty()) {
+    stored_files_.sort();
     const std::string oldest_file = stored_files_.front();
     stored_files_.pop_front();
     return oldest_file;
@@ -145,6 +152,7 @@ std::string FileManagerStrategy::getFileToRead() {
 
 void FileManagerStrategy::addFilePathToStorage(const fs::path &file_path) {
   stored_files_.push_back(file_path);
+  storage_size_ += fs::file_size(file_path);
 }
 
 void FileManagerStrategy::rotateWriteFile() {
@@ -154,15 +162,44 @@ void FileManagerStrategy::rotateWriteFile() {
   std::ostringstream oss;
   auto tm = *std::localtime(&tt);
   oss << std::put_time(&tm, "%F_%H-%M-%S");
-  active_write_file_ = options_.storage_directory + options_.file_prefix + oss.str() + options_.file_extension;
+  uint count = 0;
+  std::string original_file_name = options_.file_prefix + oss.str();
+  std::string file_name = original_file_name + "-" + std::to_string(count);
+  std::string file_path = options_.storage_directory + file_name + options_.file_extension;
+  while (fs::exists(file_path)) {
+    ++count;
+    file_name = original_file_name + "-" + std::to_string(count);
+    file_path = options_.storage_directory + file_name + options_.file_extension;
+  }
+
+  if (!active_write_file_.empty()) {
+    stored_files_.push_back(active_write_file_);
+    storage_size_ += active_write_file_size_;
+  }
+
+  active_write_file_ = file_path;
   active_write_file_size_ = 0;
 }
 
-void FileManagerStrategy::checkIfFileShouldRotate(const std::string &data) {
-  const uintmax_t new_file_size = active_write_file_size_ + data.size();
-  if (new_file_size >= options_.maximum_file_size_in_bytes) {
+void FileManagerStrategy::checkIfFileShouldRotate(const uintmax_t &new_data_size) {
+  const uintmax_t new_file_size = active_write_file_size_ + new_data_size;
+  if (new_file_size > options_.maximum_file_size_in_bytes) {
     rotateWriteFile();
   }
+}
+
+void FileManagerStrategy::checkIfStorageLimitHasBeenReached(const uintmax_t &new_data_size) {
+  const uintmax_t new_storage_size = storage_size_ + active_write_file_size_ + new_data_size;
+  if (new_storage_size > options_.storage_limit_in_bytes) {
+    deleteOldestFile();
+  }
+}
+
+void FileManagerStrategy::deleteOldestFile() {
+  stored_files_.sort();
+  const std::string oldest_file = stored_files_.front();
+  stored_files_.pop_front();
+  deleteFile(oldest_file);
 }
 
 DataToken FileManagerStrategy::createToken(const std::string &file_name) {
