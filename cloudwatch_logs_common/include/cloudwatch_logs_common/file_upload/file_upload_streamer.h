@@ -124,7 +124,7 @@ public:
     FileObject<T> file_object = data_reader_->readBatch(batch_size_);
     total_logs_uploaded += file_object.batch_size;
     auto file_upload_task =
-      std::make_shared<FileUploadTaskAsync<T>>(file_object);
+      std::make_shared<FileUploadTaskAsync<T>>(file_object, nullptr); //todo FIXME
     auto future_result = file_upload_task->getResult();
     auto is_accepted = OutputStage<TaskPtr<T>>::getSink()->enqueue(file_upload_task);
     std::future_status status = std::future_status::timeout;

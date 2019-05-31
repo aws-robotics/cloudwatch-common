@@ -63,23 +63,16 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsRequest(
 
 Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsToCloudWatch(
   Aws::String & next_token, const std::string & log_group, const std::string & log_stream,
-  std::list<Aws::CloudWatchLogs::Model::InputLogEvent> * logs)
+  std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
   Aws::Vector<Aws::CloudWatchLogs::Model::InputLogEvent> events;
-
-  if (nullptr == logs) {
-    status = CW_LOGS_NULL_PARAMETER;
-    AWS_LOGSTREAM_WARN(__func__, "Internal error occurred, error code: "
-                                   << status
-                                   << ", quit attempting to send logs to CloudWatch in Log Group: "
-                                   << log_group << " Log Stream: " << log_stream << ".");
-    return status;
-  } else if (logs->empty()) {
+  if (logs.empty()) {
     status = CW_LOGS_EMPTY_PARAMETER;
     AWS_LOGSTREAM_WARN(__func__,
-                       "Log set is empty, quit attempting to send logs to CloudWatch in Log Group: "
-                         << log_group << " Log Stream: " << log_stream << ".");
+                       "Log set is empty, "
+                         << log_group << " Log Stream: " <<
+                         log_stream << ".");
     return status;
   }
 
@@ -91,7 +84,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsToCloudWa
     request.SetSequenceToken(next_token);
   }
 
-  for (auto it = logs->begin(); it != logs->end(); ++it) {
+  for (auto it = logs.begin(); it != logs.end(); ++it) {
     events.push_back(*it);
     if (events.size() >= kMaxLogsPerRequest) {
       request.SetLogEvents(events);
@@ -102,12 +95,11 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsToCloudWa
     if (CW_LOGS_SUCCEEDED != status) {
       AWS_LOGSTREAM_ERROR(__func__, "Failed to send to CloudWatch in Log Group: "
                                       << log_group << " Log Stream: " << log_stream
-                                      << " with error code: " << status
-                                      << ". Dropping this batch of logs.");
+                                      << " with error code: " << status);
       return status;
     } else {
       AWS_LOGSTREAM_DEBUG(__func__,
-                         "A batch of log was successfully sent to CloudWatch in Log Group: "
+                         "A batch of logs was successfully sent to CloudWatch in Log Group: "
                            << log_group << " Log Stream: " << log_stream << ".");
     }
   }
@@ -118,10 +110,9 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsToCloudWa
     if (CW_LOGS_SUCCEEDED != status) {
       AWS_LOGSTREAM_ERROR(__func__, "Failed to send to CloudWatch in Log Group: "
                                       << log_group << " Log Stream: " << log_stream
-                                      << " with error code: " << status
-                                      << ". Dropping the last bit of this batch of logs.");
+                                      << " with error code: " << status);
     } else {
-      AWS_LOGSTREAM_DEBUG(__func__, "All logs were successfully sent to CloudWatch in Log Group: "
+      AWS_LOGSTREAM_DEBUG(__func__, "All queued logs were successfully sent to CloudWatch in Log Group: "
                                      << log_group << " Log Stream: " << log_stream << ".");
     }
   }

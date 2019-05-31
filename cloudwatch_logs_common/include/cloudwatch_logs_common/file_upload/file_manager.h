@@ -36,6 +36,7 @@ public:
   std::list<DataToken> data_tokens;
 };
 
+//todo move to a different file, e.g. statuses?
 enum UploadStatus {
   FAIL,
   SUCCESS
@@ -133,6 +134,11 @@ public:
       // Set last read location for this file.
     }
   }
+
+  virtual void uploadCompleteStatus(
+          const FileManagement::UploadStatus& upload_status,
+          const T &message) = 0;
+
 
   /**
    * Add a file status monitor to notify observers when there
