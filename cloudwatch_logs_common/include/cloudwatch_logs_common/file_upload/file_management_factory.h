@@ -24,7 +24,7 @@
 namespace Aws {
 namespace FileManagement {
 
-static const FileManagerOptions kDefaultFileManagerOptions{50, 5};
+static const FileUploadStreamerOptions kDefaultFileManagerOptions{50, 5};
 
 /**
  * Create a file upload manager complete with a file status monitor attached to the file_manager,
@@ -39,7 +39,9 @@ template<
   typename O,
   class = typename std::enable_if<std::is_base_of<DataReader<T>, O>::value, O>::type>
 std::shared_ptr<FileUploadStreamer<T>> createFileUploadStreamer(
-  std::shared_ptr<O> file_manager, FileManagerOptions file_manager_options = kDefaultFileManagerOptions)
+  std::shared_ptr<O> file_manager,
+  std::shared_ptr<ITaskFactory<T>> task_factory,
+  FileUploadStreamerOptions file_manager_options = kDefaultFileManagerOptions)
   {
 
   // File Management system
@@ -60,7 +62,8 @@ std::shared_ptr<FileUploadStreamer<T>> createFileUploadStreamer(
       std::make_shared<Aws::FileManagement::FileUploadStreamer<T>>(
           multi_status_condition_monitor,
           file_manager,
-          file_manager_options.batch_size);
+          task_factory,
+          file_manager_options);
   return file_upload_manager;
 }
 

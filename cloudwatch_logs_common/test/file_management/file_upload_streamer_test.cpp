@@ -30,6 +30,20 @@ using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
 using namespace Aws::DataFlow;
 
+
+class MockTaskFactory :
+  public ITaskFactory<std::string> {
+public:
+  MOCK_METHOD1(createFileUploadTaskAsync_rvr,
+    std::shared_ptr<FileUploadTaskAsync<std::string>>(FileObject<std::string> batch_data));
+
+  std::shared_ptr<FileUploadTaskAsync<std::string>>
+  createFileUploadTaskAsync(
+      FileObject<std::string>&& batch_data) override {
+    return createFileUploadTaskAsync_rvr(batch_data);
+  }
+};
+
 class MockDataReader :
   public DataReader<std::string>
 {
@@ -82,7 +96,8 @@ public:
   void SetUp() override
   {
     file_manager = std::make_shared<::testing::StrictMock<MockDataReader>>();
-    file_upload_streamer = createFileUploadStreamer<std::string>(file_manager);
+    mock_task_factory = std::make_shared<MockTaskFactory>();
+    file_upload_streamer = createFileUploadStreamer<std::string>(file_manager, mock_task_factory);
     mock_sink = std::make_shared<MockSink>();
     network_status_monitor = std::make_shared<StatusMonitor>();
   }
@@ -96,6 +111,7 @@ protected:
   std::shared_ptr<FileUploadStreamer<std::string>> file_upload_streamer;
   std::shared_ptr<MockSink> mock_sink;
   std::shared_ptr<StatusMonitor> network_status_monitor;
+  std::shared_ptr<MockTaskFactory> mock_task_factory;
 };
 
 
@@ -114,7 +130,7 @@ TEST_F(FileStreamerTest, success_on_network_and_file) {
   EXPECT_CALL(*mock_sink, enqueue_rvr(testing::_))
   .WillOnce(
     testing::Invoke([](SharedFileUploadTask data) -> bool {
-      data->onComplete(SUCCESS);
+      data->run();
       return true;
     }));
   EXPECT_CALL(*file_manager, readBatch(testing::Eq(50)))
@@ -138,7 +154,6 @@ TEST_F(FileStreamerTest, fail_upload) {
   EXPECT_CALL(*mock_sink, enqueue_rvr(testing::_))
       .WillOnce(
           testing::Invoke([](SharedFileUploadTask data) -> bool {
-            data->onComplete(UploadStatus::FAIL);
             return true;
           }));
   EXPECT_CALL(*file_manager, readBatch(testing::Eq(50)))

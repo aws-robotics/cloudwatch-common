@@ -27,6 +27,7 @@
 #include <cloudwatch_logs_common/file_upload/task_utils.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_task.h>
+#include <cloudwatch_logs_common/file_upload/task_factory.h>
 
 namespace Aws {
 namespace FileManagement {
@@ -36,7 +37,7 @@ using Aws::DataFlow::OutputStage;
 
 static constexpr std::chrono::milliseconds kTimeout = std::chrono::milliseconds(100);
 
-struct FileManagerOptions {
+struct FileUploadStreamerOptions {
 
   /**
    * Max number of data processed per read.
@@ -69,11 +70,13 @@ public:
   explicit FileUploadStreamer(
     std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor,
     std::shared_ptr<DataReader<T>> file_manager,
-    size_t batch_size)
+    std::shared_ptr<ITaskFactory<T>> task_factory,
+    FileUploadStreamerOptions options)
   {
     status_condition_monitor_ = status_condition_monitor;
     data_reader_ = file_manager;
-    batch_size_ = batch_size;
+    batch_size_ = options.batch_size;
+    task_factory_ = task_factory;
   }
 
   virtual ~FileUploadStreamer() {
@@ -123,8 +126,7 @@ public:
                  "Found work! Batching");
     FileObject<T> file_object = data_reader_->readBatch(batch_size_);
     total_logs_uploaded += file_object.batch_size;
-    auto file_upload_task =
-      std::make_shared<FileUploadTaskAsync<T>>(file_object, nullptr); //todo FIXME
+    auto file_upload_task = task_factory_->createFileUploadTaskAsync(std::move(file_object));
     auto future_result = file_upload_task->getResult();
     auto is_accepted = OutputStage<TaskPtr<T>>::getSink()->enqueue(file_upload_task);
     std::future_status status = std::future_status::timeout;
@@ -181,6 +183,11 @@ private:
    * The file manager to read data from.
    */
   std::shared_ptr<DataReader<T>> data_reader_;
+
+  /**
+   * Task factory to create tasks.
+   */
+  std::shared_ptr<ITaskFactory<T>> task_factory_;
 };
 
 }  // namespace FileManagement
