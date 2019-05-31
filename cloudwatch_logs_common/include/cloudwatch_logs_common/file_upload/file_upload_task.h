@@ -117,30 +117,31 @@ template<typename T>
 class FileUploadTaskAsync : public Task<T> {
  public:
   explicit FileUploadTaskAsync(
-      std::shared_ptr<FileObject<T>> batch_data,
-      std::shared_ptr<IPublisher<T>> iPublisher
-      ) : Task<T>(iPublisher)
+      FileObject<T> &&batch_data,
+      std::shared_ptr<IPublisher<T>> publisher
+      ) : Task<T>(publisher)
   {
     this->batch_data_ = batch_data;
   }
 
   virtual ~FileUploadTaskAsync() = default;
 
-  inline void run(){}
-
-  inline void onComplete(const UploadStatus &upload_status) {
+  inline void run(){
+    auto status = this->iPublisher_->attemptPublish(batch_data_.batch_data);
     file_upload_promise_.set_value(
-            std::pair<FileObject<T>, UploadStatus>{batch_data_, upload_status});
+        std::pair<FileObject<T>, UploadStatus>{batch_data_, status});
   }
 
   inline std::future<std::pair<FileObject<T>, UploadStatus>> getResult() {
     return file_upload_promise_.get_future();
   }
 
-  inline void cancel() {};
+  inline void cancel() {
 
- private:
-  std::shared_ptr<FileObject<T>> batch_data_;
+  };
+
+private:
+  FileObject<T> batch_data_;
   std::promise<std::pair<FileObject<T>, UploadStatus>> file_upload_promise_;
 };
 

@@ -17,18 +17,25 @@
 
 #include <vector>
 #include <cloudwatch_logs_common/file_upload/file_upload_task.h>
-#include "cloudwatch_logs_common/file_upload/file_manager.h"
+#include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <functional>
 
 namespace Aws {
-namespace CloudWatchLogs {
+namespace FileManagement {
 
 using namespace Aws::CloudWatchLogs;
-using namespace Aws::FileManagement;
 
 template<typename T>
-class TaskFactory {
+class ITaskFactory {
+public:
+  virtual std::shared_ptr<FileUploadTaskAsync<T>>
+  createFileUploadTaskAsync(
+    FileObject<T>&& batch_data) = 0;
+};
 
+template<typename T>
+class TaskFactory :
+  public ITaskFactory<T> {
 public:
     inline TaskFactory(std::shared_ptr<IPublisher<T>> publisher, std::shared_ptr<FileManager<T>> file_manager) {
       publisher_= publisher;
@@ -38,9 +45,9 @@ public:
       auto upload_function = std::bind(&FileManager<T>::uploadCompleteStatus, this->file_manager_, std::placeholders::_1, std::placeholders::_2);
       return BasicTask<T>(batch_data, upload_function, this->publisher_);
     }
-    inline FileUploadTask<T> createFileUploadTask(std::shared_ptr<FileObject<T>> batch_data) {
-      auto upload_function = std::bind(&FileManager<T>::fileUploadCompleteStatus, file_manager_, std::placeholders::_1, std::placeholders::_2);
-      return FileUploadTask<T>(batch_data, upload_function, this->publisher_);
+    inline std::shared_ptr<FileUploadTaskAsync<T>> createFileUploadTaskAsync(
+        FileObject<T>&& batch_data) override {
+      return std::make_shared<FileUploadTaskAsync<T>>(std::move(batch_data), this->publisher_);
     }
 private:
     std::shared_ptr<IPublisher<T>> publisher_;
@@ -48,3 +55,4 @@ private:
 };
 }
 }
+

@@ -28,8 +28,6 @@
 #include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_publisher.h>
 
-#include <cloudwatch_logs_common/utils/service.h>
-
 namespace Aws {
 namespace CloudWatchLogs {
 
