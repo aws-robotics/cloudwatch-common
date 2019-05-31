@@ -15,8 +15,9 @@
 
 #pragma once
 
-#include <cloudwatch_logs_common/log_manager.h>
+#include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_publisher.h>
+#include <cloudwatch_logs_common/log_service.h>
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -38,7 +39,8 @@ public:
    *
    *  @return An instance of LogManager
    */
-  virtual std::shared_ptr<LogManager> CreateLogManager(
+   //todo is LogService of type 'LogType' bad to expose as a public API?
+  virtual std::shared_ptr<LogService> CreateLogManager(
     const std::string & log_group,
     const std::string & log_stream,
     const Aws::Client::ClientConfiguration & client_config,

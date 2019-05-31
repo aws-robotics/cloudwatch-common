@@ -16,32 +16,44 @@
 #include <future>
 #include <cloudwatch_logs_common/file_upload/task_utils.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
-
+#include <memory>
 #pragma once
 
 namespace Aws {
 namespace FileManagement {
 
+template<typename T>
+class IPublisher {
+public:
+    virtual UploadStatus attemptPublish(T &batch_data) = 0; //todo shared pointer input? or unique pointer?
+};
 
 /**
- * Define a task to get batch data and call a callback when finished with this task.
+ * Define a task (runnable) to get batch data and call a callback when finished with this task.
  * @tparam T
  */
 template<typename T>
 class Task {
  public:
+  inline Task(std::shared_ptr<IPublisher<T>> publisher) {
+    this->iPublisher_ = publisher;
+  }
   virtual ~Task() = default;
-  virtual T& getBatchData() = 0;
-  virtual void onComplete(const UploadStatus &upload_status) = 0;
+  virtual void run() = 0; //todo would be nice to define here, same definition is reused
+  virtual void cancel() = 0;
+protected:
+  std::shared_ptr<IPublisher<T>> iPublisher_;
 };
+
 
 template<typename T>
 class BasicTask :
   public Task<T> {
 public:
   explicit BasicTask(
-    T batch_data,
-    UploadStatusFunction<UploadStatus, T> upload_status_function)
+    std::shared_ptr<T> batch_data,
+    UploadStatusFunction<UploadStatus, T> upload_status_function,
+    std::shared_ptr<IPublisher<T>> iPublisher) : Task<T>(iPublisher)
   {
     this->batch_data_ = batch_data;
     this->upload_status_function_ = upload_status_function;
@@ -49,17 +61,18 @@ public:
 
   virtual ~BasicTask() = default;
 
-  inline T& getBatchData() override {
-    return batch_data_;
+  inline void run() {
+    auto status = this->iPublisher_->attemptPublish(*batch_data_);
+    upload_status_function_(status, *batch_data_); //todo input should be a shared pointer
   }
 
-  inline void onComplete(const UploadStatus &upload_status) override {
-    upload_status_function_(upload_status, batch_data_);
+  inline void cancel() {
+    upload_status_function_(UploadStatus::FAIL, *batch_data_);
   }
 
 private:
-  T batch_data_;
-  UploadStatusFunction<UploadStatus, T> upload_status_function_;
+  std::shared_ptr<T> batch_data_; //todo consider const
+  UploadStatusFunction<UploadStatus, T> upload_status_function_; //todo consider const
 };
 
 /**
@@ -71,8 +84,9 @@ template<typename T>
 class FileUploadTask : public Task<T> {
  public:
   explicit FileUploadTask(
-      FileObject<T> batch_data,
-      UploadStatusFunction<UploadStatus, FileObject<T>> upload_status_function)
+      std::shared_ptr<FileObject<T>> batch_data,
+      UploadStatusFunction<UploadStatus, FileObject<T>> upload_status_function,
+      std::shared_ptr<IPublisher<T>> iPublisher) : Task<T>(iPublisher)
   {
     this->batch_data_ = batch_data;
     this->upload_status_function_ = upload_status_function;
@@ -80,16 +94,17 @@ class FileUploadTask : public Task<T> {
 
   virtual ~FileUploadTask() = default;
 
-  inline T& getBatchData() override {
-    return batch_data_.batch_data;
-  }
+    inline void run() {
+      auto status = this->iPublisher_->attemptPublish(*batch_data_);
+      upload_status_function_(status, batch_data_);
+    }
 
-  inline void onComplete(const UploadStatus &upload_status) override {
-    upload_status_function_(upload_status, batch_data_);
-  }
+    inline void cancel() {
+      upload_status_function_(UploadStatus::FAIL, *batch_data_);
+    }
 
- private:
-  FileObject<T> batch_data_;
+private:
+  std::shared_ptr<FileObject<T>> batch_data_;
   UploadStatusFunction<UploadStatus, FileObject<T>> upload_status_function_;
 };
 
@@ -102,28 +117,30 @@ template<typename T>
 class FileUploadTaskAsync : public Task<T> {
  public:
   explicit FileUploadTaskAsync(
-      FileObject<T> batch_data)
+      std::shared_ptr<FileObject<T>> batch_data,
+      std::shared_ptr<IPublisher<T>> iPublisher
+      ) : Task<T>(iPublisher)
   {
     this->batch_data_ = batch_data;
   }
 
   virtual ~FileUploadTaskAsync() = default;
 
-  inline T& getBatchData() override {
-    return batch_data_.batch_data;
-  }
+  inline void run(){}
 
-  inline void onComplete(const UploadStatus &upload_status) override {
+  inline void onComplete(const UploadStatus &upload_status) {
     file_upload_promise_.set_value(
-        std::pair<FileObject<T>, UploadStatus>{batch_data_, upload_status});
+            std::pair<FileObject<T>, UploadStatus>{batch_data_, upload_status});
   }
 
   inline std::future<std::pair<FileObject<T>, UploadStatus>> getResult() {
     return file_upload_promise_.get_future();
   }
 
+  inline void cancel() {};
+
  private:
-  FileObject<T> batch_data_;
+  std::shared_ptr<FileObject<T>> batch_data_;
   std::promise<std::pair<FileObject<T>, UploadStatus>> file_upload_promise_;
 };
 

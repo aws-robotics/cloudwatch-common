@@ -20,47 +20,46 @@
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
 #include <cloudwatch_logs_common/utils/log_file_manager.h>
-#include <cloudwatch_logs_common/utils/shared_object.h>
 #include <cloudwatch_logs_common/file_upload/task_utils.h>
 #include <cloudwatch_logs_common/dataflow/status_monitor.h>
 #include <cloudwatch_logs_common/dataflow/queue_monitor.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
 
+#include <cloudwatch_logs_common/utils/publisher.h>
+#include <list>
 #include <memory>
 #include <thread>
 
 namespace Aws {
 namespace CloudWatchLogs {
-  
+
 /** 
  * @enum Aws::CloudWatchLogs::LogPublisherRunState
  * @brief Defines the different runtime states for the Publisher
  * This enum is used by the LogPublisher to track the current runtime state of the Run function
  */
 enum LogPublisherRunState {
+  LOG_PUBLISHER_INITIALIZED,
   LOG_PUBLISHER_RUN_CREATE_GROUP,
+  LOG_PUBLISHER_FAILED_CREATE_GROUP,
   LOG_PUBLISHER_RUN_CREATE_STREAM,
+  LOG_PUBLISHER_FAILED_CREATE_STREAM,
   LOG_PUBLISHER_RUN_INIT_TOKEN,
-  LOG_PUBLISHER_RUN_SEND_LOGS
+  LOG_PUBLISHER_FAILED_INIT_TOKEN,
+  LOG_PUBLISHER_ATTEMPT_SEND_LOGS,
+  LOG_PUBLISHER_FAILED_SEND_LOGS,
+  LOG_PUBLISHER_FINISHED_SEND_LOGS
 };
 
-class ILogPublisher {
-  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors StartPublisherThread() = 0;
-  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors StopPublisherThread() = 0;
-};
+const static Aws::String EMPTY_TOKEN = "";
+
 /**
- *  @brief Class that handles sending logs data to CloudWatch
- *  This class is responsible for emitting all the stored logs to AWS CloudWatch.
- *  Logs are published asynchronously using a thread. The thread waits on a condition
- *  variable and is signaled (by AWSCloudWatchLogManager) whenever new logs are
- *  available.
+ * Wrapping class around the CloudWatch Logs API.
  */
-class LogPublisher :
-  public ILogPublisher
+class LogPublisher : public Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>
 {
 public:
-  using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
-  using LogTypePtr = LogType *;
+  using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>; //todo in types class? this was not easy to find
   /**
    *  @brief Creates a LogPublisher object that uses the provided client and SDK configuration
    *  Constructs a LogPublisher object that will use the provided CloudWatchClient and SDKOptions
@@ -70,48 +69,14 @@ public:
    * CloudWatch.
    */
   LogPublisher(const std::string & log_group, const std::string & log_stream,
-               std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cw_client);
+               std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cw_client, Aws::SDKOptions options);
 
   /**
    *  @brief Tears down the LogPublisher object
    */
   virtual ~LogPublisher();
 
-  /**
-   *  @brief Asynchronously publishes the provided logs to CloudWatch.
-   *  This function will start an asynchronous request to CloudWatch to post the provided logs. If
-   * the publisher is already in the process of publishing a previous batch of logs it will fail
-   * with AWS_ERR_ALREADY.
-   *
-   *  @param shared_logs A reference to a shared object that contains a map where the key is a
-   * string representing logs group name and the value is a map where the key is a string
-   *      representing log stream and the value is a list containing the logs to be published
-   *  @return An error code that will be SUCCESS if it started publishing successfully, otherwise it
-   * will be an error code.
-   */
-  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors PublishLogs(
-    Aws::CloudWatchLogs::Utils::SharedObject<
-      std::list<Aws::CloudWatchLogs::Model::InputLogEvent> *> * shared_logs);
-
-  /**
-   *  @brief Starts the background thread used by the publisher.
-   *  Use this function in order to start the background thread that the publisher uses for the
-   * asynchronous posting of logs to CloudWatch
-   */
-  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors StartPublisherThread();
-
-  /**
-   *  @brief Stops the background thread used by the publisher.
-   *  Use this function in order to attempt a graceful shutdown of the background thread that the
-   * publisher uses.
-   *
-   *  @return An error code that will be SUCCESS if the thread was shutdown successfully
-   */
-  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors StopPublisherThread();
-
-  virtual void SetLogFileManager(
-      std::shared_ptr<Utils::LogFileManager> &log_file_manager);
-
+  //todo remove, use observer
   virtual void SetNetworkMonitor(
       std::shared_ptr<Aws::FileManagement::StatusMonitor> &network_monitor);
 
@@ -120,15 +85,28 @@ public:
   virtual inline void SetLogTaskSource(LogTaskSource &queue_monitor) {
     queue_monitor_ = queue_monitor;
   }
+  virtual bool initialize() override;
+  virtual bool shutdown() override;
 
 private:
-  void CreateGroup();
-  void CreateStream();
-  void InitToken(Aws::String & next_token);
-  void SendLogs(Aws::String & next_token);
-  void SendLogFiles(Aws::String & next_token);
-  void Run();
-  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, LogTypePtr logs);
+
+  //todo init AWS SDK
+  //todo shutdown AWS SDK
+
+  //config
+  bool CreateGroup();
+  bool CreateStream();
+  bool InitToken(Aws::String & next_token);
+
+  //overall config
+  bool configure() override;
+
+
+  //main publish mechanism
+  bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) override;
+
+  bool SendLogFiles(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs);
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data);
 
   FileManagement::UploadStatusFunction<FileManagement::UploadStatus, LogType> upload_status_function_;
   std::shared_ptr<Utils::LogFileManager> log_file_manager_ = nullptr;
@@ -137,14 +115,11 @@ private:
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
   std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cloudwatch_client_;
   Aws::SDKOptions aws_sdk_options_;
-  std::thread * publisher_thread_;
-  std::atomic_bool thread_keep_running_;
-  std::atomic<Aws::CloudWatchLogs::Utils::SharedObject<
-    std::list<Aws::CloudWatchLogs::Model::InputLogEvent> *> *>
-    shared_logs_;
-  std::string log_group_;
-  std::string log_stream_;
-  LogPublisherRunState run_state_;
+  std::string log_group_; //todo const?
+  std::string log_stream_; //todo const?
+  LogPublisherRunState run_state_; //useful for debug
+  Aws::String next_token;
+  Aws::SDKOptions options_;
 };
 
 }  // namespace CloudWatchLogs

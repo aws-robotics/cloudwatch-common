@@ -20,13 +20,13 @@ if(AWSSDK_FOUND)
 endif()
 
 set(ALL_SRC_FILES
-    src/log_manager.cpp
+    src/log_batcher.cpp
     src/log_manager_factory.cpp
-    src/log_publisher.cpp
     src/utils/cloudwatch_facade.cpp
     src/utils/log_file_manager.cpp
     src/file_upload/file_manager_strategy.cpp
-        src/dataflow/status_monitor.cpp)
+    src/dataflow/status_monitor.cpp
+    src/log_publisher.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})
 target_link_libraries(${PROJECT_NAME} ${OUTPUT} stdc++fs)
@@ -94,7 +94,10 @@ if(GMOCK_LIBRARY)
           test/file_management/file_manager_strategy_test.cpp
           test/file_management/file_upload_manager_test.cpp
           test/dataflow/observed_queue_test.cpp
-          test/dataflow/queue_monitor_test.cpp)
+          test/dataflow/queue_monitor_test.cpp
+          test/utils/pipeline_test.cpp
+          )
+
   target_include_directories(test_cloudwatch_offline
         PRIVATE include
         PRIVATE ${aws_common_INCLUDE_DIRS}

@@ -65,7 +65,7 @@ public:
    */
   virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogsToCloudWatch(
     Aws::String & next_token, const std::string & log_group, const std::string & log_stream,
-    std::list<Aws::CloudWatchLogs::Model::InputLogEvent> * logs);
+    std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs);
 
   /**
    * @brief Creates a log group
