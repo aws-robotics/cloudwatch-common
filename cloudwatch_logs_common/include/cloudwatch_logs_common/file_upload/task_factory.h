@@ -37,21 +37,37 @@ template<typename T>
 class TaskFactory :
   public ITaskFactory<T> {
 public:
+
+    //for testing
+    inline TaskFactory(std::shared_ptr<IPublisher<T>> publisher) {
+      publisher_= publisher;
+      file_manager_ = nullptr;
+    }
+
     inline TaskFactory(std::shared_ptr<IPublisher<T>> publisher, std::shared_ptr<FileManager<T>> file_manager) {
       publisher_= publisher;
       file_manager_ = file_manager;
     }
     inline BasicTask<T> createBasicTask(std::shared_ptr<T> batch_data) {
-      auto upload_function = std::bind(&FileManager<T>::uploadCompleteStatus, this->file_manager_, std::placeholders::_1, std::placeholders::_2);
+
+      auto upload_function = std::bind(&TaskFactory<T>::emptyFunction, this);
+      if (file_manager_) {
+        auto upload_function = std::bind(&FileManager<T>::uploadCompleteStatus, this->file_manager_,
+                                         std::placeholders::_1, std::placeholders::_2);
+      }
       return BasicTask<T>(batch_data, upload_function, this->publisher_);
     }
     inline std::shared_ptr<FileUploadTaskAsync<T>> createFileUploadTaskAsync(
         FileObject<T>&& batch_data) override {
       return std::make_shared<FileUploadTaskAsync<T>>(std::move(batch_data), this->publisher_);
     }
+
+    //do nothing
+    void emptyFunction() {};
+
 private:
     std::shared_ptr<IPublisher<T>> publisher_;
-    std::shared_ptr<FileManager<T>> file_manager_;
+    std::shared_ptr<FileManager<T>> file_manager_; //allow this to be null?
 };
 }
 }

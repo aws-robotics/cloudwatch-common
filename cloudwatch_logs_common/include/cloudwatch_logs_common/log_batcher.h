@@ -21,7 +21,6 @@
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
-#include <cloudwatch_logs_common/file_upload/file_upload_task.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/task_factory.h>
 
@@ -37,17 +36,44 @@
 namespace Aws {
 namespace CloudWatchLogs {
 
-//todo this can be moved to utils for metrics
+// todo this can be moved to utils for metrics
+// todo could to a template of <T, D> where D is the data to be stored in the list / vector
+/**
+ * Abstract class used to define a batching interface.
+ * @tparam T the type of data to be batched.
+ */
 template<typename T>
-class DataBatcher {
+class DataBatcher : public Service {
 public:
-
   static const int DEFAULT_SIZE = -1;
-  //todo would be nice to implement an abstract type with timestamp
+  DataBatcher() {
+    this->max_batch_size_.store(DataBatcher::DEFAULT_SIZE);
+  }
+  DataBatcher(int size) {
+    if(size <= 0) {
+      //todo throw exception?
+    }
+    this->max_batch_size_.store(size);
+  }
   virtual bool batchData(const T &data_to_batch) = 0;
   virtual bool batchData(const T &data_to_batch, const std::chrono::milliseconds & milliseconds) = 0;
   virtual bool publishBatchedData() = 0;
-  //todo could have a list, but then that implies the list is of type T
+  virtual int getCurrentBatchSize() = 0;
+  inline bool setSize(int new_value) {
+    if(new_value > 0) {
+      this->max_batch_size_.store(new_value);
+      return true;
+    }
+    return false;
+  }
+
+  inline void resetSize(int new_value) {
+      this->max_batch_size_.store(DEFAULT_SIZE);
+  }
+  /**
+   * Size used for the internal storage
+   */
+  std::atomic<int> max_batch_size_;
 };
 
 //todo this class could entirely be a base worker class
@@ -58,18 +84,21 @@ class LogBatcher :
 public:
   /**
    *  @brief Creates a new LogBatcher
-   *  Creates a new LogManager that will group/buffer logs and then send them to the provided
-   * log_publisher to be sent out to CloudWatch
-   *
-   *  @param log_publisher A shared pointer to a LogPublisher that will be used to publish the
-   * buffered logs
+   *  Creates a new LogBatcher that will group/buffer logs. Note: logs are only automatically published if the
+   *  size is set, otherwise the publishBatchedData is necesary to push data to be published.
    */
     LogBatcher(std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> taskFactory);
-
+    /**
+     *  @brief Creates a new LogBatcher
+     *  Creates a new LogBatcher that will group/buffer logs. Note: logs are only automatically published if the
+     *  size is set, otherwise the publishBatchedData is necesary to push data to be published.
+     *
+     *  @param size of the batched data that will trigger a publish
+     */
     LogBatcher(std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> taskFactory, int size);
 
   /**
-   *  @brief Tears down a LogManager object
+   *  @brief Tears down a LogBatcher object
    */
   virtual ~LogBatcher();
 
@@ -101,6 +130,12 @@ public:
    */
   virtual bool publishBatchedData() override;
 
+  virtual int getCurrentBatchSize() override;
+
+  virtual bool initialize() override;
+  virtual bool start() override;
+  virtual bool shutdown() override;
+
 protected:
   virtual Aws::CloudWatchLogs::Model::InputLogEvent convertToLogEvent(const std::string & message,
           const std::chrono::milliseconds & milliseconds);
@@ -110,7 +145,7 @@ private:
   std::shared_ptr<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>> batched_data_; //todo vector
   std::recursive_mutex batch_and_publish_lock_;
   std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> task_factory_;
-  int max_batch_size_ = DataBatcher::DEFAULT_SIZE; //todo getter / setter?
+  //todo getter / setter?
   //todo stats? how many times published? rate of publishing? throughput?
 };
 

@@ -28,6 +28,8 @@
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_task.h>
 #include <cloudwatch_logs_common/file_upload/task_factory.h>
+#include <cloudwatch_logs_common/utils/publisher.h>
+#include <cloudwatch_logs_common/utils/service.h>
 
 namespace Aws {
 namespace FileManagement {
@@ -57,7 +59,7 @@ struct FileUploadStreamerOptions {
  */
 template<typename T>
 class FileUploadStreamer :
-  public OutputStage<TaskPtr<T>> {
+  public OutputStage<TaskPtr<T>>, public Service {
 public:
   /**
    * Create a file upload manager.
@@ -77,6 +79,8 @@ public:
     data_reader_ = file_manager;
     batch_size_ = options.batch_size;
     task_factory_ = task_factory;
+    network_monitor_ = std::make_shared<Aws::FileManagement::StatusMonitor>();
+    status_condition_monitor_->addStatusMonitor(network_monitor_);
   }
 
   virtual ~FileUploadStreamer() {
@@ -98,10 +102,24 @@ public:
     status_condition_monitor_->addStatusMonitor(status_monitor);
   }
 
-  inline void startRun() {
+  inline bool shutdown() {
+    // set that the thread should no longer run
+    return true;
+  }
+
+  // todo this should be protected or private
+  inline bool startRun() {
+    //todo while should run
     while (true) {
       run();
     }
+  }
+
+  void onPublisherStateChange(const Aws::CloudWatchLogs::PublisherState &newState) {
+    //set the status_condition_monitor_
+    auto network_status = newState == PublisherState::CONNECTED ?
+                          Aws::DataFlow::Status::UNAVAILABLE : Aws::DataFlow::Status::AVAILABLE;
+    network_monitor_->setStatus(network_status);
   }
 
   /**
@@ -142,11 +160,17 @@ public:
                  "Total logs from file completed %i", total_logs_uploaded);
   }
 
+  bool initialize() {
+    return true;
+  }
+
   /**
    * Start the upload thread.
    */
-  void start() {
+  bool start() {
+    // todo check if joinable, then don't start again
     thread = std::make_shared<std::thread>(std::bind(&FileUploadStreamer::startRun, this));
+    return true;
   }
 
   /**
@@ -157,6 +181,8 @@ public:
       thread->join();
     }
   }
+
+  // todo join wait?
 
 private:
   /**
@@ -188,6 +214,8 @@ private:
    * Task factory to create tasks.
    */
   std::shared_ptr<ITaskFactory<T>> task_factory_;
+
+  std::shared_ptr<Aws::FileManagement::StatusMonitor> network_monitor_;
 };
 
 }  // namespace FileManagement

@@ -13,13 +13,19 @@
  * permissions and limitations under the License.
  */
 
+#pragma once
+
 #include <atomic>
+#include <chrono>
 #include <list>
+#include <functional>
 #include <aws/logs/model/PutLogEventsRequest.h>
 #include <aws/core/Aws.h>
 #include <aws/logs/CloudWatchLogsClient.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_task.h>
+#include "cloudwatch_logs_common/utils/observable_object.h"
+#include <cloudwatch_logs_common/utils/service.h>
 
 using namespace Aws::FileManagement;
 
@@ -27,19 +33,19 @@ namespace Aws {
 namespace CloudWatchLogs { //todo should be cloudwatch (generic)
 
 enum PublisherState {
-    CREATED, // constructed
+    UNKNOWN, // constructed
     CONNECTED, //configured, ready to receive data
     NOT_CONNECTED, //unable to send data
 };
 
 template <typename T>
-class Publisher : public IPublisher<T> //todo extend service
+class Publisher : public IPublisher<T>, public Service
 {
 
 public:
 
-  Publisher() {
-    current_state_.store(CREATED);
+  Publisher() : publisher_state_(UNKNOWN) {
+    published_count_ = 0; //todo publish attempts
   }
   /**
    * Return the current state of the publisher.
@@ -47,7 +53,7 @@ public:
    */
   inline PublisherState getPublisherState()
     {
-      return current_state_.load();
+      return publisher_state_.getValue();
     }
 
   /**
@@ -57,22 +63,30 @@ public:
    */
   inline UploadStatus attemptPublish(T &data)
   {
-    bool b = publishData(data);
-    current_state_.store(b ? CONNECTED : NOT_CONNECTED);
-    return b ? UploadStatus::SUCCESS : UploadStatus::FAIL;
+    bool b = publishData(data); // always at least try
+    publisher_state_.setValue(b ? CONNECTED : NOT_CONNECTED);
+    if (b) {
+      published_count_++;
+      return UploadStatus::SUCCESS;
+    }
+    UploadStatus::FAIL;
   }
   /**
    * Return true if this publisher can send data to CloudWatch, false otherwise.
    * @return
    */
   inline bool canPublish(){
-    auto curent_state = current_state_.load();
-    return curent_state == CREATED || curent_state == CONNECTED; //at least try once when configured
+    auto curent_state = publisher_state_.getValue();
+    return curent_state == UNKNOWN || curent_state == CONNECTED; //at least try once when configured
   }
 
-  virtual bool initialize() = 0;
-  virtual bool shutdown() = 0;
+  int getPublishedCount() {
+    return published_count_; //todo atomic?
+  }
 
+  virtual bool addPublisherStateListener(const std::function<void(const PublisherState&)> & listener) {
+    publisher_state_.addListener(listener);
+  }
 
 protected:
   /**
@@ -88,7 +102,9 @@ protected:
   virtual bool publishData(T &data) = 0;
 
 private:
-  std::atomic<PublisherState> current_state_;
+  ObservableObject<PublisherState> publisher_state_;
+  int published_count_;
+  //todo time last published?
 };
 
 }  // namespace CloudWatchLogs

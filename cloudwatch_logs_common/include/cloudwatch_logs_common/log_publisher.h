@@ -26,6 +26,7 @@
 #include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
 
 #include <cloudwatch_logs_common/utils/publisher.h>
+
 #include <list>
 #include <memory>
 #include <thread>
@@ -76,10 +77,6 @@ public:
    */
   virtual ~LogPublisher();
 
-  //todo remove, use observer
-  virtual void SetNetworkMonitor(
-      std::shared_ptr<Aws::FileManagement::StatusMonitor> &network_monitor);
-
   using Task = Aws::FileManagement::Task<LogType>;
   using LogTaskSource = std::shared_ptr<Aws::DataFlow::Source<std::shared_ptr<Task>>>;
   virtual inline void SetLogTaskSource(LogTaskSource &queue_monitor) {
@@ -87,11 +84,9 @@ public:
   }
   virtual bool initialize() override;
   virtual bool shutdown() override;
+  virtual bool start() { return true;};
 
 private:
-
-  //todo init AWS SDK
-  //todo shutdown AWS SDK
 
   //config
   bool CreateGroup();
@@ -100,7 +95,6 @@ private:
 
   //overall config
   bool configure() override;
-
 
   //main publish mechanism
   bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) override;
