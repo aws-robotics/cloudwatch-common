@@ -21,12 +21,15 @@
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 
 #include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
-#include <cloudwatch_logs_common/file_upload/file_upload_task.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/task_factory.h>
 
 #include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_publisher.h>
+
+#include <cloudwatch_logs_common/utils/service.h>
+
+#include <chrono>
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -35,104 +38,148 @@ using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
 
-
 /**
  *
- * @tparam T
- * @tparam D
+ * @tparam T the type to be published to cloudwatch
+ * @tparam D the type to be batched and converted to the cloudwatch published type T
  */
 template<typename T, typename D>
-class CloudWatchService : public Aws::DataFlow::InputStage<TaskPtr<T>> {
+class CloudWatchService : public Aws::DataFlow::InputStage<TaskPtr<T>>, public Service {
 public:
+  CloudWatchService(std::shared_ptr<Publisher<T>> log_publisher,
+    std::shared_ptr<DataBatcher<D>> log_batcher) {
 
-    /**
-     *
-     */
-    virtual inline void start() {
-      //todo atomic
-      if(should_run_.load()) {
-        return;
-      }
+    this->log_file_upload_streamer_ = nullptr;
+    this->log_publisher_ = log_publisher;
+    this->log_batcher_ = log_batcher;
+    this->dequeue_duration_ = std::chrono::milliseconds(100); //todo magic constant
+    this->should_run_.store(false);
+  }
 
-      log_publisher_->initialize();
+  ~CloudWatchService() {
 
+  }
+
+  /**
+   * Start everything up.
+   */
+  virtual bool start() {
+    //todo atomic
+    if(should_run_.load()) {
+      return false;
+    }
+
+    log_publisher_->start();
+    log_batcher_->start();
+
+    if (log_file_upload_streamer_) {
       log_file_upload_streamer_->start();
-      //start the thread to dequeue
-      if(!worker_thread_.joinable()) {
-        should_run_.store(true);
-        worker_thread_ = std::thread(&CloudWatchService::Work, this);
-      }
     }
+    //start the thread to dequeue
+    startWorkerThread();
+    return true;
+  }
 
-    /**
-     *
-     */
-    virtual inline void shutdown() {
-      //todo atomic
-      //stop publisher
-      //clear batcher
-      //streamer stop (owns file manager, so it's shutdown?)
-      log_publisher_->shutdown();
-      should_run_.store(false);
-    }
+  virtual bool initialize() {
+    bool b = true;
+    b &= log_publisher_->initialize();
+    //no one else needs init()
+    return b;
+  }
 
-    //entry point to batch data
-    //todo generic function
-    virtual inline void batchData(const D &data_to_batch) {
-      log_batcher_->batchData(data_to_batch);
-    }
-    //todo interface?
-    virtual inline void publishBatchedData() {
-      log_batcher_->publishBatchedData();
-    }
+  /**
+   * Shut everything down.
+   */
+  virtual inline bool shutdown() {
+    //todo atomic
+    log_publisher_->shutdown();
+    log_batcher_->shutdown();
+    log_file_upload_streamer_->shutdown();
+    should_run_.store(false);
+    return true;
+  }
 
-
-    virtual inline std::chrono::milliseconds getDequeueDuration() {
-      return this->dequeue_duration_;
+  virtual inline void waitForShutdown() { //todo timeout?
+    if (worker_thread_.joinable()) {
+      worker_thread_.join();
     }
+  }
 
-    virtual inline bool setDequeueDuration(std::chrono::milliseconds new_value) {
-      if (new_value.count() >= 0) {
-        this->dequeue_duration_ = new_value;
-      }
+  /**
+   * Userland entry point to batch data for publishing
+   * @param data_to_batch
+   */
+  virtual inline bool batchData(const D &data_to_batch) {
+    return log_batcher_->batchData(data_to_batch);
+  }
+
+  virtual inline bool batchData(const D &data_to_batch, const std::chrono::milliseconds &milliseconds) {
+    return log_batcher_->batchData(data_to_batch, milliseconds);
+  }
+
+  /**
+   * Publishing mechanism
+   * @param data_to_batch
+   */
+  virtual inline bool publishBatchedData() {
+    return log_batcher_->publishBatchedData();
+  }
+
+  virtual inline std::chrono::milliseconds getDequeueDuration() {
+    return this->dequeue_duration_;
+  }
+
+  virtual inline bool setDequeueDuration(std::chrono::milliseconds new_value) {
+    if (new_value.count() >= 0) {
+      this->dequeue_duration_ = new_value;
     }
+  }
 
 protected:
 
-    inline void Work() {
-      //take input and publish it
-      while(should_run_.load()) {
-        TaskPtr<LogType> t;
-        bool b = Aws::DataFlow::InputStage<TaskPtr<T>>::getSource()->dequeue(t, dequeue_duration_);
-        if (b) {
-          t->run();
-        }
-      }
-
-      // todo we fell through, cancel all the tasks in the queue
-
+  virtual inline bool startWorkerThread() {
+    if(!worker_thread_.joinable()) {
+      should_run_.store(true);
+      worker_thread_ = std::thread(&CloudWatchService::Work, this);
+      return true;
     }
-    std::shared_ptr<FileUploadStreamer<T>> log_file_upload_streamer_; //kept here for startup and shutdown
-    std::shared_ptr<Publisher<T>> log_publisher_; //kept here for startup shutdown
-    std::thread worker_thread_;
-    std::atomic<bool> should_run_;
-    std::shared_ptr<DataBatcher<D>> log_batcher_;
-    std::chrono::milliseconds dequeue_duration_;
+    return false;
+  }
+  /**
+   * Main workhorse thread that dequeues from the source and calls Task run.
+   */
+  inline void Work() {
+    //take input and publish it
+    while(should_run_.load()) {
+      TaskPtr<T> t;
+      bool b = Aws::DataFlow::InputStage<TaskPtr<T>>::getSource()->dequeue(t, dequeue_duration_);
+      if (b) {
+        t->run(); // publish mechanism via the TaskFactory
+      }
+    }
+    // todo we fell through, cancel all the tasks in the queue
+  }
+
+  std::shared_ptr<FileUploadStreamer<T>> log_file_upload_streamer_; //kept here for startup and shutdown
+  std::shared_ptr<Publisher<T>> log_publisher_; //kept here for startup shutdown
+  std::thread worker_thread_;
+  std::atomic<bool> should_run_;
+  std::shared_ptr<DataBatcher<D>> log_batcher_;
+  std::chrono::milliseconds dequeue_duration_;
+  //todo need a handle to the FileManager or have filestreamer be a service and shut the manager down accordingly
 };
 
 // hide the template from userland
 class LogService : public CloudWatchService<LogType, std::string> {
 public:
 
-    LogService(std::shared_ptr<FileUploadStreamer<LogType>> log_file_upload_streamer,
-            std::shared_ptr<Publisher<LogType>> log_publisher,
-            std::shared_ptr<DataBatcher<std::string>> log_batcher) {
+  LogService(std::shared_ptr<FileUploadStreamer<LogType>> log_file_upload_streamer,
+          std::shared_ptr<Publisher<LogType>> log_publisher,
+          std::shared_ptr<DataBatcher<std::string>> log_batcher)
+          : CloudWatchService(log_publisher, log_batcher) {
 
-      this->log_file_upload_streamer_ = log_file_upload_streamer;
-      this->log_publisher_ = log_publisher;
-      this->log_batcher_ = log_batcher;
-      this->dequeue_duration_ = std::chrono::milliseconds(100); //todo magic constant
-    }
+    this->log_file_upload_streamer_ = log_file_upload_streamer;
+  }
 };
 
 }

@@ -34,17 +34,20 @@
 
 using namespace Aws::CloudWatchLogs;
 
-LogBatcher::LogBatcher(std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> task_factory){
+LogBatcher::LogBatcher(std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> task_factory)
+: DataBatcher()
+{
   //todo check arguments
   this->task_factory_ = task_factory;
   this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>();
 }
 
-LogBatcher::LogBatcher(std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> task_factory, int size) {
+LogBatcher::LogBatcher(std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> task_factory, int size)
+: DataBatcher(size)
+{
   //todo check arguments
   this->task_factory_ = task_factory;
-  this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>();
-  this->max_batch_size_ = size;
+  this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>(); //todo set to size so we don't have to keep allocating
 }
 
 LogBatcher::~LogBatcher() = default;
@@ -69,7 +72,7 @@ bool LogBatcher::batchData(const std::string &log_msg_formatted, const std::chro
   this->batched_data_->push_back(log_event);
 
   // publish if the size has been configured
-  if (max_batch_size_ != DataBatcher::DEFAULT_SIZE && batched_data_->size() > max_batch_size_) {
+  if (max_batch_size_ != DataBatcher::DEFAULT_SIZE && batched_data_->size() >= max_batch_size_) {
     this->publishBatchedData();
   }
   return true;
@@ -84,20 +87,33 @@ Aws::CloudWatchLogs::Model::InputLogEvent LogBatcher::convertToLogEvent(const st
 
 bool LogBatcher::publishBatchedData() {
 
-  std::lock_guard<std::recursive_mutex> lck(batch_and_publish_lock_);
+  std::lock_guard <std::recursive_mutex> lck(batch_and_publish_lock_);
 
   if (getSink()) {
 
     auto bt = task_factory_->createBasicTask(batched_data_);
-    auto p = std::make_shared<BasicTask<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(bt);
+    auto p = std::make_shared < BasicTask < std::list < Aws::CloudWatchLogs::Model::InputLogEvent >> > (bt);
     getSink()->enqueue(p);
 
-    this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>();
-
+    this->batched_data_ = std::make_shared < std::list < Aws::CloudWatchLogs::Model::InputLogEvent >> ();
     return true;
 
   } else {
     //todo log unable to queue
     return false;
   }
+}
+
+int LogBatcher::getCurrentBatchSize() {
+  return this->batched_data_->size();
+}
+
+bool LogBatcher::initialize() {
+  return true;
+}
+bool LogBatcher::start() {
+  return true;
+}
+bool LogBatcher::shutdown() {
+  batched_data_->clear();
 }

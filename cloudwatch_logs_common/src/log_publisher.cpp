@@ -163,19 +163,13 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String 
     AWS_LOG_DEBUG(__func__,
                   "Unable to obtain the sequence token to use");
   }
-  //todo
+  // set the new observed state, will fire any registered listeners
   if (network_monitor_) {
     auto network_status = send_logs_status ?
                           Aws::DataFlow::Status::UNAVAILABLE : Aws::DataFlow::Status::AVAILABLE;
     network_monitor_->setStatus(network_status);
   }
   return send_logs_status;
-}
-
-void LogPublisher::SetNetworkMonitor(
-    std::shared_ptr<Aws::FileManagement::StatusMonitor> &network_monitor)
-{
-  network_monitor_ = network_monitor;
 }
 
 bool LogPublisher::configure()
@@ -213,7 +207,7 @@ bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEve
 }
 
 bool LogPublisher::initialize() {
-  Aws::InitAPI(this->options_); //TODO what happens when offline?
+  Aws::InitAPI(this->options_); //TODO what happens when offline? //does this need to be called again?
   return true;
 }
 

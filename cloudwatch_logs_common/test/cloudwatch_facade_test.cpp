@@ -65,9 +65,10 @@ protected:
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_NullLogs)
 {
+    std::list<Aws::CloudWatchLogs::Model::InputLogEvent> empty_logs_list;
     Aws::String nextToken;
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_NULL_PARAMETER,
-        facade_->SendLogsToCloudWatch(nextToken, "", "", nullptr));
+        facade_->SendLogsToCloudWatch(nextToken, "", "", empty_logs_list));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_EmptyLogs)
@@ -75,7 +76,7 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_EmptyLogs)
     std::list<Aws::CloudWatchLogs::Model::InputLogEvent> empty_logs_list;
     Aws::String nextToken;
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_EMPTY_PARAMETER,
-        facade_->SendLogsToCloudWatch(nextToken, "", "", &empty_logs_list));
+        facade_->SendLogsToCloudWatch(nextToken, "", "", empty_logs_list));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_FailedResponse)
@@ -86,7 +87,7 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_FailedRespons
     Aws::String nextToken;
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_FAILED,
-        facade_->SendLogsToCloudWatch(nextToken, "", "", &logs_list_));
+        facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list_));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_SuccessResponse)
@@ -98,7 +99,7 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_SuccessRespon
     Aws::String nextToken;
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
-        facade_->SendLogsToCloudWatch(nextToken, "", "", &logs_list_));
+        facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list_));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_LongSuccessResponse)
@@ -116,7 +117,7 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_LongSuccessRe
     }
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
-        facade_->SendLogsToCloudWatch(nextToken, "", "", &logs_list));
+        facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list));
 }
 
 

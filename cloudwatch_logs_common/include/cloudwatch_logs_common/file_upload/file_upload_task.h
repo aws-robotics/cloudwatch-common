@@ -13,6 +13,8 @@
  * permissions and limitations under the License.
  */
 
+#pragma once
+
 #include <future>
 #include <cloudwatch_logs_common/file_upload/task_utils.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
@@ -52,7 +54,7 @@ class BasicTask :
 public:
   explicit BasicTask(
     std::shared_ptr<T> batch_data,
-    UploadStatusFunction<UploadStatus, T> upload_status_function,
+    UploadStatusFunction<UploadStatus, T> upload_status_function, //allow this to be null / unset
     std::shared_ptr<IPublisher<T>> iPublisher) : Task<T>(iPublisher)
   {
     this->batch_data_ = batch_data;
@@ -63,7 +65,9 @@ public:
 
   inline void run() {
     auto status = this->iPublisher_->attemptPublish(*batch_data_);
-    upload_status_function_(status, *batch_data_); //todo input should be a shared pointer
+    if (upload_status_function_) {
+      upload_status_function_(status, *batch_data_); //todo input should be a shared pointer
+    }
   }
 
   inline void cancel() {
@@ -96,7 +100,9 @@ class FileUploadTask : public Task<T> {
 
     inline void run() {
       auto status = this->iPublisher_->attemptPublish(*batch_data_);
-      upload_status_function_(status, batch_data_);
+      if (upload_status_function_) {
+        upload_status_function_(status, batch_data_);
+      }
     }
 
     inline void cancel() {

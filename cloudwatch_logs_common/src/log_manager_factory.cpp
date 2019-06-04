@@ -34,7 +34,7 @@ using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
 
 
-
+// why not do all of this in the setup of LogService? it has ownership of everything
 std::shared_ptr<LogService> LogManagerFactory::CreateLogManager(
   const std::string & log_group,
   const std::string & log_stream,
@@ -43,14 +43,12 @@ std::shared_ptr<LogService> LogManagerFactory::CreateLogManager(
 {
   auto cloudwatch_facade = std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchFacade>(client_config);
   auto file_manager= std::make_shared<LogFileManager>();
+
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, cloudwatch_facade, sdk_options);
 
   //factory to create all tasks, link to publisher (ultimate task sink)
   auto task_factory = std::make_shared<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(publisher, file_manager);
 
-  auto network_monitor=
-      std::make_shared<Aws::FileManagement::StatusMonitor>();
-  publisher->SetNetworkMonitor(network_monitor);
   // todo this should be a service to subscribe and status part of the publisher, too much is dependent in File utils / tasks and seems brittle
 
   auto queue_monitor =
@@ -58,7 +56,9 @@ std::shared_ptr<LogService> LogManagerFactory::CreateLogManager(
   auto file_upload_streamer =
       Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager, task_factory);
 
-  file_upload_streamer->addStatusMonitor(network_monitor);
+  // connect publisher state changes to the File Streamer
+  publisher->addPublisherStateListener(std::bind(&FileUploadStreamer<LogType>::onPublisherStateChange, file_upload_streamer, std::placeholders::_1));
+
   // Create an observed queue to trigger a publish when data is available
   auto file_data_queue =
       std::make_shared<TaskObservedQueue<LogType>>();
@@ -73,6 +73,7 @@ std::shared_ptr<LogService> LogManagerFactory::CreateLogManager(
 
   auto ls = std::make_shared<LogService>(file_upload_streamer, publisher, log_batcher);
   queue_monitor >> *ls;
-  ls->start();
+  ls->start(); // todo should we allow the user to start?
+
   return ls;
 }

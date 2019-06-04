@@ -77,16 +77,15 @@ if(GMOCK_LIBRARY)
         )
 
   target_include_directories(test_cloudwatch_logs_common
-          PRIVATE include
-          PRIVATE ${aws_common_INCLUDE_DIRS}
-          PUBLIC ${PROJECT_SOURCE_DIR}/test/include
-          )
+        PRIVATE include
+        PRIVATE ${aws_common_INCLUDE_DIRS}
+        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+        )
   target_link_libraries(test_cloudwatch_logs_common
-          ${GTEST_LIBRARIES}
-          pthread
-          ${GMOCK_LIBRARY}
-          ${PROJECT_NAME}
-          )
+        ${GTEST_LIBRARIES}
+        pthread
+        ${GMOCK_LIBRARY}
+        ${PROJECT_NAME})
 
   add_common_gtest(test_cloudwatch_offline
           test/file_management/file_manager_test.cpp
@@ -94,6 +93,8 @@ if(GMOCK_LIBRARY)
           test/file_management/file_upload_streamer_test.cpp
           test/dataflow/observed_queue_test.cpp
           test/dataflow/queue_monitor_test.cpp
+          test/pipeline_test.cpp
+          test/utils/observable_object_test.cpp
           )
 
   target_include_directories(test_cloudwatch_offline
