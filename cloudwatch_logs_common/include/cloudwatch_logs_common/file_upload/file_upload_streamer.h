@@ -103,14 +103,13 @@ public:
   }
 
   inline bool shutdown() {
-    // set that the thread should no longer run
+    is_shutdown = true;
     return true;
   }
 
   // todo this should be protected or private
   inline bool startRun() {
-    //todo while should run
-    while (true) {
+    while (!is_shutdown) {
       run();
     }
   }
@@ -188,6 +187,11 @@ public:
   // todo join wait?
 
 private:
+
+  /**
+   * Is shutdown boolean;
+   */
+  bool is_shutdown = false;
 
   /**
    * The status condition monitor to wait on before uploading.

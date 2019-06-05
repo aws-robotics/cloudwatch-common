@@ -67,7 +67,7 @@ bool FileManagerStrategy::isDataAvailable() {
 
 DataToken FileManagerStrategy::read(std::string &data) {
   AWS_LOG_INFO(__func__,
-               "Reading from active log");
+    "Reading from active log");
   if (active_read_file_.empty()) {
     active_read_file_ = getFileToRead();
     active_read_file_stream_ = std::make_unique<std::ifstream>(active_read_file_);
@@ -88,7 +88,7 @@ void FileManagerStrategy::write(const std::string &data) {
   log_file.open(active_write_file_, std::ios_base::app);
   if (log_file.bad()) {
     AWS_LOG_WARN(__func__,
-                 "Unable to open file");
+      "Unable to open file: %s", active_write_file_.c_str());
   }
   log_file << data << std::endl;
   log_file.close();
@@ -131,6 +131,8 @@ void FileManagerStrategy::discoverStoredFiles() {
 }
 
 void FileManagerStrategy::deleteFile(const std::string &file_path) {
+  AWS_LOG_WARN(__func__,
+    "Deleting file: %s", file_path.c_str());
   const uintmax_t file_size = fs::file_size(file_path);
   fs::remove(file_path);
   storage_size_ -= file_size;

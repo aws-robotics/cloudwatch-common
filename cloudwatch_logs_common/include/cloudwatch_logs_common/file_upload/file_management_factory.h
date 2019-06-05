@@ -33,6 +33,7 @@ static const FileUploadStreamerOptions kDefaultFileManagerOptions{50, 5};
  * @tparam T the type of messages the file uploader will handle
  * @param file_manager to use as the source of these messages
  * @return a shared pointer to a configured file upload manager.
+ * @throws Invalid Argument for the file manager
  */
 template<
   typename T,
