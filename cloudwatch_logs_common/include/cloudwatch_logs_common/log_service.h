@@ -93,7 +93,9 @@ public:
     //todo atomic
     log_publisher_->shutdown();
     log_batcher_->shutdown();
-    log_file_upload_streamer_->shutdown();
+    if (log_file_upload_streamer_) {
+      log_file_upload_streamer_->shutdown();
+    }
     should_run_.store(false);
     return true;
   }

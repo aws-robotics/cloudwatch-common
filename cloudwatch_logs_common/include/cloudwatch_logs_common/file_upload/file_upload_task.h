@@ -75,7 +75,9 @@ public:
   void setOnCompleteFunction(
     const UploadStatusFunction<UploadStatus, T> upload_status_function)
   {
-    upload_status_function_ = upload_status_function;
+    if (upload_status_function_) {
+      upload_status_function_ = upload_status_function;
+    }
   }
 
   T& getBatchData() override {
@@ -84,7 +86,7 @@ public:
 
 private:
   std::shared_ptr<T> batch_data_;
-  UploadStatusFunction<UploadStatus, T> upload_status_function_;
+  UploadStatusFunction<UploadStatus, T> upload_status_function_ = nullptr;
 };
 
 /**
@@ -109,7 +111,9 @@ class FileUploadTask : public Task<T> {
   virtual ~FileUploadTask() = default;
 
   void onComplete(const UploadStatus &status) override {
-    upload_status_function_(status, batch_data_);
+    if (upload_status_function_) {
+      upload_status_function_(status, batch_data_);
+    }
   }
 
   T& getBatchData() override {
@@ -118,7 +122,7 @@ class FileUploadTask : public Task<T> {
 
 private:
   FileObject<T> batch_data_;
-  FileUploadStatusFunc upload_status_function_;
+  FileUploadStatusFunc upload_status_function_ = nullptr;
 };
 
 /**
@@ -152,7 +156,7 @@ class FileUploadTaskAsync : public Task<T> {
 
 private:
   FileObject<T> batch_data_;
-  std::promise<std::pair<FileObject<T>, UploadStatus>> file_upload_promise_;
+  std::promise<std::pair<FileObject<T>, UploadStatus>> file_upload_promise_ = nullptr;
 };
 
 //------------- Definitions --------------//
