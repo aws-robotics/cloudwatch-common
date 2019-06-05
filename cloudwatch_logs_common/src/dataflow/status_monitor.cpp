@@ -52,6 +52,7 @@ void MultiStatusConditionMonitor::addStatusMonitor(
   if (status_monitor) {
     status_monitor->setStatusObserver(this);
     status_monitors_[(status_monitor.get())] = mask_factory_.getNewMask();
+    setStatus(status_monitor->getStatus(), status_monitor.get());
   }
 }
 

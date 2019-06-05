@@ -23,7 +23,6 @@
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_management_factory.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_task.h>
-#include <cloudwatch_logs_common/file_upload/task_factory.h>
 
 #include <cloudwatch_logs_common/dataflow/dataflow.h>
 
@@ -45,16 +44,12 @@ std::shared_ptr<LogService> LogManagerFactory::CreateLogManager(
   auto file_manager= std::make_shared<LogFileManager>();
 
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, cloudwatch_facade, sdk_options);
-
-  //factory to create all tasks, link to publisher (ultimate task sink)
-  auto task_factory = std::make_shared<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(publisher, file_manager);
-
   // todo this should be a service to subscribe and status part of the publisher, too much is dependent in File utils / tasks and seems brittle
 
   auto queue_monitor =
       std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
   auto file_upload_streamer =
-      Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager, task_factory);
+      Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager);
 
   // connect publisher state changes to the File Streamer
   publisher->addPublisherStateListener(std::bind(&FileUploadStreamer<LogType>::onPublisherStateChange, file_upload_streamer, std::placeholders::_1));
@@ -66,7 +61,7 @@ std::shared_ptr<LogService> LogManagerFactory::CreateLogManager(
   auto stream_data_queue =
     std::make_shared<TaskObservedQueue<LogType>>();
 
-  auto log_batcher = std::make_shared<LogBatcher>(task_factory);
+  auto log_batcher = std::make_shared<LogBatcher>();
 
   *file_upload_streamer >> file_data_queue >> Aws::DataFlow::LOWEST_PRIORITY >> queue_monitor;
   *log_batcher >> stream_data_queue >> Aws::DataFlow::HIGHEST_PRIORITY >> queue_monitor;

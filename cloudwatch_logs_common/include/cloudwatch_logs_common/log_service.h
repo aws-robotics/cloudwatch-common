@@ -22,7 +22,6 @@
 
 #include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
-#include <cloudwatch_logs_common/file_upload/task_factory.h>
 
 #include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_publisher.h>
@@ -145,16 +144,17 @@ protected:
     }
     return false;
   }
+  
   /**
    * Main workhorse thread that dequeues from the source and calls Task run.
    */
   inline void Work() {
     //take input and publish it
     while(should_run_.load()) {
-      TaskPtr<T> t;
+      TaskPtr<LogType> t;
       bool b = Aws::DataFlow::InputStage<TaskPtr<T>>::getSource()->dequeue(t, dequeue_duration_);
       if (b) {
-        t->run(); // publish mechanism via the TaskFactory
+        t->run(log_publisher_);
       }
     }
     // todo we fell through, cancel all the tasks in the queue

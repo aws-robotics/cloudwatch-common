@@ -98,6 +98,7 @@ private:
 
 class ThreadMonitor {
 public:
+  virtual ~ThreadMonitor() = default;
   void waitForWork();
   std::cv_status waitForWork(const std::chrono::microseconds &duration);
   void notify();
@@ -113,6 +114,10 @@ private:
  */
 class MultiStatusConditionMonitor : public ThreadMonitor {
 public:
+  MultiStatusConditionMonitor() {
+    mask_ = 0;
+  }
+  virtual ~MultiStatusConditionMonitor() = default;
   void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor);
 protected:
   friend StatusMonitor;

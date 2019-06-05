@@ -78,11 +78,10 @@ public:
     {
       //holy dependencies batman
       test_publisher = std::make_shared<TestPublisher>();
-      task_factory = std::make_shared<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(test_publisher);
-      log_batcher = std::make_shared<LogBatcher>(task_factory);
+      log_batcher = std::make_shared<LogBatcher>();
 
       //  log service owns the streamer, batcher, and publisher
-      cw_service = std::make_shared<CloudWatchService<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>, std::string>> (test_publisher, log_batcher);
+      cw_service = std::make_shared<CloudWatchService<LogType, std::string>> (test_publisher, log_batcher);
 
       stream_data_queue = std::make_shared<TaskObservedQueue<LogType>>();
       queue_monitor = std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
@@ -104,9 +103,8 @@ public:
     }
 
 protected:
-    std::shared_ptr<CloudWatchService<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>, std::string>> cw_service;
+    std::shared_ptr<CloudWatchService<LogType, std::string>> cw_service;
     std::shared_ptr<LogBatcher> log_batcher;
-    std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> task_factory;
     std::shared_ptr<TestPublisher> test_publisher;
     std::shared_ptr<TaskObservedQueue<LogType>> stream_data_queue;
     std::shared_ptr<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>queue_monitor;
