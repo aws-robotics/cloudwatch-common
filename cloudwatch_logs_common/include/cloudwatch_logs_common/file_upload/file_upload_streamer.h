@@ -27,9 +27,8 @@
 #include <cloudwatch_logs_common/file_upload/task_utils.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_task.h>
-#include <cloudwatch_logs_common/file_upload/task_factory.h>
-#include <cloudwatch_logs_common/utils/publisher.h>
 #include <cloudwatch_logs_common/utils/service.h>
+#include <cloudwatch_logs_common/utils/publisher.h>
 
 namespace Aws {
 namespace FileManagement {
@@ -70,17 +69,18 @@ public:
    * @param batch_size
    */
   explicit FileUploadStreamer(
-    std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor,
-    std::shared_ptr<DataReader<T>> file_manager,
-    std::shared_ptr<ITaskFactory<T>> task_factory,
+    std::shared_ptr<DataReader<T>> data_reader,
     FileUploadStreamerOptions options)
   {
-    status_condition_monitor_ = status_condition_monitor;
-    data_reader_ = file_manager;
+    data_reader_ = data_reader;
+    auto data_status_monitor = std::make_shared<StatusMonitor>();
+    addStatusMonitor(data_status_monitor);
+    network_monitor_ = std::make_shared<StatusMonitor>();
+    addStatusMonitor(network_monitor_);
+
+    data_reader_->setStatusMonitor(data_status_monitor);
     batch_size_ = options.batch_size;
-    task_factory_ = task_factory;
-    network_monitor_ = std::make_shared<Aws::FileManagement::StatusMonitor>();
-    status_condition_monitor_->addStatusMonitor(network_monitor_);
+
   }
 
   virtual ~FileUploadStreamer() {
@@ -99,7 +99,7 @@ public:
    * @param status_monitor to add
    */
   inline void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor) {
-    status_condition_monitor_->addStatusMonitor(status_monitor);
+    status_condition_monitor_.addStatusMonitor(status_monitor);
   }
 
   inline bool shutdown() {
@@ -117,8 +117,8 @@ public:
 
   void onPublisherStateChange(const Aws::CloudWatchLogs::PublisherState &newState) {
     //set the status_condition_monitor_
-    auto network_status = newState == PublisherState::CONNECTED ?
-                          Aws::DataFlow::Status::UNAVAILABLE : Aws::DataFlow::Status::AVAILABLE;
+    auto network_status = newState == Aws::CloudWatchLogs::PublisherState::CONNECTED ?
+                          Aws::DataFlow::Status::AVAILABLE : Aws::DataFlow::Status::UNAVAILABLE;
     network_monitor_->setStatus(network_status);
   }
 
@@ -133,34 +133,37 @@ public:
   inline void run() {
     AWS_LOG_INFO(__func__,
                  "Waiting for files and work.");
-    auto wait_result = status_condition_monitor_->waitForWork(kTimeout);
+    auto wait_result = status_condition_monitor_.waitForWork(kTimeout);
     if (wait_result == std::cv_status::timeout) {
+      AWS_LOG_DEBUG(__func__,
+                   "Timed out when waiting for work");
       return;
     }
     if (!OutputStage<TaskPtr<T>>::getSink()) {
+      AWS_LOG_WARN(__func__,
+                   "No Sink Configured");
       return;
     }
     AWS_LOG_INFO(__func__,
                  "Found work! Batching");
-    FileObject<T> file_object = data_reader_->readBatch(batch_size_);
-    total_logs_uploaded += file_object.batch_size;
-    auto file_upload_task = task_factory_->createFileUploadTaskAsync(std::move(file_object));
-    auto future_result = file_upload_task->getResult();
-    auto is_accepted = OutputStage<TaskPtr<T>>::getSink()->enqueue(file_upload_task);
-    std::future_status status = std::future_status::timeout;
+    if (!stored_task_) {
+      FileObject<T> file_object = data_reader_->readBatch(batch_size_);
+      total_logs_uploaded += file_object.batch_size;
+      stored_task_ = std::make_shared<FileUploadTask<T>>(
+          std::move(file_object),
+          std::bind(
+              &DataReader<T>::fileUploadCompleteStatus,
+              data_reader_,
+              std::placeholders::_1,
+              std::placeholders::_2));
+    }
+    auto is_accepted = OutputStage<TaskPtr<T>>::getSink()->tryEnqueue(stored_task_, kTimeout);
     if (is_accepted) {
-      status = future_result.wait_for(kTimeout);
+      stored_task_ = nullptr;
     }
-    if (status == std::future_status::ready) {
-      AWS_LOG_INFO(__func__, "Future is valid, call file upload complete status.")
-      auto result = future_result.get();
-      data_reader_->fileUploadCompleteStatus(result.second, result.first);
-    }
-    AWS_LOG_INFO(__func__,
-                 "Total logs from file completed %i", total_logs_uploaded);
   }
 
-  bool initialize() {
+  bool initialize() override {
     return true;
   }
 
@@ -185,6 +188,17 @@ public:
   // todo join wait?
 
 private:
+
+  /**
+   * The status condition monitor to wait on before uploading.
+   */
+  MultiStatusConditionMonitor status_condition_monitor_;
+
+  /**
+   * Current task to upload.
+   */
+  std::shared_ptr<FileUploadTask<T>> stored_task_;
+
   /**
    * Metric on number of logs queued in the TaskObservedQueue.
    */
@@ -201,21 +215,14 @@ private:
   size_t batch_size_;
 
   /**
-   * The status condition monitor to wait on before uploading.
-   */
-  std::shared_ptr<MultiStatusConditionMonitor> status_condition_monitor_;
-
-  /**
    * The file manager to read data from.
    */
   std::shared_ptr<DataReader<T>> data_reader_;
 
   /**
-   * Task factory to create tasks.
+   * Network status monitor.
    */
-  std::shared_ptr<ITaskFactory<T>> task_factory_;
-
-  std::shared_ptr<Aws::FileManagement::StatusMonitor> network_monitor_;
+  std::shared_ptr<StatusMonitor> network_monitor_;
 };
 
 }  // namespace FileManagement

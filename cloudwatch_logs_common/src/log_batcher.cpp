@@ -21,7 +21,6 @@
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_task.h>
-#include <cloudwatch_logs_common/file_upload/task_factory.h>
 
 #include <chrono>
 #include <iostream>
@@ -34,20 +33,13 @@
 
 using namespace Aws::CloudWatchLogs;
 
-LogBatcher::LogBatcher(std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> task_factory)
-: DataBatcher()
-{
-  //todo check arguments
-  this->task_factory_ = task_factory;
+LogBatcher::LogBatcher(){
   this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>();
 }
 
-LogBatcher::LogBatcher(std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> task_factory, int size)
-: DataBatcher(size)
-{
-  //todo check arguments
-  this->task_factory_ = task_factory;
-  this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>(); //todo set to size so we don't have to keep allocating
+LogBatcher::LogBatcher(int size) {
+  this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>();
+  this->max_batch_size_ = size;
 }
 
 LogBatcher::~LogBatcher() = default;
@@ -90,9 +82,7 @@ bool LogBatcher::publishBatchedData() {
   std::lock_guard <std::recursive_mutex> lck(batch_and_publish_lock_);
 
   if (getSink()) {
-
-    auto bt = task_factory_->createBasicTask(batched_data_);
-    auto p = std::make_shared < BasicTask < std::list < Aws::CloudWatchLogs::Model::InputLogEvent >> > (bt);
+    auto p = std::make_shared<BasicTask<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(batched_data_);
     getSink()->enqueue(p);
 
     this->batched_data_ = std::make_shared < std::list < Aws::CloudWatchLogs::Model::InputLogEvent >> ();

@@ -59,7 +59,7 @@ public:
    * @param log_messages the data which was attempted to be uploaded
    */
   virtual void fileUploadCompleteStatus(
-    const UploadStatus& upload_status,
+    const UploadStatus &upload_status,
     const FileObject<T> &log_messages) = 0;
 
   virtual void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
@@ -88,6 +88,7 @@ public:
    */
   explicit FileManager(std::shared_ptr<DataManagerStrategy> file_manager_strategy) {
     file_manager_strategy_ = file_manager_strategy;
+    file_manager_strategy_->initialize();
   }
 
   virtual ~FileManager() = default;

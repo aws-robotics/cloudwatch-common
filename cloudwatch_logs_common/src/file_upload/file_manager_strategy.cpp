@@ -40,6 +40,9 @@ void FileManagerStrategy::initialize() {
 }
 
 void FileManagerStrategy::validateOptions() {
+  if (options_.storage_directory[options_.storage_directory.size()-1] != '/') {
+    options_.storage_directory += '/';
+  }
   auto storage = std::experimental::filesystem::path(options_.storage_directory);
   if (!std::experimental::filesystem::exists(storage)) {
     std::experimental::filesystem::create_directory(storage);
@@ -81,9 +84,12 @@ DataToken FileManagerStrategy::read(std::string &data) {
 void FileManagerStrategy::write(const std::string &data) {
   checkIfFileShouldRotate(data.size());
   checkIfStorageLimitHasBeenReached(data.size());
-
   std::ofstream log_file;
   log_file.open(active_write_file_, std::ios_base::app);
+  if (log_file.bad()) {
+    AWS_LOG_WARN(__func__,
+                 "Unable to open file");
+  }
   log_file << data << std::endl;
   log_file.close();
   active_write_file_size_ += data.size();
@@ -196,10 +202,12 @@ void FileManagerStrategy::checkIfStorageLimitHasBeenReached(const uintmax_t &new
 }
 
 void FileManagerStrategy::deleteOldestFile() {
-  stored_files_.sort();
-  const std::string oldest_file = stored_files_.front();
-  stored_files_.pop_front();
-  deleteFile(oldest_file);
+  if (!stored_files_.empty()) {
+    stored_files_.sort();
+    const std::string oldest_file = stored_files_.front();
+    stored_files_.pop_front();
+    deleteFile(oldest_file);
+  }
 }
 
 DataToken FileManagerStrategy::createToken(const std::string &file_name) {

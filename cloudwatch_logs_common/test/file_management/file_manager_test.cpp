@@ -21,6 +21,10 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <aws/logs/model/InputLogEvent.h>
+#include <aws/core/utils/memory/stl/AWSString.h>
+#include <aws/core/utils/logging/ConsoleLogSystem.h>
+#include <aws/core/utils/logging/AWSLogging.h>
+
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_manager_strategy.h>
@@ -40,11 +44,12 @@ public:
 
   void TearDown() override
   {
-    std::experimental::filesystem::path("log_tests").remove_filename();
+    std::experimental::filesystem::path storage_path(options.storage_directory);
+    std::experimental::filesystem::remove_all(storage_path);
   }
 
 protected:
-  FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024};
+  FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024};
 };
 
 /**
@@ -80,9 +85,14 @@ TEST_F(FileManagerTest, file_manager_no_write_on_success) {
   EXPECT_ANY_THROW(file_manager_strategy->read(line));
 }
 
-int main(int argc, char** argv) {
-  // The following line must be executed to initialize Google Mock
-  // (and Google Test) before running the tests.
+int main(int argc, char** argv)
+{
+  Aws::Utils::Logging::InitializeAWSLogging(
+      Aws::MakeShared<Aws::Utils::Logging::ConsoleLogSystem>(
+          "RunUnitTests", Aws::Utils::Logging::LogLevel::Trace));
   ::testing::InitGoogleMock(&argc, argv);
-  return RUN_ALL_TESTS();
+  int exitCode = RUN_ALL_TESTS();
+  Aws::Utils::Logging::ShutdownAWSLogging();
+  return exitCode;
 }
+

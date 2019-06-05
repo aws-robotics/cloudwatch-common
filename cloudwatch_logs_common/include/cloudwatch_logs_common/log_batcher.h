@@ -22,7 +22,6 @@
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
-#include <cloudwatch_logs_common/file_upload/task_factory.h>
 
 #include <chrono>
 #include <iostream>
@@ -87,15 +86,16 @@ public:
    *  Creates a new LogBatcher that will group/buffer logs. Note: logs are only automatically published if the
    *  size is set, otherwise the publishBatchedData is necesary to push data to be published.
    */
-    LogBatcher(std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> taskFactory);
-    /**
-     *  @brief Creates a new LogBatcher
-     *  Creates a new LogBatcher that will group/buffer logs. Note: logs are only automatically published if the
-     *  size is set, otherwise the publishBatchedData is necesary to push data to be published.
-     *
-     *  @param size of the batched data that will trigger a publish
-     */
-    LogBatcher(std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> taskFactory, int size);
+  explicit LogBatcher();
+
+  /**
+   *  @brief Creates a new LogBatcher
+   *  Creates a new LogBatcher that will group/buffer logs. Note: logs are only automatically published if the
+   *  size is set, otherwise the publishBatchedData is necesary to push data to be published.
+   *
+   *  @param size of the batched data that will trigger a publish
+   */
+  explicit LogBatcher(int size);
 
   /**
    *  @brief Tears down a LogBatcher object
@@ -144,8 +144,7 @@ private:
   //todo should probably be atomic, but currently controlled by the publish mutex
   std::shared_ptr<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>> batched_data_; //todo vector
   std::recursive_mutex batch_and_publish_lock_;
-  std::shared_ptr<TaskFactory<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>> task_factory_;
-  //todo getter / setter?
+  int max_batch_size_ = DataBatcher::DEFAULT_SIZE; //todo getter / setter?
   //todo stats? how many times published? rate of publishing? throughput?
 };
 

@@ -40,29 +40,15 @@ template<
   class = typename std::enable_if<std::is_base_of<DataReader<T>, O>::value, O>::type>
 std::shared_ptr<FileUploadStreamer<T>> createFileUploadStreamer(
   std::shared_ptr<O> file_manager,
-  std::shared_ptr<ITaskFactory<T>> task_factory,
   FileUploadStreamerOptions file_manager_options = kDefaultFileManagerOptions)
   {
-
-  // File Management system
-  // Create a file monitor to get notified if a file is ready to be read
-  auto file_monitor =
-      std::make_shared<Aws::DataFlow::StatusMonitor>();
-
-  // Create a multi status condition to trigger on network status and file status
-  auto multi_status_condition_monitor =
-      std::make_shared<Aws::DataFlow::MultiStatusConditionMonitor>();
-  multi_status_condition_monitor->addStatusMonitor(file_monitor);
-
-  // Add the file monitor to the file manager to get notifications
-  file_manager->setStatusMonitor(file_monitor);
-
+  if (!file_manager) {
+    throw "Invalid file_manager";
+  }
   // Create a file upload manager to handle uploading a file.
   auto file_upload_manager =
       std::make_shared<Aws::FileManagement::FileUploadStreamer<T>>(
-          multi_status_condition_monitor,
           file_manager,
-          task_factory,
           file_manager_options);
   return file_upload_manager;
 }
