@@ -58,17 +58,20 @@ public:
   virtual bool batchData(const T &data_to_batch, const std::chrono::milliseconds & milliseconds) = 0;
   virtual bool publishBatchedData() = 0;
   virtual int getCurrentBatchSize() = 0;
-  inline bool setSize(int new_value) {
+  inline bool setMaxBatchSize(int new_value) {
     if(new_value > 0) {
       this->max_batch_size_.store(new_value);
       return true;
     }
     return false;
   }
-
+  inline int getMaxBatchSize() {
+    return this->max_batch_size_.load();
+  }
   inline void resetSize(int new_value) {
       this->max_batch_size_.store(DEFAULT_SIZE);
   }
+private:
   /**
    * Size used for the internal storage
    */

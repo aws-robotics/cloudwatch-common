@@ -25,6 +25,7 @@
 #include <cloudwatch_logs_common/dataflow/dataflow.h>
 #include <mutex>
 #include <condition_variable>
+#include <string>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
@@ -38,17 +39,14 @@ class TestPublisher : public Publisher<std::list<Aws::CloudWatchLogs::Model::Inp
 public:
   TestPublisher() {};
   // no-op
-  bool initialize() {return true;}
-  bool start() {return true;}
+  bool initialize() override {return true;}
+  bool start() override {return true;}
   // notify just in case anyone is waiting
-  bool shutdown() {
+  bool shutdown() override {
     std::unique_lock<std::mutex> lck(this->mtx);
     this->cv.notify_all(); //don't leave anyone blocking
     return true;
   };
-
-  std::condition_variable cv; // todo think about adding this into the interface
-  std::mutex mtx; // todo think about adding this  into  the interface
 
   void wait() {
     std::unique_lock<std::mutex> lck(this->mtx);
@@ -69,6 +67,9 @@ protected:
     }
     return true;
   }
+
+  std::condition_variable cv; // todo think about adding this into the interface
+  std::mutex mtx; // todo think about adding this  into  the interface
 };
 
 
@@ -76,7 +77,6 @@ class PipelineTest : public ::testing::Test {
 public:
     void SetUp() override
     {
-      //holy dependencies batman
       test_publisher = std::make_shared<TestPublisher>();
       log_batcher = std::make_shared<LogBatcher>();
 
@@ -91,16 +91,13 @@ public:
       queue_monitor->addSource(stream_data_queue, Aws::DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
       cw_service->setSource(queue_monitor);
 
-      cw_service->start();
+      cw_service->start(); //this starts the worker thread
     }
 
     void TearDown() override
     {
       cw_service->shutdown();
-      cw_service->waitForShutdown();
-      cw_service.reset();
-      stream_data_queue.reset(); // not owned by the LogService
-      queue_monitor.reset();
+      cw_service->join(); // todo wait for shutdown is broken
     }
 
 protected:
@@ -111,13 +108,19 @@ protected:
     std::shared_ptr<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>queue_monitor;
 };
 
+TEST_F(PipelineTest, Sanity) {
+  ASSERT_TRUE(true);
+}
+
 /**
  * Simple Pipeline test to check that everything was hooked up correctly.
  */
 TEST_F(PipelineTest, TestBatcherManualPublish) {
 
   std::string toBatch("TestBatcherManualPublish");
+  EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   bool b1 = cw_service->batchData(toBatch);
+  EXPECT_EQ(1, log_batcher->getCurrentBatchSize());
 
   EXPECT_TRUE(b1);
 
@@ -136,13 +139,45 @@ TEST_F(PipelineTest, TestBatcherManualPublish) {
 /**
  * Simple Pipeline test to check that everything was hooked up correctly.
  */
+TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
+
+  std::string toBatch("TestBatcherManualPublish");
+  bool b1 = cw_service->batchData(toBatch);
+  EXPECT_TRUE(b1);
+
+  for(int i=99; i>0; i--) {
+    b1 = cw_service->batchData(std::to_string(99) + std::string(" bottles of beer on the wall"));
+    EXPECT_TRUE(b1);
+  }
+
+  EXPECT_TRUE(b1);
+
+  EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
+  EXPECT_EQ(100, log_batcher->getCurrentBatchSize());
+
+  // force a publish
+  bool b2 = cw_service->publishBatchedData();
+  test_publisher->wait_for(std::chrono::seconds(1));
+
+  EXPECT_TRUE(b2);
+  EXPECT_EQ(1, test_publisher->getPublishedCount());
+  EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
+  EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
+}
+
+/**
+ * Simple Pipeline test to check that everything was hooked up correctly.
+ */
 TEST_F(PipelineTest, TestBatcherSize) {
 
-  bool b = log_batcher->setSize(-1); // setting the size will trigger a publish when the collection is full
+  bool b = log_batcher->setMaxBatchSize(-1); // setting the size will trigger a publish when the collection is full
   EXPECT_FALSE(b);
+  EXPECT_EQ(-1, log_batcher->getMaxBatchSize());
 
-  b = log_batcher->setSize(5); // setting the size will trigger a publish when the collection is full
+  b = log_batcher->setMaxBatchSize(5); // setting the size will trigger a publish when the collection is full
   EXPECT_TRUE(b);
+  EXPECT_EQ(5, log_batcher->getMaxBatchSize());
+
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
 
   for(int i=1; i<5; i++) {
@@ -155,6 +190,7 @@ TEST_F(PipelineTest, TestBatcherSize) {
     EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   }
 
+  ASSERT_EQ(5, log_batcher->getMaxBatchSize());
   std::string toBatch("test message publish trigger");
   bool b1 = cw_service->batchData(toBatch);
 

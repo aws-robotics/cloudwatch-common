@@ -33,13 +33,12 @@
 
 using namespace Aws::CloudWatchLogs;
 
-LogBatcher::LogBatcher(){
+LogBatcher::LogBatcher() : DataBatcher() {
   this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>();
 }
 
-LogBatcher::LogBatcher(int size) {
+LogBatcher::LogBatcher(int size) : DataBatcher(size) {
   this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>();
-  this->max_batch_size_ = size;
 }
 
 LogBatcher::~LogBatcher() = default;
@@ -64,7 +63,8 @@ bool LogBatcher::batchData(const std::string &log_msg_formatted, const std::chro
   this->batched_data_->push_back(log_event);
 
   // publish if the size has been configured
-  if (max_batch_size_ != DataBatcher::DEFAULT_SIZE && batched_data_->size() >= max_batch_size_) {
+  int mbs = this->getMaxBatchSize();
+  if (mbs != DataBatcher::DEFAULT_SIZE && this->batched_data_->size() >= mbs) {
     this->publishBatchedData();
   }
   return true;
@@ -81,9 +81,14 @@ bool LogBatcher::publishBatchedData() {
 
   std::lock_guard <std::recursive_mutex> lck(batch_and_publish_lock_);
 
+  //todo getSink is kind of race-y
   if (getSink()) {
+
     auto p = std::make_shared<BasicTask<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(batched_data_);
-    getSink()->enqueue(p);
+
+    //todo register complete with drop data function
+    // todo if file manager reference is set then publish to that when failed
+    getSink()->enqueue(p); //todo should we try enqueue? if we can't queue (too fast then we need to fail to file
 
     this->batched_data_ = std::make_shared < std::list < Aws::CloudWatchLogs::Model::InputLogEvent >> ();
     return true;
@@ -93,6 +98,8 @@ bool LogBatcher::publishBatchedData() {
     return false;
   }
 }
+
+//todo implement drop data function
 
 int LogBatcher::getCurrentBatchSize() {
   return this->batched_data_->size();
@@ -105,5 +112,5 @@ bool LogBatcher::start() {
   return true;
 }
 bool LogBatcher::shutdown() {
-  batched_data_->clear();
+  this->batched_data_->clear();
 }

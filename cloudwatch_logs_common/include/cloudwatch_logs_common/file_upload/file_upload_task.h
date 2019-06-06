@@ -41,16 +41,14 @@ class Task {
 
   virtual void run(std::shared_ptr<IPublisher<T>> publisher) {
     auto status = publisher->attemptPublish(getBatchData());
-    onComplete(status);
+    this->onComplete(status);
   }
 
   virtual void cancel() {
-    onComplete(FAIL);
+    this->onComplete(FAIL);
   }
 
-  virtual void onComplete(const UploadStatus &status) {
-
-  }
+  virtual void onComplete(const UploadStatus &status) = 0;
 
   virtual T& getBatchData() = 0;
 };
@@ -68,8 +66,10 @@ public:
 
   virtual ~BasicTask() = default;
 
-  void onComplete(const UploadStatus &status) override {
-    upload_status_function_(status, *batch_data_);
+  virtual void onComplete(const UploadStatus &status) override {
+    if (upload_status_function_) {
+      upload_status_function_(status, *batch_data_);
+    }
   }
 
   void setOnCompleteFunction(

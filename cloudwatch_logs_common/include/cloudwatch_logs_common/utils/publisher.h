@@ -61,7 +61,7 @@ public:
    * @param data
    * @return
    */
-  inline UploadStatus attemptPublish(T &data)
+  inline UploadStatus attemptPublish(T &data) override
   {
     bool b = publishData(data); // always at least try
     publisher_state_.setValue(b ? CONNECTED : NOT_CONNECTED);
