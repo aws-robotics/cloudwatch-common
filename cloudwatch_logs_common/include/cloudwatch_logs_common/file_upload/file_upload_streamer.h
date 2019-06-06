@@ -58,7 +58,7 @@ struct FileUploadStreamerOptions {
  */
 template<typename T>
 class FileUploadStreamer :
-  public OutputStage<TaskPtr<T>>, public Service {
+  public OutputStage<TaskPtr<T>>, public RunnableService {
 public:
   /**
    * Create a file upload manager.
@@ -84,10 +84,10 @@ public:
   }
 
   virtual ~FileUploadStreamer() {
-    if (thread) {
+    if (thread.joinable()) {
       AWS_LOG_INFO(__func__,
                    "Shutting down FileUploader thread.");
-      thread->join();
+      thread.join();
       AWS_LOG_INFO(__func__,
                    "FileUploader successfully shutdown");
     }
@@ -103,15 +103,8 @@ public:
   }
 
   inline bool shutdown() {
-    is_shutdown = true;
-    return true;
-  }
-
-  // todo this should be protected or private
-  inline bool startRun() {
-    while (!is_shutdown) {
-      run();
-    }
+    // set that the thread should no longer run
+    return RunnableService::shutdown();
   }
 
   void onPublisherStateChange(const Aws::CloudWatchLogs::PublisherState &newState) {
@@ -119,6 +112,10 @@ public:
     auto network_status = newState == Aws::CloudWatchLogs::PublisherState::CONNECTED ?
                           Aws::DataFlow::Status::AVAILABLE : Aws::DataFlow::Status::UNAVAILABLE;
     network_monitor_->setStatus(network_status);
+  }
+
+  bool initialize() {
+    return true;
   }
 
   /**
@@ -161,37 +158,63 @@ public:
       stored_task_ = nullptr;
     }
   }
-
-  bool initialize() override {
-    return true;
-  }
-
   /**
    * Start the upload thread.
    */
   bool start() {
-    // todo check if joinable, then don't start again
-    thread = std::make_shared<std::thread>(std::bind(&FileUploadStreamer::startRun, this));
-    return true;
+    RunnableService::start();
   }
 
-  /**
-   * Join the running thread if available.
-   */
-  void join() {
-    if (thread) {
-      thread->join();
+  // todo this is a hack. Should just implement an extension in test
+  inline void forceWork() {
+    this->work();
+  }
+
+protected:
+
+    /**
+     * Attempt to start uploading.
+     *
+     * 1. First wait for work on all the status conditions. (i.e wait until files are available to upload)
+     * 2. Read a batch of data from the file_manager
+     * 3. Queue up the task to be worked on.
+     * 4. Wait for the task to be completed to continue.
+     */
+    inline void work() {
+      AWS_LOG_INFO(__func__,
+                   "Waiting for files and work.");
+      auto wait_result = status_condition_monitor_.waitForWork(kTimeout);
+      if (wait_result == std::cv_status::timeout) {
+        AWS_LOG_DEBUG(__func__,
+                      "Timed out when waiting for work");
+        return;
+      }
+      if (!OutputStage<TaskPtr<T>>::getSink()) {
+        AWS_LOG_WARN(__func__,
+                     "No Sink Configured");
+        return;
+      }
+      AWS_LOG_INFO(__func__,
+                   "Found work! Batching");
+      if (!stored_task_) {
+        FileObject<T> file_object = data_reader_->readBatch(batch_size_);
+        total_logs_uploaded += file_object.batch_size;
+        stored_task_ = std::make_shared<FileUploadTask<T>>(
+                std::move(file_object),
+                        std::bind(
+                                &DataReader<T>::fileUploadCompleteStatus,
+                                data_reader_,
+                                std::placeholders::_1,
+                                std::placeholders::_2));
+      }
+      auto is_accepted = OutputStage<TaskPtr<T>>::getSink()->tryEnqueue(stored_task_, kTimeout);
+      if (is_accepted) {
+        stored_task_ = nullptr;
+      }
     }
-  }
 
-  // todo join wait?
 
 private:
-
-  /**
-   * Is shutdown boolean;
-   */
-  bool is_shutdown = false;
 
   /**
    * The status condition monitor to wait on before uploading.
@@ -211,7 +234,7 @@ private:
   /**
    * Current thread working on file upload management.
    */
-  std::shared_ptr<std::thread> thread;
+  std::thread thread;
 
   /**
    * The configured batch size to use when uploading.

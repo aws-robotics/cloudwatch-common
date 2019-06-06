@@ -95,6 +95,7 @@ if(GMOCK_LIBRARY)
           test/dataflow/queue_monitor_test.cpp
           test/pipeline_test.cpp
           test/utils/observable_object_test.cpp
+          test/utils/runnable_service_test.cpp
           )
 
   target_include_directories(test_cloudwatch_offline

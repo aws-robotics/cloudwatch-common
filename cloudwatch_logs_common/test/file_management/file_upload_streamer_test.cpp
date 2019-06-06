@@ -116,7 +116,7 @@ TEST_F(FileStreamerTest, success_on_network_and_file) {
   EXPECT_CALL(*file_manager, readBatch(testing::Eq(50)))
   .WillOnce(testing::Return(test_file_object));
   // Expect a batch call and enqueue from the file upload streamer
-  file_upload_streamer->run();
+  file_upload_streamer->forceWork();
 }
 
 TEST_F(FileStreamerTest, fail_enqueue_retry) {
@@ -155,7 +155,7 @@ TEST_F(FileStreamerTest, block_on_no_network) {
   file_upload_streamer->onPublisherStateChange(PublisherState::NOT_CONNECTED);
 
   // The strict mocks will throw an error should the run function pass the status monitor check
-  file_upload_streamer->run();
+  file_upload_streamer->forceWork();
 }
 
 TEST_F(FileStreamerTest, block_on_file_not_available) {
@@ -163,11 +163,11 @@ TEST_F(FileStreamerTest, block_on_file_not_available) {
   file_upload_streamer->setSink(mock_sink);
   file_upload_streamer->onPublisherStateChange(PublisherState::CONNECTED);
   // The strict mocks will throw an error should the run function pass the status monitor check
-  file_upload_streamer->run();
+  file_upload_streamer->forceWork();
 }
 
 TEST_F(FileStreamerTest, test_no_sink_installed) {
 
   // The strict mocks will throw an error should the run function pass the status monitor check
-  file_upload_streamer->run();
+  file_upload_streamer->forceWork();
 }

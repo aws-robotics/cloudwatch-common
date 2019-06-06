@@ -26,7 +26,7 @@
 #include <memory>
 #include <fstream>
 
-constexpr int kMaxRetries = 1;
+constexpr int kMaxRetries = 1; // todo this should probably be configurable, maybe part of the generic publisher interface
 
 using namespace Aws::CloudWatchLogs;
 
