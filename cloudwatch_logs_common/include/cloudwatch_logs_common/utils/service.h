@@ -24,9 +24,10 @@
 
 class Service {
 public:
-    virtual bool initialize() = 0;
-    virtual bool start() = 0;
-    virtual bool shutdown() = 0;
+  virtual ~Service() = default;
+  virtual bool initialize() = 0;
+  virtual bool start() = 0;
+  virtual bool shutdown() = 0;
 
 //protected:
 //    void getState() {

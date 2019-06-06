@@ -22,6 +22,13 @@
 namespace Aws {
 namespace CloudWatchLogs {
 
+struct CloudwatchOptions {
+  size_t batch_size;
+  size_t file_max_queue_size;
+  size_t stream_max_queue_size;
+};
+
+static constexpr CloudwatchOptions kDefaultCloudwatchOptions{50, 2, 20};
 class LogManagerFactory
 {
 public:
@@ -44,7 +51,8 @@ public:
     const std::string & log_group,
     const std::string & log_stream,
     const Aws::Client::ClientConfiguration & client_config,
-    const Aws::SDKOptions & sdk_options);
+    const Aws::SDKOptions & sdk_options,
+    const CloudwatchOptions & cloudwatch_options = kDefaultCloudwatchOptions);
 private:
   /**
    * Block copy constructor and assignment operator for Factory object.

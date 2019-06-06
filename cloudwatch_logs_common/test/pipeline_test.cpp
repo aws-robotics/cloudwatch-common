@@ -87,8 +87,9 @@ public:
       queue_monitor = std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
 
       // create pipeline
-      *log_batcher >> stream_data_queue >> Aws::DataFlow::HIGHEST_PRIORITY >> queue_monitor;
-      queue_monitor >> *cw_service;
+      log_batcher->setSink(stream_data_queue);
+      queue_monitor->addSource(stream_data_queue, Aws::DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
+      cw_service->setSource(queue_monitor);
 
       cw_service->start();
     }

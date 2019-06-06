@@ -31,7 +31,12 @@ public:
   std::shared_ptr<Sink<O>> getSink() {
     return sink_;
   }
-  inline void setSink(std::shared_ptr<Sink<O>> sink) {
+
+  template<
+      class T>
+  inline
+  typename std::enable_if<std::is_base_of<Sink<O>, T>::value, std::shared_ptr<T>>::type
+  setSink(std::shared_ptr<T> sink) {
     sink_ = sink;
   }
  private:
