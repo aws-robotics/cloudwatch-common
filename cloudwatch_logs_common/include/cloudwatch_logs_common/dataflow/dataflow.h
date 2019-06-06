@@ -33,7 +33,7 @@ template<
 typename std::enable_if<std::is_base_of<Sink<T>, O>::value, std::shared_ptr<O>>::type
 inline operator >> (
   OutputStage<T> &output_stage,
-  std::shared_ptr<O> &sink)
+  std::shared_ptr<O> sink)
 {
   output_stage.setSink(sink);
   return sink;

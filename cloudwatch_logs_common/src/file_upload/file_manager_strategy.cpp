@@ -66,12 +66,12 @@ bool FileManagerStrategy::isDataAvailable() {
 }
 
 DataToken FileManagerStrategy::read(std::string &data) {
-  AWS_LOG_INFO(__func__,
-    "Reading from active log");
   if (active_read_file_.empty()) {
     active_read_file_ = getFileToRead();
     active_read_file_stream_ = std::make_unique<std::ifstream>(active_read_file_);
   }
+  AWS_LOG_INFO(__func__,
+               "Reading from active log file: %s", active_read_file_.c_str());
   DataToken token = createToken(active_read_file_);
   std::getline(*active_read_file_stream_, data);
   if (active_read_file_stream_->eof()) {

@@ -170,6 +170,9 @@ template<typename T>
 using TaskObservedQueue = Aws::DataFlow::ObservedQueue<TaskPtr<T>>;
 
 template<typename T>
+using TaskObservedBlockingQueue = Aws::DataFlow::ObservedBlockingQueue<TaskPtr<T>>;
+
+template<typename T>
 using TaskSink = Aws::DataFlow::Sink<TaskPtr<T>>;
 //----------------------------------------//
 

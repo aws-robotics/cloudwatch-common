@@ -38,7 +38,8 @@ std::shared_ptr<LogService> LogManagerFactory::CreateLogManager(
   const std::string & log_group,
   const std::string & log_stream,
   const Aws::Client::ClientConfiguration & client_config,
-  const Aws::SDKOptions & sdk_options)
+  const Aws::SDKOptions & sdk_options,
+  const CloudwatchOptions & cloudwatch_options)
 {
   auto cloudwatch_facade = std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchFacade>(client_config);
   auto file_manager= std::make_shared<LogFileManager>();
@@ -48,23 +49,27 @@ std::shared_ptr<LogService> LogManagerFactory::CreateLogManager(
 
   auto queue_monitor =
       std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
+  FileUploadStreamerOptions file_upload_options{cloudwatch_options.batch_size, cloudwatch_options.file_max_queue_size};
   auto file_upload_streamer =
-      Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager);
+      Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager,file_upload_options);
 
   // connect publisher state changes to the File Streamer
   publisher->addPublisherStateListener(std::bind(&FileUploadStreamer<LogType>::onPublisherStateChange, file_upload_streamer, std::placeholders::_1));
 
   // Create an observed queue to trigger a publish when data is available
   auto file_data_queue =
-      std::make_shared<TaskObservedQueue<LogType>>();
+      std::make_shared<TaskObservedBlockingQueue<LogType>>(cloudwatch_options.file_max_queue_size);
 
   auto stream_data_queue =
     std::make_shared<TaskObservedQueue<LogType>>();
 
   auto log_batcher = std::make_shared<LogBatcher>();
 
-  *file_upload_streamer >> file_data_queue >> Aws::DataFlow::LOWEST_PRIORITY >> queue_monitor;
-  *log_batcher >> stream_data_queue >> Aws::DataFlow::HIGHEST_PRIORITY >> queue_monitor;
+  file_upload_streamer->setSink(file_data_queue);
+  queue_monitor->addSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
+
+  log_batcher->setSink(stream_data_queue);
+  queue_monitor->addSource(stream_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
 
   auto ls = std::make_shared<LogService>(file_upload_streamer, publisher, log_batcher);
   queue_monitor >> *ls;

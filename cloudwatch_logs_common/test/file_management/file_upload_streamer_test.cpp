@@ -102,7 +102,7 @@ protected:
 
 TEST_F(FileStreamerTest, success_on_network_and_file) {
   // Create the pipeline
-  *file_upload_streamer >> mock_sink;
+  file_upload_streamer->setSink(mock_sink);
 
   // Set the file and network available
   file_manager->status_monitor_->setStatus(AVAILABLE);
@@ -121,7 +121,7 @@ TEST_F(FileStreamerTest, success_on_network_and_file) {
 
 TEST_F(FileStreamerTest, fail_enqueue_retry) {
   // Create the pipeline
-  *file_upload_streamer >> mock_sink;
+  file_upload_streamer->setSink(mock_sink);
 
   // Set the file and network available
   file_manager->status_monitor_->setStatus(AVAILABLE);
@@ -148,7 +148,7 @@ TEST_F(FileStreamerTest, fail_enqueue_retry) {
 
 TEST_F(FileStreamerTest, block_on_no_network) {
   // Create the pipeline
-  *file_upload_streamer >> mock_sink;
+  file_upload_streamer->setSink(mock_sink);
 
   // Set the file available, network is still unavailable
   file_manager->status_monitor_->setStatus(AVAILABLE);
@@ -160,7 +160,7 @@ TEST_F(FileStreamerTest, block_on_no_network) {
 
 TEST_F(FileStreamerTest, block_on_file_not_available) {
   // Create the pipeline
-  *file_upload_streamer >> mock_sink;
+  file_upload_streamer->setSink(mock_sink);
   file_upload_streamer->onPublisherStateChange(PublisherState::CONNECTED);
   // The strict mocks will throw an error should the run function pass the status monitor check
   file_upload_streamer->run();
