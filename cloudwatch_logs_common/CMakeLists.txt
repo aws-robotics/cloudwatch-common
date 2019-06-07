@@ -91,6 +91,7 @@ if(GMOCK_LIBRARY)
           test/file_management/file_manager_test.cpp
           test/file_management/file_manager_strategy_test.cpp
           test/file_management/file_upload_streamer_test.cpp
+          test/file_management/token_test.cpp
           test/dataflow/observed_queue_test.cpp
           test/dataflow/queue_monitor_test.cpp
           test/pipeline_test.cpp

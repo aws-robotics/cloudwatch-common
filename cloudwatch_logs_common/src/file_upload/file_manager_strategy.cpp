@@ -27,6 +27,69 @@ namespace fs = std::experimental::filesystem;
 namespace Aws {
 namespace FileManagement {
 
+static const std::string kConfigFile("file_management.info");
+
+
+
+bool TokenStore::isTokenAvailable(const std::string &file_name) const {
+  return !(staged_tokens_.find(file_name) == staged_tokens_.end());
+}
+
+FileTokenInfo TokenStore::popAvailableToken(const std::string &file_name) {
+  auto file_token_info = staged_tokens_[file_name];
+  staged_tokens_.erase(file_name);
+  return file_token_info;
+}
+
+FileTokenInfo TokenStore::fail(const DataToken &token) {
+  if (token_store_.find(token) == token_store_.end()) {
+    throw std::runtime_error("DataToken not found");
+  }
+  FileTokenInfo token_info = token_store_[token];
+  if (file_tokens_.find(token_info.file_path_) == file_tokens_.end()) {
+    throw std::runtime_error("File not found in cache: " + token_info.file_path_);
+  }
+  std::string &file_path = token_info.file_path_;
+  staged_tokens_[file_path] = token_info;
+  file_tokens_.erase(file_path);
+  token_store_.erase(token);
+  return token_info;
+}
+
+std::vector<FileTokenInfo> TokenStore::backup() {
+  auto vector_size = file_tokens_.size() + staged_tokens_.size();
+  std::vector<FileTokenInfo> token_backup(vector_size);
+  auto it = token_backup.begin();
+  for (auto& token : staged_tokens_) {
+    *it++ = token.second;
+  }
+  for (auto& token : file_tokens_) {
+    *it++ = token_store_[*token.second.begin()];
+  }
+  return token_backup;
+}
+
+FileTokenInfo TokenStore::resolve(const DataToken &token) {
+  if (token_store_.find(token) == token_store_.end()) {
+    throw std::runtime_error("DataToken not found");
+  }
+  FileTokenInfo token_info = token_store_[token];
+  std::string &file_path = token_info.file_path_;
+
+  if (file_tokens_.find(file_path) == file_tokens_.end()) {
+    throw std::runtime_error("Could not find token set for file: " + file_path);
+  }
+  // this find should be O(1), as we expect data to be resolved in order
+  auto list = file_tokens_[file_path];
+  list.erase(std::find(list.begin(), list.end(), token));
+
+  if (file_tokens_[file_path].empty()) {
+    file_tokens_.erase(file_path);
+  }
+  token_store_.erase(token);
+  return token_info;
+}
+
 FileManagerStrategy::FileManagerStrategy(const FileManagerStrategyOptions &options) {
   options_ = options;
   storage_size_ = 0;
@@ -50,37 +113,10 @@ void FileManagerStrategy::validateOptions() {
 }
 
 bool FileManagerStrategy::isDataAvailable() {
-  if (!active_read_file_.empty()) {
-    return true;
-  }
-
-  if (!stored_files_.empty()) {
-    return true;
-  }
-
-  if (active_write_file_size_ > 0) {
-    return true;
-  }
-
-  return false;
+  return !active_read_file_.empty() || !stored_files_.empty() || active_write_file_size_ > 0;
 }
 
-DataToken FileManagerStrategy::read(std::string &data) {
-  if (active_read_file_.empty()) {
-    active_read_file_ = getFileToRead();
-    active_read_file_stream_ = std::make_unique<std::ifstream>(active_read_file_);
-  }
-  AWS_LOG_INFO(__func__,
-               "Reading from active log file: %s", active_read_file_.c_str());
-  DataToken token = createToken(active_read_file_);
-  std::getline(*active_read_file_stream_, data);
-  if (active_read_file_stream_->eof()) {
-    active_read_file_.clear();
-    active_read_file_stream_ = nullptr;
-  }
-  return token;
-}
-
+// @todo (rddesmon) catch and wrap failure to open exceptions
 void FileManagerStrategy::write(const std::string &data) {
   checkIfFileShouldRotate(data.size());
   checkIfStorageLimitHasBeenReached(data.size());
@@ -95,26 +131,52 @@ void FileManagerStrategy::write(const std::string &data) {
   active_write_file_size_ += data.size();
 }
 
-void FileManagerStrategy::resolve(const DataToken &token) {
-  if (token_store_.find(token) == token_store_.end()) {
-    throw std::runtime_error("DataToken not found");
+DataToken FileManagerStrategy::read(std::string &data) {
+  if (active_read_file_.empty()) {
+    active_read_file_ = getFileToRead();
+    active_read_file_stream_ = std::make_unique<std::ifstream>(active_read_file_);
   }
-  FileTokenInfo token_info = token_store_[token];
-  std::string &file_path = token_info.file_path_;
+  AWS_LOG_INFO(__func__,
+               "Reading from active log file: %s", active_read_file_.c_str());
+  DataToken token;
+  if (token_store_.isTokenAvailable(active_read_file_)) {
+    FileTokenInfo file_token = token_store_.popAvailableToken(active_read_file_);
+    active_read_file_stream_->seekg(file_token.position_);
+  }
+  long position = active_read_file_stream_->tellg();
+  auto file_size = active_read_file_stream_->seekg(0, std::ifstream::end).tellg();
+  active_read_file_stream_->seekg(position, std::ifstream::beg);
+  std::getline(*active_read_file_stream_, data);
+  long next_position = active_read_file_stream_->tellg();
+  token = token_store_.createToken(active_read_file_, position, next_position >= file_size);
 
-  if (file_tokens_.find(file_path) == file_tokens_.end()) {
-    throw std::runtime_error("Could not find token set for file: " + file_path);
+  if (next_position >= file_size) {
+    active_read_file_.clear();
+    active_read_file_stream_ = nullptr;
   }
-  file_tokens_[file_path].erase(token);
-  if (file_tokens_[file_path].empty()) {
-    deleteFile(file_path);
-    file_tokens_.erase(file_path);
+  return token;
+}
+
+void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
+  if (is_success) {
+    auto file_info = token_store_.resolve(token);
+    if (file_info.eof_) {
+      deleteFile(file_info.file_path_);
+    }
+  } else {
+    auto file_info = token_store_.fail(token);
+    if (file_info.eof_) {
+      stored_files_.push_back(file_info.file_path_);
+    }
   }
-  token_store_.erase(token);
 }
 
 void FileManagerStrategy::onShutdown() {
-  // @todo: implement
+  auto config_file_path = std::experimental::filesystem::path(options_.storage_directory + kConfigFile);
+  if (std::experimental::filesystem::exists(config_file_path)) {
+    std::experimental::filesystem::remove(config_file_path);
+  }
+  std::ofstream config_file(config_file_path);
 }
 
 void FileManagerStrategy::discoverStoredFiles() {
@@ -131,6 +193,7 @@ void FileManagerStrategy::discoverStoredFiles() {
 }
 
 void FileManagerStrategy::deleteFile(const std::string &file_path) {
+  // @todo (rddesmon) consider new thread for file deletion
   AWS_LOG_WARN(__func__,
     "Deleting file: %s", file_path.c_str());
   const uintmax_t file_size = fs::file_size(file_path);
@@ -139,6 +202,7 @@ void FileManagerStrategy::deleteFile(const std::string &file_path) {
 }
 
 std::string FileManagerStrategy::getFileToRead() {
+  // @todo (rddesmond) return earliest file
   // if we have stored files, pop from the start of the list and return that filename
   // if we do not have stored files, and the active file has data, switch active file and return the existing active file.
   if (!stored_files_.empty()) {
@@ -212,14 +276,14 @@ void FileManagerStrategy::deleteOldestFile() {
   }
 }
 
-DataToken FileManagerStrategy::createToken(const std::string &file_name) {
+DataToken TokenStore::createToken(const std::string &file_name, const long & streampos, bool is_eof) {
   DataToken token = std::rand() % UINT64_MAX;
-  FileTokenInfo token_info = FileTokenInfo(file_name);
+  FileTokenInfo token_info = FileTokenInfo(file_name, streampos, is_eof);
   token_store_[token] = token_info;
   if (file_tokens_.find(file_name) == file_tokens_.end()) {
-    file_tokens_[file_name] = std::set<DataToken>();
+    file_tokens_[file_name] = std::list<DataToken>();
   }
-  file_tokens_[file_name].insert(token);
+  file_tokens_[file_name].push_back(token);
   return token;
 }
 

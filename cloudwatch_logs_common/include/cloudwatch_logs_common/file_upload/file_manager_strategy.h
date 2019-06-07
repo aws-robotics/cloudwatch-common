@@ -28,38 +28,41 @@
 namespace Aws {
 namespace FileManagement {
 
-/**
- * The status of a file.
- */
-enum FileStatus {
-  END_OF_READ,
-  GOOD
-};
-
-/**
- * File information struct.
- */
-class FileInfo {
-public:
-  std::string file_location;
-  std::string file_name;
-  FileStatus file_status;
-};
-
 enum TokenStatus {
   ACTIVE,
   INACTIVE
 };
-
 
 using DataToken = uint64_t;
 
 class FileTokenInfo {
 public:
   FileTokenInfo() = default;
-  explicit FileTokenInfo(std::string file_path) : file_path_{std::move(file_path)} {};
+  explicit FileTokenInfo(const std::string &file_path, long position, bool eof) :
+  file_path_{file_path},
+  position_(position),
+  eof_(eof)
+  {
+
+  };
+
+  explicit FileTokenInfo(std::string &&file_path, long position, bool eof) :
+      file_path_{std::move(file_path)},
+      position_(position),
+      eof_(eof)
+  {
+
+  };
+
+  bool eof_;
   std::string file_path_;
+  long position_ = 0;
 };
+inline bool operator==(const FileTokenInfo& lhs, const FileTokenInfo& rhs){
+  return lhs.eof_ == rhs.eof_ && lhs.position_ == rhs.position_ && lhs.file_path_ == lhs.file_path_;
+}
+
+inline bool operator!=(const FileTokenInfo& lhs, const FileTokenInfo& rhs){ return !(lhs == rhs); }
 
 class DataManagerStrategy {
 public:
@@ -79,7 +82,7 @@ public:
    * data associated with that token can be cleaned up.
    * @param token
    */
-  virtual void resolve(const DataToken &token) = 0;
+  virtual void resolve(const DataToken &token, bool is_success) = 0;
 };
 
 /**
@@ -91,6 +94,59 @@ struct FileManagerStrategyOptions {
   std::string file_extension;
   uint maximum_file_size_in_bytes;
   uint storage_limit_in_bytes;
+};
+
+/**
+ * Stores all tokens and manages failed or loaded tokens.
+ */
+class TokenStore {
+public:
+
+  /**
+   * @param file_name to lookup
+   * @return true if a staged token is available to read for that file
+   */
+  bool isTokenAvailable(const std::string &file_name) const;
+
+  /**
+   * @param file_name to lookup
+   * @return the file token for that file
+   */
+  FileTokenInfo popAvailableToken(const std::string &file_name);
+
+  /**
+   * Create a token with the file name, stream position, and whether or not this is the last token in the file.
+   *
+   * @param file_name
+   * @param streampos
+   * @param is_eof
+   * @return
+   */
+  DataToken createToken(const std::string &file_name, const long & streampos, bool is_eof);
+
+  /**
+   * Fail a token.
+   *
+   * @param token to fail
+   * @return token info that was failed
+   * @throws std::runtime_exception if token not found
+   */
+  FileTokenInfo fail(const DataToken &token);
+
+  /**
+   * Return the file path
+   * @param token
+   * @return token info which was resolved
+   * @throws std::runtime_exception if token not found
+   */
+  FileTokenInfo resolve(const DataToken &token);
+
+  std::vector<FileTokenInfo> backup();
+
+private:
+  std::unordered_map<DataToken, FileTokenInfo> token_store_;
+  std::unordered_map<std::string, std::list<DataToken>> file_tokens_;
+  std::unordered_map<std::string, FileTokenInfo> staged_tokens_;
 };
 
 /**
@@ -114,7 +170,7 @@ public:
 
   void write(const std::string &data) override;
 
-  void resolve(const DataToken &token) override;
+  void resolve(const DataToken &token, bool is_success) override;
 
   void onShutdown();
 
@@ -135,14 +191,16 @@ private:
 
   void addFilePathToStorage(const std::experimental::filesystem::path &file_path);
 
-  DataToken createToken(const std::string &file_path);
+  /**
+   * Stored files to read from in order from most recent to oldest.
+   */
+  std::list<std::string> stored_files_;
+
+  uintmax_t  storage_size_; // size of all stored files, does not include active write file size.
 
   /**
    * Current file name to write to.
    */
-  std::list<std::string> stored_files_;
-  uintmax_t  storage_size_; // size of all stored files, does not include active write file size.
-
   std::string active_write_file_;
   uint active_write_file_size_;
 
@@ -160,8 +218,10 @@ private:
    */
   uint8_t batch_size = 1;
 
-  std::unordered_map<DataToken, FileTokenInfo> token_store_;
-  std::unordered_map<std::string, std::set<DataToken>> file_tokens_;
+  /**
+   * Stores which tokens to read from.
+   */
+  TokenStore token_store_;
 
 };
 

@@ -40,7 +40,7 @@ public:
 
   void TearDown() override
   {
-    std::experimental::filesystem::path test_folder{"log_tests"};
+    std::experimental::filesystem::path test_folder{"log_tests/"};
     std::experimental::filesystem::remove_all(test_folder);
   }
 
@@ -73,6 +73,49 @@ TEST_F(FileManagerStrategyTest, restart_without_token) {
   }
 }
 
+// @todo (rddesmon) preserve file of tokens on restart
+//TEST_F(FileManagerStrategyTest, restart_with_token) {
+//  const std::string data1 = "test_data_1";
+//  const std::string data2 = "test_data_2";
+//  {
+//    FileManagerStrategy file_manager_strategy(options);
+//    EXPECT_NO_THROW(file_manager_strategy.initialize());
+//    file_manager_strategy.write(data1);
+//    file_manager_strategy.write(data2);
+//    std::string result1;
+//    DataToken token1 = file_manager_strategy.read(result1);
+//    EXPECT_EQ(data1, result1);
+//  }
+//  {
+//    FileManagerStrategy file_manager_strategy(options);
+//    EXPECT_NO_THROW(file_manager_strategy.initialize());
+//    std::string result2;
+//    DataToken token2 = file_manager_strategy.read(result2);
+//    EXPECT_EQ(data2, result2);
+//  }
+//}
+
+TEST_F(FileManagerStrategyTest, fail_token_restart_from_last_location) {
+  const std::string data1 = "test_data_1";
+  const std::string data2 = "test_data_2";
+  FileManagerStrategy file_manager_strategy(options);
+  EXPECT_NO_THROW(file_manager_strategy.initialize());
+  file_manager_strategy.write(data1);
+  file_manager_strategy.write(data2);
+  std::string result1;
+  DataToken token1 = file_manager_strategy.read(result1);
+  EXPECT_EQ(data1, result1);
+  file_manager_strategy.resolve(token1, true);
+  std::string result2, result3;
+  DataToken token2 = file_manager_strategy.read(result2);
+  EXPECT_EQ(data2, result2);
+
+  file_manager_strategy.resolve(token2, false);
+  // Token was failed, should be re-read.
+  DataToken token3 = file_manager_strategy.read(result2);
+  EXPECT_EQ(data2, result2);
+}
+
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
@@ -95,7 +138,7 @@ TEST_F(FileManagerStrategyTest, discover_stored_files) {
     std::string result;
     DataToken token = file_manager_strategy.read(result);
     EXPECT_EQ(test_data, result);
-    file_manager_strategy.resolve(token);
+    file_manager_strategy.resolve(token, true);
   }
 }
 
@@ -127,7 +170,7 @@ TEST_F(FileManagerStrategyTest, resolve_token_deletes_file) {
     EXPECT_TRUE(file_manager_strategy.isDataAvailable());
     std::string result;
     DataToken token = file_manager_strategy.read(result);
-    file_manager_strategy.resolve(token);
+    file_manager_strategy.resolve(token, true);
   }
   {
     FileManagerStrategy file_manager_strategy(options);
