@@ -35,10 +35,15 @@ enum TokenStatus {
 
 using DataToken = uint64_t;
 
+/**
+ * Stores file token information for the purpose of tracking read locations.
+ */
 class FileTokenInfo {
 public:
+
   FileTokenInfo() = default;
-  explicit FileTokenInfo(const std::string &file_path, long position, bool eof) :
+
+  explicit FileTokenInfo(const std::string &file_path, const long position, const bool eof) :
   file_path_{file_path},
   position_(position),
   eof_(eof)
@@ -46,10 +51,18 @@ public:
 
   };
 
-  explicit FileTokenInfo(std::string &&file_path, long position, bool eof) :
+  explicit FileTokenInfo(std::string &&file_path, const long position, const bool eof) :
       file_path_{std::move(file_path)},
       position_(position),
       eof_(eof)
+  {
+
+  };
+
+  FileTokenInfo(const FileTokenInfo &info) :
+      file_path_{info.file_path_},
+      position_(info.position_),
+      eof_(info.eof_)
   {
 
   };
@@ -58,8 +71,9 @@ public:
   std::string file_path_;
   long position_ = 0;
 };
+
 inline bool operator==(const FileTokenInfo& lhs, const FileTokenInfo& rhs){
-  return lhs.eof_ == rhs.eof_ && lhs.position_ == rhs.position_ && lhs.file_path_ == lhs.file_path_;
+  return lhs.eof_ == rhs.eof_ && lhs.position_ == rhs.position_ && lhs.file_path_ == rhs.file_path_;
 }
 
 inline bool operator!=(const FileTokenInfo& lhs, const FileTokenInfo& rhs){ return !(lhs == rhs); }
@@ -81,6 +95,7 @@ public:
    * Mark a token as 'done' so the DataManager knows the piece of
    * data associated with that token can be cleaned up.
    * @param token
+   * @throws std::runtime_exception for token not found
    */
   virtual void resolve(const DataToken &token, bool is_success) = 0;
 };
@@ -102,6 +117,9 @@ struct FileManagerStrategyOptions {
 class TokenStore {
 public:
 
+  TokenStore() = default;
+
+  explicit TokenStore(const std::vector<FileTokenInfo> &file_tokens);
   /**
    * @param file_name to lookup
    * @return true if a staged token is available to read for that file
@@ -141,6 +159,10 @@ public:
    */
   FileTokenInfo resolve(const DataToken &token);
 
+  /**
+   * Backup the first unacked token and all failed tokens into a vector.
+   * @return vector to tokens
+   */
   std::vector<FileTokenInfo> backup();
 
 private:

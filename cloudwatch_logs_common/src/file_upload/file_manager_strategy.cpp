@@ -29,7 +29,11 @@ namespace FileManagement {
 
 static const std::string kConfigFile("file_management.info");
 
-
+TokenStore::TokenStore(const std::vector<FileTokenInfo> &file_tokens) {
+  for (auto& file_token: file_tokens) {
+    staged_tokens_[file_token.file_path_] = file_token;
+  }
+}
 
 bool TokenStore::isTokenAvailable(const std::string &file_name) const {
   return !(staged_tokens_.find(file_name) == staged_tokens_.end());
@@ -49,7 +53,7 @@ FileTokenInfo TokenStore::fail(const DataToken &token) {
   if (file_tokens_.find(token_info.file_path_) == file_tokens_.end()) {
     throw std::runtime_error("File not found in cache: " + token_info.file_path_);
   }
-  std::string &file_path = token_info.file_path_;
+  const std::string &file_path = token_info.file_path_;
   staged_tokens_[file_path] = token_info;
   file_tokens_.erase(file_path);
   token_store_.erase(token);
@@ -74,7 +78,7 @@ FileTokenInfo TokenStore::resolve(const DataToken &token) {
     throw std::runtime_error("DataToken not found");
   }
   FileTokenInfo token_info = token_store_[token];
-  std::string &file_path = token_info.file_path_;
+  const std::string &file_path = token_info.file_path_;
 
   if (file_tokens_.find(file_path) == file_tokens_.end()) {
     throw std::runtime_error("Could not find token set for file: " + file_path);
