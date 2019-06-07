@@ -75,6 +75,7 @@ public:
   {
     return tryEnqueue(value, duration);
   }
+  MOCK_METHOD0(clear, void (void));
 };
 
 class FileStreamerTest : public ::testing::Test {
@@ -145,6 +146,35 @@ TEST_F(FileStreamerTest, fail_enqueue_retry) {
   file_upload_streamer->run();
   file_upload_streamer->run();
 }
+
+TEST_F(FileStreamerTest, fail_task_clears_queue) {
+  // Create the pipeline
+  file_upload_streamer->setSink(mock_sink);
+
+  // Set the file and network available
+  file_manager->status_monitor_->setStatus(AVAILABLE);
+  file_upload_streamer->onPublisherStateChange(PublisherState::CONNECTED);
+
+  FileObject<std::string> test_file_object;
+  test_file_object.batch_data = "data";
+  test_file_object.batch_size = 1;
+  SharedFileUploadTask task;
+  // TODO: capture and test equivalence
+  EXPECT_CALL(*mock_sink, tryEnqueue(testing::_, testing::_))
+    .WillOnce(testing::Invoke([&task](SharedFileUploadTask& data,
+                                      const std::chrono::microseconds &duration){
+      task = data;
+      return true;
+    }));
+  EXPECT_CALL(*file_manager, readBatch(testing::Eq(50)))
+      .WillOnce(testing::Return(test_file_object));
+  EXPECT_CALL(*mock_sink, clear());
+  EXPECT_CALL(*file_manager, fileUploadCompleteStatus(FAIL, testing::_));
+  // Expect a batch call and enqueue from the file upload streamer
+  file_upload_streamer->run();
+  task->onComplete(FAIL);
+}
+
 
 TEST_F(FileStreamerTest, block_on_no_network) {
   // Create the pipeline

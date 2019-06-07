@@ -31,6 +31,7 @@ public:
   virtual bool tryEnqueue(
     T&& value,
     const std::chrono::microseconds &duration) = 0;
+  virtual void clear() = 0;
 };
 
 }  // namespace DataFlow
