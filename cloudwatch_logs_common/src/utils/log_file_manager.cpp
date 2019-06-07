@@ -27,18 +27,6 @@ namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
-void LogFileManager::uploadCompleteStatus(
-  const FileManagement::UploadStatus& upload_status,
-  const LogType &log_messages)
-{
-  if (!log_messages.empty()) {
-    if (FileManagement::SUCCESS != upload_status) {
-      AWS_LOG_INFO(__func__, "Writing logs to file");
-      write(log_messages);
-    }
-  }
-}
-
 FileObject<LogType> LogFileManager::readBatch(
   size_t batch_size)
 {

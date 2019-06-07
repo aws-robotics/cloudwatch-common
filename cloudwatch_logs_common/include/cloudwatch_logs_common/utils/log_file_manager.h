@@ -44,22 +44,12 @@ class LogFileManager :
   LogFileManager()  = default;
 
   explicit LogFileManager(
-      std::shared_ptr<FileManagerStrategy> file_manager_strategy)
+      const std::shared_ptr<FileManagerStrategy> &file_manager_strategy)
       : FileManager(file_manager_strategy)
   {
   }
 
   ~LogFileManager() override = default;
-
-  /**
-   * Handle an upload complete status.
-   *
-   * @param upload_status the status of an attempted upload of data
-   * @param log_messages the data which was attempted to be uploaded
-   */
-  void uploadCompleteStatus(
-    const FileManagement::UploadStatus& upload_status,
-    const LogType &log_messages);
 
   void write(const LogType & data) override;
 
