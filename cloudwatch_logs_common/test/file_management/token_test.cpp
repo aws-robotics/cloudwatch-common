@@ -20,6 +20,9 @@
 
 using namespace Aws::FileManagement;
 
+static const FileTokenInfo kTestToken1("fake_file", 0, false);
+static const FileTokenInfo kTestToken2("fake_file", 10, true);
+
 TEST(token_test, fail_unknown_token) {
   TokenStore token_store;
   EXPECT_THROW(token_store.fail(0), std::runtime_error);
@@ -27,36 +30,26 @@ TEST(token_test, fail_unknown_token) {
 
 TEST(token_test, fail_token_twice) {
   TokenStore token_store;
-  auto test_file_name = "fake_file";
-  auto position = 0;
-  bool is_eof = false;
-  auto token = token_store.createToken(test_file_name, position, is_eof);
+  FileTokenInfo kTestToken1("fake_file", 0, false);
+  auto token = token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
   token_store.fail(token);
   EXPECT_THROW(token_store.fail(token), std::runtime_error);
 }
 
 TEST(token_test, resolve_then_fail_token) {
   TokenStore token_store;
-  auto test_file_name = "fake_file";
-  auto position = 0;
-  bool is_eof = false;
-  auto token = token_store.createToken(test_file_name, position, is_eof);
+  auto token = token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
   token_store.resolve(token);
   EXPECT_THROW(token_store.fail(token), std::runtime_error);
 }
 
 TEST(token_test, fail_then_recover_token) {
   TokenStore token_store;
-  auto test_file_name = "fake_file";
-  auto position = 0;
-  bool is_eof = false;
-  auto token = token_store.createToken(test_file_name, position, is_eof);
+  auto token = token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
   token_store.fail(token);
-  EXPECT_TRUE(token_store.isTokenAvailable(test_file_name));
-  auto popped_token = token_store.popAvailableToken(test_file_name);
-  EXPECT_EQ(test_file_name, popped_token.file_path_);
-  EXPECT_EQ(position, popped_token.position_);
-  EXPECT_EQ(is_eof, popped_token.eof_);
+  EXPECT_TRUE(token_store.isTokenAvailable(kTestToken1.file_path_));
+  auto popped_token = token_store.popAvailableToken(kTestToken1.file_path_);
+  EXPECT_EQ(kTestToken1, popped_token);
 }
 
 TEST(token_test, resolve_unknown_token) {
@@ -66,59 +59,57 @@ TEST(token_test, resolve_unknown_token) {
 
 TEST(token_test, resolve_token) {
   TokenStore token_store;
-  auto test_file_name = "fake_file";
-  auto position = 0;
-  bool is_eof = false;
-  auto token = token_store.createToken(test_file_name, position, is_eof);
+  auto token = token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
   auto resolved_token = token_store.resolve(token);
-  EXPECT_EQ(test_file_name, resolved_token.file_path_);
-  EXPECT_EQ(position, resolved_token.position_);
-  EXPECT_EQ(is_eof, resolved_token.eof_);
+  EXPECT_EQ(kTestToken1, resolved_token);
 }
 
 TEST(token_test, resolve_token_twice) {
   TokenStore token_store;
-  auto test_file_name = "fake_file";
-  auto position = 0;
-  bool is_eof = false;
-  auto token = token_store.createToken(test_file_name, position, is_eof);
+  auto token = token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
   token_store.resolve(token);
   EXPECT_THROW(token_store.resolve(token), std::runtime_error);
 }
 
 TEST(token_test, test_backup) {
   TokenStore token_store;
-  FileTokenInfo test_token_1("fake_file", 0, false);
-  FileTokenInfo test_token_2("fake_file", 10, true);
-
-  auto token1 = token_store.createToken(test_token_1.file_path_, test_token_1.position_, test_token_1.eof_);
-  auto token2 = token_store.createToken(test_token_2.file_path_, test_token_2.position_, test_token_2.eof_);
+  auto token1 = token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
+  auto token2 = token_store.createToken(kTestToken2.file_path_, kTestToken2.position_, kTestToken2.eof_);
   auto backup = token_store.backup();
 
-  EXPECT_THAT(backup, testing::ElementsAre(test_token_1));
+  EXPECT_THAT(backup, testing::ElementsAre(kTestToken1));
 }
 
 TEST(token_test, test_backup_failed_file) {
   TokenStore token_store;
-  FileTokenInfo test_token_1("fake_file", 0, false);
-  FileTokenInfo test_token_2("fake_file", 10, true);
 
-  auto token1 = token_store.createToken(test_token_1.file_path_, test_token_1.position_, test_token_1.eof_);
-  auto token2 = token_store.createToken(test_token_2.file_path_, test_token_2.position_, test_token_2.eof_);
+  auto token1 = token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
+  auto token2 = token_store.createToken(kTestToken2.file_path_, kTestToken2.position_, kTestToken2.eof_);
   token_store.fail(token1);
   auto backup = token_store.backup();
 
-  EXPECT_THAT(backup, testing::ElementsAre(test_token_1));
+  EXPECT_THAT(backup, testing::ElementsAre(kTestToken1));
+}
+
+TEST(token_test, test_token_backup_constructor) {
+  std::vector<FileTokenInfo> backup;
+  {
+    TokenStore token_store;
+    token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
+    backup = token_store.backup();
+    EXPECT_THAT(backup, testing::ElementsAre(kTestToken1));
+  }
+  {
+    TokenStore token_store(backup);
+    EXPECT_TRUE(token_store.isTokenAvailable(kTestToken1.file_path_));
+    EXPECT_EQ(kTestToken1, token_store.popAvailableToken(kTestToken1.file_path_));
+  }
 }
 
 TEST(token_test, test_backup_two_files) {
   TokenStore token_store;
-  FileTokenInfo test_token_1("fake_file", 0, false);
-  FileTokenInfo test_token_2("fake_file2", 10, true);
-
-  auto token1 = token_store.createToken(test_token_1.file_path_, test_token_1.position_, test_token_1.eof_);
-  auto token2 = token_store.createToken(test_token_2.file_path_, test_token_2.position_, test_token_2.eof_);
+  token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
+  token_store.createToken(kTestToken2.file_path_, kTestToken2.position_, kTestToken2.eof_);
   auto backup = token_store.backup();
-
-  EXPECT_THAT(backup, testing::UnorderedElementsAre(test_token_1, test_token_2));
+  EXPECT_THAT(backup, testing::UnorderedElementsAre(kTestToken1, kTestToken2));
 }

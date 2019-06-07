@@ -57,8 +57,8 @@ public:
   virtual bool batchData(const T &data_to_batch) = 0;
   virtual bool batchData(const T &data_to_batch, const std::chrono::milliseconds & milliseconds) = 0;
   virtual bool publishBatchedData() = 0;
-  virtual int getCurrentBatchSize() = 0;
-  inline bool setMaxBatchSize(int new_value) {
+  virtual size_t getCurrentBatchSize() = 0;
+  inline bool setMaxBatchSize(size_t new_value) {
     if(new_value > 0) {
       this->max_batch_size_.store(new_value);
       return true;
@@ -68,14 +68,14 @@ public:
   inline int getMaxBatchSize() {
     return this->max_batch_size_.load();
   }
-  inline void resetSize(int new_value) {
+  inline void resetSize(size_t new_value) {
       this->max_batch_size_.store(DEFAULT_SIZE);
   }
 private:
   /**
    * Size used for the internal storage
    */
-  std::atomic<int> max_batch_size_;
+  std::atomic<size_t> max_batch_size_;
 };
 
 //todo this class could entirely be a base worker class
@@ -133,7 +133,7 @@ public:
    */
   virtual bool publishBatchedData() override;
 
-  virtual int getCurrentBatchSize() override;
+  virtual size_t getCurrentBatchSize() override;
 
   virtual bool initialize() override;
   virtual bool start() override;

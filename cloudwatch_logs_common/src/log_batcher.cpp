@@ -101,7 +101,7 @@ bool LogBatcher::publishBatchedData() {
 
 //todo implement drop data function
 
-int LogBatcher::getCurrentBatchSize() {
+size_t LogBatcher::getCurrentBatchSize() {
   return this->batched_data_->size();
 }
 
