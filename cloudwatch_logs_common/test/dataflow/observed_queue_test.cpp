@@ -43,12 +43,17 @@ TEST(observed_queue_test, enqueue_dequeue_test) {
   test_enqueue_dequeue(observed_queue);
 }
 
-TEST(blocking_queue_test, enqueue_dequeue_test) {
+TEST(observed_queue_test, blocking_enqueue_dequeue_test) {
   ObservedBlockingQueue<std::string> observed_queue(1);
   test_enqueue_dequeue(observed_queue);
 }
 
-TEST(blocking_queue_test, enqueue_blocked_dequeue_test) {
+TEST(observed_queue_test, synchronized_enqueue_dequeue_test) {
+  ObservedSynchronizedQueue<std::string> observed_queue;
+  test_enqueue_dequeue(observed_queue);
+}
+
+TEST(observed_queue_test, enqueue_blocked_dequeue_test) {
   ObservedBlockingQueue<std::string> observed_queue(1);
   auto status_monitor = std::make_shared<StatusMonitor>();
   observed_queue.setStatusMonitor(status_monitor);
