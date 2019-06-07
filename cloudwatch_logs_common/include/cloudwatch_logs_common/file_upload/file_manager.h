@@ -127,12 +127,10 @@ public:
       AWS_LOG_INFO(__func__,
                    "Total logs uploaded: %i",
                    total_logs_uploaded_);
-      // Delete file if empty log_messages.file_location.
-      for (const auto &token : log_messages.data_tokens) {
-        file_manager_strategy_->resolve(token);
-      }
-    } else {
-      // Set last read location for this file.
+    }
+    // Delete file if empty log_messages.file_location.
+    for (const auto &token : log_messages.data_tokens) {
+      file_manager_strategy_->resolve(token, upload_status == SUCCESS);
     }
   }
 
