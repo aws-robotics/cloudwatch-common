@@ -69,6 +69,7 @@ public:
    * @param value to enqueue
    */
   inline bool enqueue(T&& value) override {
+    std::lock_guard<std::mutex> lock(dequeue_mutex_);
     dequeue_.push_back(value);
     notifyMonitor(AVAILABLE);
     return true;
@@ -80,6 +81,7 @@ public:
    * @param value to enqueue
    */
   inline bool enqueue(T& value) override {
+    std::lock_guard<std::mutex> lock(dequeue_mutex_);
     dequeue_.push_back(value);
     notifyMonitor(AVAILABLE);
     return true;
@@ -108,6 +110,7 @@ public:
     T& data,
     const std::chrono::microseconds &duration) override
   {
+    std::lock_guard<std::mutex> lock(dequeue_mutex_);
     bool is_data = false;
     if (!dequeue_.empty()) {
       data = dequeue_.front();
@@ -134,6 +137,11 @@ public:
     return dequeue_.size();
   }
 
+  void clear() {
+    std::lock_guard<std::mutex> lock(dequeue_mutex_);
+    dequeue_.clear();
+  }
+
 protected:
 
   /**
@@ -156,6 +164,7 @@ protected:
    * The dequeue to store data.
    */
   std::deque<T, Allocator> dequeue_;
+  std::mutex dequeue_mutex_;
 };
 
 /**

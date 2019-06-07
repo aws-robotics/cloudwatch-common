@@ -29,7 +29,7 @@ class MockObservedQueue :
   public IObservedQueue<std::string>
 {
 public:
-
+  MOCK_METHOD0(clear, void (void));
   MOCK_CONST_METHOD0(size, size_t (void));
   MOCK_CONST_METHOD0(empty, bool (void));
   MOCK_METHOD2(dequeue, bool (std::string& data,

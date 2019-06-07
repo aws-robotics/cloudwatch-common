@@ -118,6 +118,11 @@ public:
     return true;
   }
 
+  void onComplete(const UploadStatus & upload_status, const FileObject<T> &message) {
+    OutputStage<TaskPtr<T>>::getSink()->clear();
+    data_reader_->fileUploadCompleteStatus(upload_status, message);
+  }
+
   /**
    * Attempt to start uploading.
    *
@@ -126,7 +131,7 @@ public:
    * 3. Queue up the task to be worked on.
    * 4. Wait for the task to be completed to continue.
    */
-  inline void run() {
+  inline void run() override {
     AWS_LOG_INFO(__func__,
                  "Waiting for files and work.");
     auto wait_result = status_condition_monitor_.waitForWork(kTimeout);
@@ -148,8 +153,8 @@ public:
       stored_task_ = std::make_shared<FileUploadTask<T>>(
           std::move(file_object),
           std::bind(
-              &DataReader<T>::fileUploadCompleteStatus,
-              data_reader_,
+              &FileUploadStreamer<T>::onComplete,
+              this,
               std::placeholders::_1,
               std::placeholders::_2));
     }
