@@ -134,11 +134,6 @@ public:
     }
   }
 
-  virtual void uploadCompleteStatus(
-          const FileManagement::UploadStatus& upload_status,
-          const T &message) = 0;
-
-
   /**
    * Add a file status monitor to notify observers when there
    * @param status_monitor

@@ -55,7 +55,7 @@ protected:
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
-TEST_F(FileManagerTest, file_manager_write_on_fail) {
+TEST_F(FileManagerTest, file_manager_write) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   LogFileManager file_manager(file_manager_strategy);
   LogType log_data;
@@ -63,26 +63,10 @@ TEST_F(FileManagerTest, file_manager_write_on_fail) {
   input_event.SetTimestamp(0);
   input_event.SetMessage("Hello my name is foo");
   log_data.push_back(input_event);
-  file_manager.uploadCompleteStatus(UploadStatus::FAIL, log_data);
+  file_manager.write(log_data);
   std::string line;
   file_manager_strategy->read(line);
   EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
-}
-
-/**
- * Test that the upload complete with CW success does not go to a file.
- */
-TEST_F(FileManagerTest, file_manager_no_write_on_success) {
-  std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
-  LogFileManager file_manager(file_manager_strategy);
-  LogType log_data;
-  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Hello my name is bar");
-  log_data.push_back(input_event);
-  file_manager.uploadCompleteStatus(Aws::FileManagement::SUCCESS, log_data);
-  std::string line;
-  EXPECT_ANY_THROW(file_manager_strategy->read(line));
 }
 
 int main(int argc, char** argv)
