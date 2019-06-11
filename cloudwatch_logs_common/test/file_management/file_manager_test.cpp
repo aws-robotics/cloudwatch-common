@@ -39,7 +39,6 @@ class FileManagerTest : public ::testing::Test {
 public:
   void SetUp() override
   {
-    // extra setup goes here.
   }
 
   void TearDown() override

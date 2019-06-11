@@ -87,26 +87,40 @@ if(GMOCK_LIBRARY)
         ${GMOCK_LIBRARY}
         ${PROJECT_NAME})
 
-  add_common_gtest(test_cloudwatch_offline
+  add_common_gtest(test_common_utilities
           test/file_management/file_manager_test.cpp
           test/file_management/file_manager_strategy_test.cpp
           test/file_management/file_upload_streamer_test.cpp
           test/file_management/token_test.cpp
           test/dataflow/observed_queue_test.cpp
           test/dataflow/queue_monitor_test.cpp
+          )
+
+  target_include_directories(test_common_utilities
+        PRIVATE include
+        PRIVATE ${aws_common_INCLUDE_DIRS}
+        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+        )
+  target_link_libraries(test_common_utilities
+        ${GTEST_LIBRARIES}
+        pthread
+        ${GMOCK_LIBRARY}
+        ${PROJECT_NAME})
+
+  add_common_gtest(test_pipelines
           test/pipeline_test.cpp
           test/utils/observable_object_test.cpp
           test/utils/runnable_service_test.cpp
           )
 
-  target_include_directories(test_cloudwatch_offline
-        PRIVATE include
-        PRIVATE ${aws_common_INCLUDE_DIRS}
-        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
-        )
-  target_link_libraries(test_cloudwatch_offline
-        ${GTEST_LIBRARIES}
-        pthread
-        ${GMOCK_LIBRARY}
-        ${PROJECT_NAME})
+  target_include_directories(test_pipelines
+          PRIVATE include
+          PRIVATE ${aws_common_INCLUDE_DIRS}
+          PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+          )
+  target_link_libraries(test_pipelines
+          ${GTEST_LIBRARIES}
+          pthread
+          ${GMOCK_LIBRARY}
+          ${PROJECT_NAME})
 endif()
