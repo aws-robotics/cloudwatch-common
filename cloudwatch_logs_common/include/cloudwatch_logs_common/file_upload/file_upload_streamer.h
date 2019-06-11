@@ -167,7 +167,7 @@ public:
    * Start the upload thread.
    */
   bool start() {
-    RunnableService::start();
+    return RunnableService::start();
   }
 
   // todo this is a hack. Should just implement an extension in test

@@ -44,12 +44,13 @@ namespace CloudWatchLogs {
 template<typename T>
 class DataBatcher : public Service {
 public:
-  static const int DEFAULT_SIZE = -1;
+  // @todo (dbbonie): why set size to an invalid number?
+  static const size_t DEFAULT_SIZE = 0;
   DataBatcher() {
     this->max_batch_size_.store(DataBatcher::DEFAULT_SIZE);
   }
-  DataBatcher(int size) {
-    if(size <= 0) {
+  explicit DataBatcher(size_t size) {
+    if(size == 0) {
       //todo throw exception?
     }
     this->max_batch_size_.store(size);
@@ -65,11 +66,11 @@ public:
     }
     return false;
   }
-  inline int getMaxBatchSize() {
+  inline size_t getMaxBatchSize() {
     return this->max_batch_size_.load();
   }
   inline void resetSize(size_t new_value) {
-      this->max_batch_size_.store(DEFAULT_SIZE);
+      this->max_batch_size_.store(new_value);
   }
 private:
   /**

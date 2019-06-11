@@ -64,7 +64,7 @@ public:
    */
   uint64_t getNewMask() {
     uint64_t current_mask = 0, new_mask;
-    short shift = 0;
+    size_t shift = 0;
     while (current_mask == 0) {
       new_mask = (uint64_t) 1 << shift++;
       current_mask = !(collective_mask_ & new_mask) ? new_mask : 0;

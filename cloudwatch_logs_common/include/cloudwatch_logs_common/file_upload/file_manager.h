@@ -77,7 +77,7 @@ public:
    * Default constructor.
    */
   FileManager() {
-    FileManagerStrategyOptions options{"cloudwatchlogs", "/tmp/", ".log", 1024*1024};
+    FileManagerStrategyOptions options{"cloudwatchlogs", "/tmp/", ".log", 1024*1024, 1024*1024};
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }
 

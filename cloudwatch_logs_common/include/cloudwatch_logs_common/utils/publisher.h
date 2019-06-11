@@ -69,7 +69,7 @@ public:
       published_count_++;
       return UploadStatus::SUCCESS;
     }
-    UploadStatus::FAIL;
+    return UploadStatus::FAIL;
   }
   /**
    * Return true if this publisher can send data to CloudWatch, false otherwise.
@@ -84,7 +84,7 @@ public:
     return published_count_; //todo atomic?
   }
 
-  virtual bool addPublisherStateListener(const std::function<void(const PublisherState&)> & listener) {
+  virtual void addPublisherStateListener(const std::function<void(const PublisherState&)> & listener) {
     publisher_state_.addListener(listener);
   }
 

@@ -88,14 +88,14 @@ public:
 
   inline bool tryEnqueue(
       T& value,
-      const std::chrono::microseconds &duration) override
+      const std::chrono::microseconds&) override
   {
     return enqueue(value);
   }
 
   inline bool tryEnqueue(
       T&& value,
-      const std::chrono::microseconds &duration) override
+      const std::chrono::microseconds&) override
   {
     return enqueue(value);
   }
@@ -107,7 +107,7 @@ public:
    */
   inline bool dequeue(
     T& data,
-    const std::chrono::microseconds &duration) override
+    const std::chrono::microseconds&) override
   {
     bool is_data = false;
     if (!dequeue_.empty()) {

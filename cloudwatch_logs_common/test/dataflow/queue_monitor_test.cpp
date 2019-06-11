@@ -38,13 +38,13 @@ public:
   MOCK_METHOD2(tryEnqueue,
     bool (std::string& data,
     const std::chrono::microseconds &duration));
-  inline bool enqueue(std::string&& value) override {
+  inline bool enqueue(std::string&&) override {
     return false;
   }
 
   inline bool tryEnqueue(
       std::string&& value,
-      const std::chrono::microseconds &duration) override
+      const std::chrono::microseconds&) override
   {
     return enqueue(value);
   }
@@ -67,7 +67,7 @@ public:
 bool dequeueFunc(
   std::string& data,
   std::string actual,
-  const std::chrono::microseconds &duration)
+  const std::chrono::microseconds&)
 {
   data = std::move(actual);
   return true;
