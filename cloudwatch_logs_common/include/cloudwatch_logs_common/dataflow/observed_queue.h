@@ -186,7 +186,7 @@ public:
    * @param value to enqueue
    */
   inline bool enqueue(T&& value) override {
-    std::lock_guard<std::mutex> lock(dequeue_mutex_);
+    std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
     return OQ::enqueue(std::move(value));
   }
 
@@ -196,7 +196,7 @@ public:
    * @param value to enqueue
    */
   inline bool enqueue(T& value) override {
-    std::lock_guard<std::mutex> lock(dequeue_mutex_);
+    std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
     return OQ::enqueue(value);
   }
 
@@ -204,14 +204,24 @@ public:
       T& value,
       const std::chrono::microseconds &duration) override
   {
-    return enqueue(value);
+    std::unique_lock<DequeueMutex> lock(dequeue_mutex_, std::defer_lock);
+    bool result = lock.try_lock_for(duration);
+    if (result) {
+      OQ::enqueue(value);
+    }
+    return result;
   }
 
   inline bool tryEnqueue(
       T&& value,
       const std::chrono::microseconds &duration) override
   {
-    return enqueue(value);
+    std::unique_lock<DequeueMutex> lock(dequeue_mutex_, std::defer_lock);
+    bool result = lock.try_lock_for(duration);
+    if (result) {
+      OQ::enqueue(std::move(value));
+    }
+    return result;
   }
 
   /**
@@ -223,15 +233,19 @@ public:
       T& data,
       const std::chrono::microseconds &duration) override
   {
-    std::lock_guard<std::mutex> lock(dequeue_mutex_);
-    return OQ::dequeue(data, duration);
+    std::unique_lock<DequeueMutex> lock(dequeue_mutex_, std::defer_lock);
+    bool result = lock.try_lock_for(duration);
+    if (result) {
+      result = OQ::dequeue(data, duration);
+    }
+    return result;
   }
 
   /**
    * @return true if the queue is empty
    */
   inline bool empty() const override {
-    std::lock_guard<std::mutex> lock(dequeue_mutex_);
+    std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
     return OQ::empty();
   }
 
@@ -239,7 +253,7 @@ public:
    * @return the size of the queue
    */
   inline size_t size() const override {
-    std::lock_guard<std::mutex> lock(dequeue_mutex_);
+    std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
     return OQ::size();
   }
 
@@ -247,14 +261,15 @@ public:
    * Clear the dequeue
    */
   void clear() {
-    std::lock_guard<std::mutex> lock(dequeue_mutex_);
+    std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
     OQ::clear();
   }
 
 private:
   using OQ = ObservedQueue<T, Allocator>;
   // @todo (rddesmon): Dual semaphore for read optimization
-  mutable std::mutex dequeue_mutex_;
+  using DequeueMutex = std::timed_mutex;
+  mutable DequeueMutex dequeue_mutex_;
 };
 /**
  * An observed queue is a dequeue wrapper which notifies an observer when a task is added.

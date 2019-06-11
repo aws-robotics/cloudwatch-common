@@ -108,8 +108,9 @@ TEST(token_test, test_token_backup_constructor) {
 
 TEST(token_test, test_backup_two_files) {
   TokenStore token_store;
+  FileTokenInfo test_token_2("different_file", 10, true);
   token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
-  token_store.createToken(kTestToken2.file_path_, kTestToken2.position_, kTestToken2.eof_);
+  token_store.createToken(test_token_2.file_path_, test_token_2.position_, test_token_2.eof_);
   auto backup = token_store.backup();
-  EXPECT_THAT(backup, testing::UnorderedElementsAre(kTestToken1, kTestToken2));
+  EXPECT_THAT(backup, testing::UnorderedElementsAre(kTestToken1, test_token_2));
 }

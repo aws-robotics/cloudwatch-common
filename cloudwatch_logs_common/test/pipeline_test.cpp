@@ -16,16 +16,21 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <aws/core/Aws.h>
+
 #include <chrono>
+#include <mutex>
+#include <condition_variable>
+#include <string>
+
+#include <aws/core/Aws.h>
+
 #include "cloudwatch_logs_common/log_service.h"
 #include "cloudwatch_logs_common/log_batcher.h"
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/utils/publisher.h>
 #include <cloudwatch_logs_common/dataflow/dataflow.h>
-#include <mutex>
-#include <condition_variable>
-#include <string>
+
+#include <aws/core/utils/logging/ConsoleLogSystem.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
@@ -201,4 +206,15 @@ TEST_F(PipelineTest, TestBatcherSize) {
   EXPECT_EQ(1, test_publisher->getPublishedCount());
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
+}
+
+int main(int argc, char** argv)
+{
+  Aws::Utils::Logging::InitializeAWSLogging(
+      Aws::MakeShared<Aws::Utils::Logging::ConsoleLogSystem>(
+          "RunUnitTests", Aws::Utils::Logging::LogLevel::Trace));
+  ::testing::InitGoogleMock(&argc, argv);
+  int exitCode = RUN_ALL_TESTS();
+  Aws::Utils::Logging::ShutdownAWSLogging();
+  return exitCode;
 }
