@@ -73,8 +73,8 @@ TEST(token_test, resolve_token_twice) {
 
 TEST(token_test, test_backup) {
   TokenStore token_store;
-  auto token1 = token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
-  auto token2 = token_store.createToken(kTestToken2.file_path_, kTestToken2.position_, kTestToken2.eof_);
+  token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
+  token_store.createToken(kTestToken2.file_path_, kTestToken2.position_, kTestToken2.eof_);
   auto backup = token_store.backup();
 
   EXPECT_THAT(backup, testing::ElementsAre(kTestToken1));
@@ -84,7 +84,7 @@ TEST(token_test, test_backup_failed_file) {
   TokenStore token_store;
 
   auto token1 = token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
-  auto token2 = token_store.createToken(kTestToken2.file_path_, kTestToken2.position_, kTestToken2.eof_);
+  token_store.createToken(kTestToken2.file_path_, kTestToken2.position_, kTestToken2.eof_);
   token_store.fail(token1);
   auto backup = token_store.backup();
 

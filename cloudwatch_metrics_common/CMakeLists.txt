@@ -11,6 +11,21 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
 endif()
 
+# Enable strict compiler flags if possible.
+include(CheckCXXCompilerFlag)
+set(FLAGS -pedantic -Wno-long-long -Wall -Wextra -Wcast-align -Wcast-qual -Wformat -Wwrite-strings -Wconversion -Wmissing-declarations)
+foreach(FLAG ${FLAGS})
+  check_cxx_compiler_flag(${FLAG} R${FLAG})
+  if(${R${FLAG}})
+    set(WARNING_CXX_FLAGS "${WARNING_CXX_FLAGS} ${FLAG}")
+  endif()
+endforeach()
+
+if(NOT DEFINED CXX_DISABLE_WERROR)
+  set(WARNING_CXX_FLAGS "-Werror ${WARNING_CXX_FLAGS}")
+endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_CXX_FLAGS}")
+
 find_package(aws_common REQUIRED)
 if(AWSSDK_FOUND)
   set(SERVICE monitoring)

@@ -65,8 +65,8 @@ TEST_F(FileManagerStrategyTest, restart_without_token) {
     FileManagerStrategy file_manager_strategy(options);
     EXPECT_NO_THROW(file_manager_strategy.initialize());
     std::string result1, result2;
-    DataToken token1 = file_manager_strategy.read(result1);
-    DataToken token2 = file_manager_strategy.read(result2);
+    file_manager_strategy.read(result1);
+    file_manager_strategy.read(result2);
     EXPECT_EQ(data1, result1);
     EXPECT_EQ(data2, result2);
   }
@@ -111,7 +111,7 @@ TEST_F(FileManagerStrategyTest, fail_token_restart_from_last_location) {
 
   file_manager_strategy.resolve(token2, false);
   // Token was failed, should be re-read.
-  DataToken token3 = file_manager_strategy.read(result2);
+  file_manager_strategy.read(result2);
   EXPECT_EQ(data2, result2);
 }
 
@@ -191,9 +191,9 @@ TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
     file_manager_strategy.write(string_25_bytes);
     long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
     EXPECT_EQ(1, file_count);
-    for (const auto &entry : fs::directory_iterator(folder)) {
-      const fs::path &path = entry.path();
-    }
+//    for (const auto &entry : fs::directory_iterator(folder)) {
+//      const fs::path &path = entry.path();
+//    }
 
     for (int i = 0; i < 5; i++) {
       file_manager_strategy.write(string_25_bytes);

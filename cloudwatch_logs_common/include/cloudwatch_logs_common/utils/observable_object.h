@@ -90,7 +90,7 @@ public:
      * Get the current number of listeners
      * @return
      */
-    virtual int getNumberOfListeners() {
+    virtual size_t getNumberOfListeners() {
       return listeners_.size();
     }
 

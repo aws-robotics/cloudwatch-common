@@ -38,6 +38,7 @@ public:
   typename std::enable_if<std::is_base_of<Sink<O>, T>::value, std::shared_ptr<T>>::type
   setSink(std::shared_ptr<T> sink) {
     sink_ = sink;
+    return sink;
   }
  private:
   std::shared_ptr<Sink<O>> sink_;

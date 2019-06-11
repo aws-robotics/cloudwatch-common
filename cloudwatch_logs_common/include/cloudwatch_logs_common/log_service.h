@@ -124,9 +124,12 @@ public:
   }
 
   virtual inline bool setDequeueDuration(std::chrono::milliseconds new_value) {
+    bool is_set = false;
     if (new_value.count() >= 0) {
       this->dequeue_duration_ = new_value;
+      is_set = true;
     }
+    return is_set;
   }
 
   /**

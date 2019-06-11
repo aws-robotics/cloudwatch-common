@@ -63,7 +63,7 @@ bool LogBatcher::batchData(const std::string &log_msg_formatted, const std::chro
   this->batched_data_->push_back(log_event);
 
   // publish if the size has been configured
-  int mbs = this->getMaxBatchSize();
+  auto mbs = this->getMaxBatchSize();
   if (mbs != DataBatcher::DEFAULT_SIZE && this->batched_data_->size() >= mbs) {
     this->publishBatchedData();
   }
@@ -113,4 +113,5 @@ bool LogBatcher::start() {
 }
 bool LogBatcher::shutdown() {
   this->batched_data_->clear();
+  return true;
 }

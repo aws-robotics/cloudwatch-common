@@ -67,9 +67,9 @@ public:
 
   };
 
-  bool eof_;
   std::string file_path_;
   long position_ = 0;
+  bool eof_;
 };
 
 inline bool operator==(const FileTokenInfo& lhs, const FileTokenInfo& rhs){
@@ -224,7 +224,7 @@ private:
    * Current file name to write to.
    */
   std::string active_write_file_;
-  uint active_write_file_size_;
+  size_t active_write_file_size_;
 
   std::string active_read_file_;
   std::unique_ptr<std::ifstream> active_read_file_stream_ = nullptr;

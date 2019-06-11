@@ -64,8 +64,8 @@ public:
   }
 
 protected:
-  bool configure() {};
-  bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) {
+  bool configure() override { return false; };
+  bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent>&) override {
     {
       std::unique_lock <std::mutex> lck(this->mtx);
       this->cv.notify_all();
@@ -175,7 +175,7 @@ TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
  */
 TEST_F(PipelineTest, TestBatcherSize) {
 
-  bool b = log_batcher->setMaxBatchSize(-1); // setting the size will trigger a publish when the collection is full
+  bool b = log_batcher->setMaxBatchSize(0); // setting the size will trigger a publish when the collection is full
   EXPECT_FALSE(b);
   EXPECT_EQ(-1, log_batcher->getMaxBatchSize());
 
