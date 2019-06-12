@@ -37,6 +37,8 @@ using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
 
+static const std::chrono::milliseconds kDequeueDuration = std::chrono::milliseconds(100);
+
 /**
  *
  * @tparam T the type to be published to cloudwatch
@@ -45,41 +47,40 @@ using namespace Aws::FileManagement;
 template<typename T, typename D>
 class CloudWatchService : public Aws::DataFlow::InputStage<TaskPtr<T>>, public RunnableService {
 public:
-  CloudWatchService(std::shared_ptr<Publisher<T>> log_publisher,
-    std::shared_ptr<DataBatcher<D>> log_batcher) : RunnableService() {
+  CloudWatchService(std::shared_ptr<Publisher<T>> publisher,
+    std::shared_ptr<DataBatcher<D>> batcher) : RunnableService() {
+
+    if (nullptr == publisher) {
+      throw "Invalid argument: log_publisher cannot be null";
+    }
+
+    if (nullptr == batcher) {
+      throw "Invalid argument: log_publisher cannot be null";
+    }
 
     this->log_file_upload_streamer_ = nullptr;
-    this->log_publisher_ = log_publisher;
-    this->log_batcher_ = log_batcher;
-    this->dequeue_duration_ = std::chrono::milliseconds(100); //todo magic constant
+    this->publisher_ = publisher;
+    this->batcher_ = batcher;
+    this->dequeue_duration_ = kDequeueDuration;
     this->number_dequeued_.store(0);
   }
 
-  ~CloudWatchService() {
-
-  }
+  ~CloudWatchService() = default;
 
   /**
    * Start everything up.
    */
   virtual bool start() {
-    //todo atomic
 
-    log_publisher_->start();
-    log_batcher_->start();
+    publisher_->start();
+    batcher_->start();
 
     if (log_file_upload_streamer_) {
       log_file_upload_streamer_->start();
     }
+
     //start the thread to dequeue
     return RunnableService::start();
-  }
-
-  virtual bool initialize() {
-    bool b = true;
-    b &= log_publisher_->initialize();
-    //no one else needs init()
-    return b;
   }
 
   /**
@@ -87,12 +88,13 @@ public:
    */
   virtual inline bool shutdown() {
     bool b = true;
-    //todo atomic
-//    b &= log_publisher_->shutdown();
-//    b &= log_batcher_->shutdown();
-      if (log_file_upload_streamer_) {
-        b &= log_file_upload_streamer_->shutdown();
-      }
+
+    b &= publisher_->shutdown();
+    b &= batcher_->shutdown();
+
+    if (log_file_upload_streamer_) {
+      b &= log_file_upload_streamer_->shutdown();
+    }
 
     b &= RunnableService::shutdown();
 
@@ -104,11 +106,11 @@ public:
    * @param data_to_batch
    */
   virtual inline bool batchData(const D &data_to_batch) {
-    return log_batcher_->batchData(data_to_batch);
+    return batcher_->batchData(data_to_batch);
   }
 
   virtual inline bool batchData(const D &data_to_batch, const std::chrono::milliseconds &milliseconds) {
-    return log_batcher_->batchData(data_to_batch, milliseconds);
+    return batcher_->batchData(data_to_batch, milliseconds);
   }
 
   /**
@@ -116,7 +118,10 @@ public:
    * @param data_to_batch
    */
   virtual inline bool publishBatchedData() {
-    return log_batcher_->publishBatchedData();
+    if (batcher_) {
+      return batcher_->publishBatchedData();
+    }
+    return false;
   }
 
   virtual inline std::chrono::milliseconds getDequeueDuration() {
@@ -145,24 +150,30 @@ protected:
    * Main workhorse thread that dequeues from the source and calls Task run.
    */
   void work() {
-    TaskPtr<T> t;
-    bool b = Aws::DataFlow::InputStage<TaskPtr<T>>::getSource()->dequeue(t, dequeue_duration_);
-    if (b) {
-      this->number_dequeued_++;
-      // todo provide publisher in the input
-      t->run(log_publisher_); // publish mechanism via the TaskFactory
+
+    TaskPtr<T> task_to_publish;
+    bool is_dequeued = Aws::DataFlow::InputStage<TaskPtr<T>>::getSource()->dequeue(task_to_publish, dequeue_duration_);
+
+    if (is_dequeued) {
+      AWS_LOGSTREAM_INFO(__func__, "Dequeued " << this->number_dequeued_++);
+
+      if (task_to_publish) {
+        this->number_dequeued_++;
+        task_to_publish->run(publisher_); // publish mechanism via the TaskFactory
+      }
     }
   }
 
-  // todo restart?
 
   std::shared_ptr<FileUploadStreamer<T>> log_file_upload_streamer_; //kept here for startup and shutdown
-  std::shared_ptr<Publisher<T>> log_publisher_; //kept here for startup shutdown
-  std::shared_ptr<DataBatcher<D>> log_batcher_;
+  std::shared_ptr<Publisher<T>> publisher_; //kept here for startup shutdown
+  std::shared_ptr<DataBatcher<D>> batcher_;
   /**
    * Duration to wait for work from the queue.
    */
   std::chrono::milliseconds dequeue_duration_;
+
+private:
   /**
    * Count of total items dequeued.
    */

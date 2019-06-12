@@ -64,7 +64,7 @@ bool LogBatcher::batchData(const std::string &log_msg_formatted, const std::chro
 
   // publish if the size has been configured
   auto mbs = this->getMaxBatchSize();
-  if (mbs != DataBatcher::DEFAULT_SIZE && this->batched_data_->size() >= mbs) {
+  if (mbs != DataBatcher::kDefaultBatchSize && this->batched_data_->size() >= mbs) {
     this->publishBatchedData();
   }
   return true;
@@ -81,20 +81,25 @@ bool LogBatcher::publishBatchedData() {
 
   std::lock_guard <std::recursive_mutex> lck(batch_and_publish_lock_);
 
+  // is there anything to send?
+  if (this-batched_data_->size() == 0) {
+    AWS_LOGSTREAM_DEBUG(__func__, "Nothing batched to publish");
+    return false;
+  }
+
   //todo getSink is kind of race-y
   if (getSink()) {
-
-    auto p = std::make_shared<BasicTask<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(batched_data_);
+    auto data_to_queue = std::make_shared<BasicTask<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(this->batched_data_);
 
     //todo register complete with drop data function
     // todo if file manager reference is set then publish to that when failed
-    getSink()->enqueue(p); //todo should we try enqueue? if we can't queue (too fast then we need to fail to file
+    getSink()->enqueue(data_to_queue); //todo should we try enqueue? if we can't queue (too fast then we need to fail to file
 
     this->batched_data_ = std::make_shared < std::list < Aws::CloudWatchLogs::Model::InputLogEvent >> ();
     return true;
 
   } else {
-    //todo log unable to queue
+    AWS_LOGSTREAM_WARN(__func__, "Unable to obtain queue");
     return false;
   }
 }
@@ -105,9 +110,6 @@ size_t LogBatcher::getCurrentBatchSize() {
   return this->batched_data_->size();
 }
 
-bool LogBatcher::initialize() {
-  return true;
-}
 bool LogBatcher::start() {
   return true;
 }

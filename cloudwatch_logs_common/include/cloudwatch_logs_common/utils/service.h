@@ -37,11 +37,6 @@ public:
     Service() = default;
     virtual ~Service() = default;
     /**
-     * Called after construction. Should be called before start
-     * @return
-     */
-    virtual bool initialize() = 0;
-    /**
      * Called to start doing work.
      * @return
      */
@@ -103,14 +98,14 @@ public:
     void waitForShutdown() {
       if (runnable_thread_.joinable()) {
         std::unique_lock <std::mutex> lck(this->mtx);
-        cv.wait(lck);
+        cv.wait(lck); // todo guard against spurious wakeup, or could do while
       }
     }
 
     void waitForShutdown(std::chrono::milliseconds millis) {
       if (runnable_thread_.joinable()) {
         std::unique_lock <std::mutex> lck(this->mtx);
-        cv.wait_for(lck, millis);
+        cv.wait_for(lck, millis); // todo guard against spurious wakeup
       }
     }
 
@@ -160,5 +155,5 @@ private:
   std::thread runnable_thread_;
   std::atomic<bool> should_run_;
   std::condition_variable cv;
-  std::mutex mtx;
+  mutable std::mutex mtx;
 };

@@ -29,8 +29,6 @@ public:
 
     ~HardWorker() = default;
 
-    virtual bool initialize(){ return true;}
-
     virtual bool shutdown() {
       std::unique_lock <std::mutex> lck(this->test_mtx);
       this->test_cv.notify_all(); // stop blocking in the work thread
@@ -51,7 +49,7 @@ public:
 private:
     bool has_worked_;
     std::condition_variable test_cv;
-    std::mutex test_mtx;
+    mutable std::mutex test_mtx;
 };
 
 class RunnableServiceTest : public ::testing::Test {

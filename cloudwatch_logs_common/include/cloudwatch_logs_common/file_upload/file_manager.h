@@ -23,6 +23,8 @@
 #include "cloudwatch_logs_common/file_upload/file_manager_strategy.h"
 #include "cloudwatch_logs_common/dataflow/status_monitor.h"
 
+#include <cloudwatch_logs_common/utils/service.h>
+
 namespace Aws {
 namespace FileManagement {
 
@@ -71,7 +73,9 @@ public:
  */
 template <typename T>
 class FileManager :
-  public DataReader <T>{
+  public DataReader <T>
+//  public Service
+{
 public:
   /**
    * Default constructor.

@@ -32,46 +32,72 @@ using namespace Aws::CloudWatchLogs;
 
 LogPublisher::LogPublisher(
   const std::string & log_group, const std::string & log_stream,
-  std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade,
-  Aws::SDKOptions options)
+  const Aws::Client::ClientConfiguration & client_config, const Aws::SDKOptions options)
   : Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>()
 {
-  this->cloudwatch_facade_ = cloudwatch_facade;
+  this->client_config_ = client_config;
   this->log_group_ = log_group;
   this->log_stream_ = log_stream;
-  this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_GROUP;
-  this->next_token = EMPTY_TOKEN;
   this->options_ = options;
+  this->cloudwatch_facade_ = nullptr;
+  this->log_file_manager_ = nullptr;
+  this->markOffline(); // reset token and set state to init
 }
 
 LogPublisher::~LogPublisher()
-{}
+{
+
+}
+
+bool LogPublisher::checkIfConnected(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors error) {
+  if (CW_LOGS_NOT_CONNECTED == error) {
+    this->markOffline();
+    return false;
+  }
+  return true;
+}
 
 /**
  * Checks to see if a log group already exists and tries to create it if not.
  */
 bool LogPublisher::CreateGroup()
 {
-  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors check_log_group_exists_status =
+  auto status =
     this->cloudwatch_facade_->CheckLogGroupExists(this->log_group_);
-  if (CW_LOGS_SUCCEEDED == check_log_group_exists_status) {
+  if (!checkIfConnected(status)) {
+    return false;
+  }
+
+  AWS_LOGSTREAM_DEBUG(__func__,  "CheckLogGroupExists code:" << status);
+
+  if (CW_LOGS_SUCCEEDED == status) {
+
     this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM;
     AWS_LOGSTREAM_DEBUG(__func__, "Found existing log group: " << log_group_);
     return true;
   }
-  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors create_log_group_status =
-    this->cloudwatch_facade_->CreateLogGroup(this->log_group_);
-  if (CW_LOGS_SUCCEEDED == create_log_group_status) {
+
+  status = this->cloudwatch_facade_->CreateLogGroup(this->log_group_);
+  if (!checkIfConnected(status)) {
+    return false;
+  }
+
+  if (CW_LOGS_SUCCEEDED == status) {
+
     this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM;
-    AWS_LOG_DEBUG(__func__, "Successfully created log group.");
+    AWS_LOGSTREAM_DEBUG(__func__, "Successfully created log group.");
     return true;
-  } else if (CW_LOGS_LOG_GROUP_ALREADY_EXISTS == create_log_group_status) {
+
+  } else if (CW_LOGS_LOG_GROUP_ALREADY_EXISTS == status) {
+
     this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM;
-    AWS_LOG_DEBUG(__func__, "Log group already exists.");
+    AWS_LOGSTREAM_INFO(__func__, "Log group already exists.");
     return true;
+
   } else {
-    AWS_LOGSTREAM_ERROR(__func__, "Failed to create log group, status: " 
-                        << create_log_group_status << ". Retrying ...");
+
+    AWS_LOGSTREAM_ERROR(__func__, "Failed to create log group, status: "
+                        << status << ". Retrying ...");
     return false;
   }
 }
@@ -81,27 +107,35 @@ bool LogPublisher::CreateGroup()
  */
 bool LogPublisher::CreateStream()
 {
-  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors check_log_stream_exists_status =
-    this->cloudwatch_facade_->CheckLogStreamExists(this->log_group_, this->log_stream_,
-                                                   nullptr);
-  if (CW_LOGS_SUCCEEDED == check_log_stream_exists_status) {
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status =
+    this->cloudwatch_facade_->CheckLogStreamExists(this->log_group_, this->log_stream_, nullptr);
+  if (!checkIfConnected(status)) {
+    return false;
+  }
+
+  if (CW_LOGS_SUCCEEDED == status) {
     this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
     AWS_LOGSTREAM_DEBUG(__func__, "Found existing log stream: " << this->log_stream_);
     return true;
   }
-  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors create_log_stream_status =
-    this->cloudwatch_facade_->CreateLogStream(this->log_group_, this->log_stream_);
-  if (CW_LOGS_SUCCEEDED == create_log_stream_status) {
+
+  status = this->cloudwatch_facade_->CreateLogStream(this->log_group_, this->log_stream_);
+  if (!checkIfConnected(status)) {
+    return false;
+  }
+
+  if (CW_LOGS_SUCCEEDED == status) {
     this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
     AWS_LOG_DEBUG(__func__, "Successfully created log stream.");
     return true;
-  } else if (CW_LOGS_LOG_STREAM_ALREADY_EXISTS == create_log_stream_status) {
+  } else if (CW_LOGS_LOG_STREAM_ALREADY_EXISTS == status) {
     this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
     AWS_LOG_DEBUG(__func__, "Log stream already exists");
     return true;
+
   } else {
     AWS_LOGSTREAM_ERROR(__func__, "Failed to create log stream, status: " 
-                        << create_log_stream_status << ". Retrying ...");
+                        << status << ". Retrying ...");
     return false;
   }
 }
@@ -111,22 +145,30 @@ bool LogPublisher::CreateStream()
  */
 bool LogPublisher::InitToken(Aws::String & next_token)
 {
-  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors get_token_status =
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status =
     this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_,
                                                 next_token);
-  if (CW_LOGS_SUCCEEDED == get_token_status) {
+  if (!checkIfConnected(status)) {
+    return false;
+  }
+
+  if (CW_LOGS_SUCCEEDED == status) {
+    AWS_LOG_DEBUG(__func__, "Get Token succeeded");
     return true;
   } else {
+
     AWS_LOGSTREAM_ERROR(__func__, "Unable to obtain the sequence token to use, status: " 
-                        << get_token_status << ". Retrying ...");
-    next_token = EMPTY_TOKEN;
+                        << status << ". Retrying ...");
+    resetInitToken();
     return false;
   }
 }
 
 bool LogPublisher::SendLogFiles(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs) {
   auto status = SendLogs(next_token, logs);
-  return status == CW_LOGS_SUCCEEDED;
+  bool b = status == CW_LOGS_SUCCEEDED;
+  AWS_LOG_DEBUG(__func__, "SendLogFiles status=%d", b);
+  return b;
 }
 
 Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) {
@@ -156,62 +198,97 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String 
     }
     if (CW_LOGS_SUCCEEDED != send_logs_status) {
       AWS_LOG_WARN(
-          __func__,
-          "Unable to send logs to CloudWatch and retried, dropping this batch of logs ...");
+              __func__,
+              "Unable to send logs to CloudWatch");
     }
   } else {
     AWS_LOG_DEBUG(__func__,
                   "Unable to obtain the sequence token to use");
   }
-  // set the new observed state, will fire any registered listeners
-  if (network_monitor_) {
-    auto network_status = send_logs_status ?
-                          Aws::DataFlow::Status::UNAVAILABLE : Aws::DataFlow::Status::AVAILABLE;
-    network_monitor_->setStatus(network_status);
-  }
+
+  checkIfConnected(send_logs_status); //mark offline if needed
   return send_logs_status;
 }
 
-bool LogPublisher::configure()
+void LogPublisher::markOffline()
 {
-  //todo lock
-  //attempt to fully configure
-  if(!CreateGroup()) {
-    return false;
-  }
-  if(!CreateStream()) {
-    return false;
-  }
-  return InitToken(next_token);
+  resetInitToken();
+  this->run_state_ = LOG_PUBLISHER_INITIALIZED;
+}
+
+void LogPublisher::resetInitToken()
+{
+  this->next_token = EMPTY_TOKEN;
 }
 
 bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data)
 {
-  //todo lock
-  if(next_token == Aws::CloudWatchLogs::EMPTY_TOKEN) {
-    return false; //InitToken failed
-  }
-
-  //attempt to configure
+  // attempt to configure
   bool b = this->configure();
   if (!b) {
-    return false; //configuration failed, new state?
+    AWS_LOG_WARN(__func__, "configure FAILED");
+    return false;
   }
+  AWS_LOG_DEBUG(__func__, "configure succeeded");
 
   this->run_state_ = LOG_PUBLISHER_ATTEMPT_SEND_LOGS;
-
   bool success = SendLogFiles(next_token, data);
+  AWS_LOG_DEBUG(__func__, "finished SendLogFiles");
 
-  this->run_state_ = LOG_PUBLISHER_FINISHED_SEND_LOGS; //we finished even if we failed, new state?
   return success;
 }
 
-bool LogPublisher::initialize() {
-  Aws::InitAPI(this->options_); //TODO what happens when offline? //does this need to be called again?
+bool LogPublisher::configure()
+{
+
+  this->start(); // init the API if needed (went offline or starting for the first time
+
+  // attempt to fully configure
+  if(!CreateGroup()) {
+    AWS_LOG_WARN(__func__, "CreateGroup FAILED");
+    return false;
+  }
+
+  AWS_LOG_DEBUG(__func__, "CreateGroup succeeded");
+
+  // attempt to create stream
+  if(!CreateStream()) {
+    AWS_LOG_WARN(__func__,"CreateStream FAILED");
+    return false;
+  }
+  AWS_LOG_DEBUG(__func__, "CreateGroup succeeded");
+
+  // init and check if we have a valid token
+  InitToken(next_token);
+  if(next_token == Aws::CloudWatchLogs::EMPTY_TOKEN) {
+    AWS_LOG_WARN(__func__, "INIT TOKEN FAILED");
+    return false;
+  }
+  AWS_LOG_DEBUG(__func__, "INIT TOKEN succeeded");
+
+  return true;
+}
+
+bool LogPublisher::start() {
+
+  // only call if init is needed
+  if (LOG_PUBLISHER_INITIALIZED != this->run_state_) {
+    AWS_LOG_DEBUG(__func__, "Not initialized, skipping");
+    return false;
+  }
+
+  Aws::InitAPI(this->options_); // this n eeds to be called if ever offline
+  if (!this->cloudwatch_facade_) {
+    this->cloudwatch_facade_ = std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchFacade>(this->client_config_);
+  }
+
   return true;
 }
 
 bool LogPublisher::shutdown() {
   Aws::ShutdownAPI(this->options_);
+  //todo teardown the facade?
+  //todo teardown references?
+  //todo if we have any batched data mark as failure?
   return true;
 }

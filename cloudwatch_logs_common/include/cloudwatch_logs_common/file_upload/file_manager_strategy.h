@@ -184,7 +184,7 @@ public:
 
   void validateOptions();
 
-  void initialize() override;
+  void initialize() override; //todo consider start from Service
 
   bool isDataAvailable() override;
 

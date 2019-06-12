@@ -130,13 +130,18 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogGroup(
 
   const auto & response = this->cw_client_->CreateLogGroup(log_group_request);
   if (!response.IsSuccess()) {
+
     AWS_LOGSTREAM_ERROR(
       __func__, "Failed to create Log Group :"
                   << log_group << " due to: " << response.GetError().GetMessage()
                   << ", with error code: " << static_cast<int>(response.GetError().GetErrorType()));
+
     if (response.GetError().GetErrorType() ==
         Aws::CloudWatchLogs::CloudWatchLogsErrors::RESOURCE_ALREADY_EXISTS) {
       status = CW_LOGS_LOG_GROUP_ALREADY_EXISTS;
+
+    } else if(response.GetError().GetErrorType() == Aws::CloudWatchLogs::CloudWatchLogsErrors::NETWORK_CONNECTION) {
+      status = CW_LOGS_NOT_CONNECTED;
     } else {
       status = CW_LOGS_CREATE_LOG_GROUP_FAILED;
     }
@@ -161,11 +166,18 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CheckLogGroupExis
 
     const auto & response = this->cw_client_->DescribeLogGroups(describe_log_group_request);
     if (!response.IsSuccess()) {
+
+      if(response.GetError().GetErrorType() == Aws::CloudWatchLogs::CloudWatchLogsErrors::NETWORK_CONNECTION) {
+        status = CW_LOGS_NOT_CONNECTED;
+      } else {
+        status = CW_LOGS_FAILED;
+      }
       status = CW_LOGS_FAILED;
       AWS_LOGSTREAM_WARN(__func__, "Request to check if log group named "
               << log_group << " exists failed. Error message: "
               << response.GetError().GetMessage() << ", with error code: "
               << static_cast<int>(response.GetError().GetErrorType()));
+
       break;
     }
 
@@ -200,6 +212,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogStream(
 
   const auto & response = this->cw_client_->CreateLogStream(log_stream_request);
   if (!response.IsSuccess()) {
+
     AWS_LOGSTREAM_ERROR(__func__, "Failed to create Log Stream :"
                                     << log_stream << " in Log Group :" << log_group << " due to: "
                                     << response.GetError().GetMessage() << ", with error code: "
@@ -207,6 +220,8 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogStream(
     if (response.GetError().GetErrorType() ==
         Aws::CloudWatchLogs::CloudWatchLogsErrors::RESOURCE_ALREADY_EXISTS) {
       status = CW_LOGS_LOG_STREAM_ALREADY_EXISTS;
+    } else if(response.GetError().GetErrorType() == Aws::CloudWatchLogs::CloudWatchLogsErrors::NETWORK_CONNECTION) {
+      status = CW_LOGS_NOT_CONNECTED;
     } else {
       status = CW_LOGS_CREATE_LOG_STREAM_FAILED;
     }
@@ -233,7 +248,14 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CheckLogStreamExi
 
     const auto & response = this->cw_client_->DescribeLogStreams(describe_log_stream_request);
     if (!response.IsSuccess()) {
-      status = CW_LOGS_FAILED;
+
+      if(response.GetError().GetErrorType() == Aws::CloudWatchLogs::CloudWatchLogsErrors::NETWORK_CONNECTION) {
+        status = CW_LOGS_NOT_CONNECTED;
+
+      } else {
+        status = CW_LOGS_FAILED;
+      }
+
       AWS_LOGSTREAM_WARN(
               __func__, "Request to check if log stream named "
                       << log_stream << " exists in log group named: " << log_group
@@ -273,7 +295,11 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::GetLogStreamToken
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
   Aws::CloudWatchLogs::Model::LogStream log_stream_object;
   if (CW_LOGS_SUCCEEDED != CheckLogStreamExists(log_group, log_stream, &log_stream_object)) {
-    status = CW_LOGS_LOG_STREAM_NOT_FOUND;
+
+    if ( status != CW_LOGS_NOT_CONNECTED) {
+      status = CW_LOGS_LOG_STREAM_NOT_FOUND;
+    }
+
     AWS_LOGSTREAM_ERROR(__func__, "Failed to obtain sequence token due to Log Stream: "
                                     << log_stream << " in Log Group :" << log_group
                                     << " doesn't exist.");
