@@ -45,45 +45,85 @@ class Publisher : public IPublisher<T>, public Service
 public:
 
   Publisher() : publisher_state_(UNKNOWN) {
-    published_count_ = 0; //todo publish attempts
+    publish_successes_.store(0);
+    publish_attempts_.store(0);
   }
+
+  virtual ~Publisher() = default;
+
   /**
    * Return the current state of the publisher.
    * @return
    */
-  inline PublisherState getPublisherState()
-    {
-      return publisher_state_.getValue();
-    }
+  PublisherState getPublisherState()
+  {
+    return publisher_state_.getValue();
+  }
 
   /**
    * Attempt to publish data to CloudWatch.
    * @param data
    * @return
    */
-  inline UploadStatus attemptPublish(T &data) override
+  UploadStatus attemptPublish(T &data) override
   {
+    //todo this should probably be locked
+    // TODO time this function, store the average
+    // todo lock?
+    publish_attempts_++;
     bool b = publishData(data); // always at least try
     publisher_state_.setValue(b ? CONNECTED : NOT_CONNECTED);
     if (b) {
-      published_count_++;
+      publish_successes_++;
       return UploadStatus::SUCCESS;
     }
     return UploadStatus::FAIL;
   }
+
   /**
    * Return true if this publisher can send data to CloudWatch, false otherwise.
    * @return
    */
-  inline bool canPublish(){
+  bool canPublish(){
     auto curent_state = publisher_state_.getValue();
     return curent_state == UNKNOWN || curent_state == CONNECTED; //at least try once when configured
   }
 
-  int getPublishedCount() {
-    return published_count_; //todo atomic?
+  /**
+   * Return the number of publish successes
+   * @return
+   */
+  int getPublishSuccesses() {
+    return publish_successes_.load();
   }
 
+  /**
+   * Return the number of attempts made to publish
+   * @return
+   */
+  int getPublishAttempts() {
+    return publish_attempts_.load();
+  }
+
+  /**
+   * Calculate and return the success rate of this publisher.
+   * @return the number of sucesses divided by the number of attempts
+   */
+  float getPublishSuccessPercentage() {
+    int attempts = publish_attempts_.load();
+    if (attempts == 0) {
+      return 0;
+    }
+    int successes = publish_successes_.load();
+    return successes / attempts * 100.0f;
+  }
+
+  /**
+   * Provide the regristration mechanism for ObservableObject (in this case PublisherState) changes.
+   *
+   * @param listener the PublisherState listener
+   * @return true if the listener was added, false otherwise
+   */
   virtual void addPublisherStateListener(const std::function<void(const PublisherState&)> & listener) {
     publisher_state_.addListener(listener);
   }
@@ -103,7 +143,9 @@ protected:
 
 private:
   ObservableObject<PublisherState> publisher_state_;
-  int published_count_;
+  std::atomic<int> publish_successes_;
+  std::atomic<int> publish_attempts_;
+
   //todo time last published?
 };
 

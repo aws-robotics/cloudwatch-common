@@ -16,7 +16,7 @@
 #include <list>
 #include <string>
 #include <cloudwatch_logs_common/log_batcher.h>
-#include <cloudwatch_logs_common/log_manager_factory.h>
+#include <cloudwatch_logs_common/log_service_factory.h>
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
@@ -34,17 +34,16 @@ using namespace Aws::FileManagement;
 
 
 // why not do all of this in the setup of LogService? it has ownership of everything
-std::shared_ptr<LogService> LogManagerFactory::CreateLogManager(
+std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   const std::string & log_group,
   const std::string & log_stream,
   const Aws::Client::ClientConfiguration & client_config,
   const Aws::SDKOptions & sdk_options,
   const CloudwatchOptions & cloudwatch_options)
 {
-  // todo options need to be set here!
-  auto file_manager = std::make_shared<LogFileManager>();
+  auto file_manager= std::make_shared<LogFileManager>();
 
-  auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, cloudwatch_facade, sdk_options);
+  auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, client_config, sdk_options);
   // todo this should be a service to subscribe and status part of the publisher, too much is dependent in File utils / tasks and seems brittle
 
   auto queue_monitor =
@@ -72,7 +71,7 @@ std::shared_ptr<LogService> LogManagerFactory::CreateLogManager(
   queue_monitor->addSource(stream_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
 
   auto ls = std::make_shared<LogService>(file_upload_streamer, publisher, log_batcher);
-  queue_monitor >> *ls; // todo rddesmon setSource?
+  queue_monitor >> *ls;
 
   ls->start(); // todo should we allow the user to start?
 

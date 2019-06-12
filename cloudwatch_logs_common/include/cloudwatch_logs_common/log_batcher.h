@@ -43,33 +43,25 @@ namespace CloudWatchLogs {
 template<typename T>
 class DataBatcher : public Service {
 public:
-  // @todo (dbbonie): why set size to an invalid number?
-  static const size_t DEFAULT_SIZE = 0;
+  static const size_t kDefaultBatchSize = SIZE_MAX;
   DataBatcher() {
-    this->max_batch_size_.store(DataBatcher::DEFAULT_SIZE);
+    this->max_batch_size_.store(DataBatcher::kDefaultBatchSize);
   }
-  explicit DataBatcher(size_t size) {
-    if(size == 0) {
-      //todo throw exception?
-    }
+  DataBatcher(size_t size) {
     this->max_batch_size_.store(size);
   }
   virtual bool batchData(const T &data_to_batch) = 0;
   virtual bool batchData(const T &data_to_batch, const std::chrono::milliseconds & milliseconds) = 0;
   virtual bool publishBatchedData() = 0;
   virtual size_t getCurrentBatchSize() = 0;
-  inline bool setMaxBatchSize(size_t new_value) {
-    if(new_value > 0) {
-      this->max_batch_size_.store(new_value);
-      return true;
-    }
-    return false;
+  inline void setMaxBatchSize(size_t new_value) {
+    this->max_batch_size_.store(new_value);
   }
   inline size_t getMaxBatchSize() {
     return this->max_batch_size_.load();
   }
   inline void resetSize(size_t new_value) {
-      this->max_batch_size_.store(new_value);
+      this->max_batch_size_.store(kDefaultBatchSize);
   }
 private:
   /**
@@ -134,6 +126,8 @@ public:
    */
   virtual bool publishBatchedData() override;
 
+  virtual size_t getCurrentBatchSize() override;
+
   virtual bool start() override;
   virtual bool shutdown() override;
 
@@ -158,7 +152,6 @@ private:
   //todo should probably be atomic, but currently controlled by the publish mutex
   std::shared_ptr<LogType> batched_data_; //todo vector
   std::recursive_mutex batch_and_publish_lock_;
-  std::shared_ptr<Aws::CloudWatchLogs::Utils::FileManager<LogType>> log_file_manager_;
   //todo stats? how many times published? rate of publishing? throughput?
 };
 

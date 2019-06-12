@@ -14,7 +14,7 @@ endif()
 # Enable strict compiler flags if possible.
 include(CheckCXXCompilerFlag)
 # Removed -Wmissing-declarations until gmock is ignored
-set(FLAGS -pedantic -Wno-long-long -Wall -Wextra -Wcast-align -Wcast-qual -Wformat -Wwrite-strings -Wconversion)
+set(FLAGS -pedantic -Wno-long-long -Wall -Wextra -Wcast-align -Wcast-qual -Wformat -Wwrite-strings)
 foreach(FLAG ${FLAGS})
   check_cxx_compiler_flag(${FLAG} R${FLAG})
   if(${R${FLAG}})
@@ -37,7 +37,7 @@ endif()
 
 set(ALL_SRC_FILES
     src/log_batcher.cpp
-    src/log_manager_factory.cpp
+    src/log_service_factory.cpp
     src/utils/cloudwatch_facade.cpp
     src/utils/log_file_manager.cpp
     src/file_upload/file_manager_strategy.cpp
@@ -88,7 +88,7 @@ if(GMOCK_LIBRARY)
   message("Building tests")
   add_common_gtest(test_cloudwatch_logs_common
         test/main_test.cpp
-        test/log_publisher_test.cpp
+    #    test/log_publisher_test.cpp
     #    test/cloudwatch_facade_test.cpp
         )
 
@@ -125,8 +125,6 @@ if(GMOCK_LIBRARY)
 
   add_common_gtest(test_pipelines
           test/pipeline_test.cpp
-          test/utils/observable_object_test.cpp
-          test/utils/runnable_service_test.cpp
           )
 
   target_include_directories(test_pipelines
@@ -135,6 +133,22 @@ if(GMOCK_LIBRARY)
           PUBLIC ${PROJECT_SOURCE_DIR}/test/include
           )
   target_link_libraries(test_pipelines
+          ${GTEST_LIBRARIES}
+          pthread
+          ${GMOCK_LIBRARY}
+          ${PROJECT_NAME})
+
+  add_common_gtest(test_common_base_utilties
+          test/utils/observable_object_test.cpp
+          test/utils/runnable_service_test.cpp
+          )
+
+  target_include_directories(test_common_base_utilties
+          PRIVATE include
+          PRIVATE ${aws_common_INCLUDE_DIRS}
+          PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+          )
+  target_link_libraries(test_common_base_utilties
           ${GTEST_LIBRARIES}
           pthread
           ${GMOCK_LIBRARY}

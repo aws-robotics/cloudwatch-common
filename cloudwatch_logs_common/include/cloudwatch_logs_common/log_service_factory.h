@@ -26,28 +26,28 @@ struct CloudwatchOptions {
   size_t batch_size;
   size_t file_max_queue_size;
   size_t stream_max_queue_size;
+  // todo filesystem max saved size
 };
 
 static constexpr CloudwatchOptions kDefaultCloudwatchOptions{50, 2, 20};
-class LogManagerFactory
+class LogServiceFactory
 {
 public:
-  LogManagerFactory() = default;
-  ~LogManagerFactory() = default;
+  LogServiceFactory() = default;
+  ~LogServiceFactory() = default;
 
   /**
-   *  @brief Creates a new LogManager object
-   *  Factory method used to create a new LogManager object, along with a creating and starting a
-   * LogPublisher for use with the LogManager.
+   *  @brief Creates a new LogService object
+   *  Factory method used to create a new LogService object, along with a creating and starting a
+   * LogPublisher for use with the LogService.
    *
    *  @param client_config The client configuration to use when creating the CloudWatch clients
    *  @param options The options used for the AWS SDK when creating and publishing with a CloudWatch
    * client
    *
-   *  @return An instance of LogManager
+   *  @return An instance of LogService
    */
-   //todo is LogService of type 'LogType' bad to expose as a public API?
-  virtual std::shared_ptr<LogService> CreateLogManager(
+  virtual std::shared_ptr<LogService> CreateLogService(
     const std::string & log_group,
     const std::string & log_stream,
     const Aws::Client::ClientConfiguration & client_config,
@@ -57,8 +57,8 @@ private:
   /**
    * Block copy constructor and assignment operator for Factory object.
    */
-  LogManagerFactory(const LogManagerFactory &) = delete;
-  LogManagerFactory & operator=(const LogManagerFactory &) = delete;
+  LogServiceFactory(const LogServiceFactory &) = delete;
+  LogServiceFactory & operator=(const LogServiceFactory &) = delete;
 };
 
 }  // namespace CloudWatchLogs

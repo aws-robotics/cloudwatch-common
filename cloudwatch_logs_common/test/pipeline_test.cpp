@@ -32,6 +32,9 @@
 
 #include <aws/core/utils/logging/ConsoleLogSystem.h>
 
+#include <thread>         // std::this_thread::sleep_for
+#include <chrono>
+
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 using namespace std::chrono_literals;
@@ -42,6 +45,19 @@ using namespace std::chrono_literals;
 class Waiter
 {
 public:
+  TestPublisher() : Publisher() {};
+  virtual ~TestPublisher() {
+    shutdown();
+  };
+
+  bool start() override {return true;}
+
+  // notify just in case anyone is waiting
+  bool shutdown() override {
+    std::unique_lock<std::mutex> lck(this->mtx);
+    this->cv.notify_all(); //don't leave anyone blocking
+    return true;
+  };
 
   void wait() {
     std::unique_lock<std::mutex> lck(this->mtx);
@@ -97,37 +113,8 @@ protected:
     return !force_failure;
   }
 
-  bool force_failure;
-};
-
-/**
- * Test File Manager
- */
-class TestLogFileManager : public FileManager<LogType>, public Waiter
-{
-public:
-
-    TestLogFileManager() : FileManager(nullptr) {
-      written_count.store(0);
-    }
-
-    void write(const LogType & data) override {
-      last_data_size = data.size();
-      written_count++;
-      this->notify();
-    };
-
-    FileObject<LogType> readBatch(size_t batch_size) {
-      // do nothing
-      FileObject<LogType> testFile;
-      testFile.batch_size = batch_size;
-      return testFile;
-    }
-
-    std::atomic<int> written_count;
-    std::atomic<size_t> last_data_size;
-    std::condition_variable cv; // todo think about adding this into the interface
-    mutable std::mutex mtx; // todo think about adding this  into  the interface
+  std::condition_variable cv; // todo think about adding this into the interface
+  mutable std::mutex mtx; // todo think about adding this  into  the interface
 };
 
 
@@ -154,14 +141,17 @@ public:
 
     void TearDown() override
     {
-      cw_service->shutdown();
-      cw_service->join(); // todo wait for shutdown is broken
+      if (cw_service) {
+        cw_service->shutdown();
+        cw_service->join(); // todo wait for shutdown is broken
+      }
     }
 
 protected:
-    std::shared_ptr<CloudWatchService<LogType, std::string>> cw_service;
     std::shared_ptr<LogBatcher> log_batcher;
     std::shared_ptr<TestPublisher> test_publisher;
+    std::shared_ptr<CloudWatchService<LogType, std::string>> cw_service;
+
     std::shared_ptr<TaskObservedQueue<LogType>> stream_data_queue;
     std::shared_ptr<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>queue_monitor;
 };
@@ -183,15 +173,20 @@ TEST_F(PipelineTest, TestBatcherManualPublish) {
   EXPECT_TRUE(b1);
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
+  EXPECT_EQ(0, test_publisher->getPublishSuccesses());
+  EXPECT_EQ(0, test_publisher->getPublishAttempts());
+  EXPECT_EQ(0.0f, test_publisher->getPublishSuccessPercentage());
 
   // force a publish
   bool b2 = cw_service->publishBatchedData();
   test_publisher->wait_for(std::chrono::seconds(1));
 
   EXPECT_TRUE(b2);
-  EXPECT_EQ(1, test_publisher->getPublishedCount());
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
+  EXPECT_EQ(1, test_publisher->getPublishSuccesses());
+  EXPECT_EQ(1, test_publisher->getPublishAttempts());
+  EXPECT_EQ(100.0f, test_publisher->getPublishSuccessPercentage());
 }
 
 /**
@@ -218,7 +213,7 @@ TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
   test_publisher->wait_for(std::chrono::seconds(1));
 
   EXPECT_TRUE(b2);
-  EXPECT_EQ(1, test_publisher->getPublishedCount());
+  EXPECT_EQ(1, test_publisher->getPublishSuccesses());
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
 }
@@ -228,12 +223,9 @@ TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
  */
 TEST_F(PipelineTest, TestBatcherSize) {
 
-  bool b = log_batcher->setMaxBatchSize(0); // setting the size will trigger a publish when the collection is full
-  EXPECT_FALSE(b);
-  EXPECT_EQ(-1, log_batcher->getMaxBatchSize());
+  EXPECT_EQ(SIZE_MAX, log_batcher->getMaxBatchSize()); // not initialized
 
-  b = log_batcher->setMaxBatchSize(5); // setting the size will trigger a publish when the collection is full
-  EXPECT_TRUE(b);
+  log_batcher->setMaxBatchSize(5); // setting the size will trigger a publish when the collection is full
   EXPECT_EQ(5, log_batcher->getMaxBatchSize());
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
@@ -243,7 +235,7 @@ TEST_F(PipelineTest, TestBatcherSize) {
     bool b1 = cw_service->batchData(toBatch);
 
     EXPECT_TRUE(b1);
-    EXPECT_EQ(0, test_publisher->getPublishedCount());
+    EXPECT_EQ(0, test_publisher->getPublishSuccesses());
     EXPECT_EQ(i, log_batcher->getCurrentBatchSize());
     EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   }
@@ -256,41 +248,9 @@ TEST_F(PipelineTest, TestBatcherSize) {
 
   test_publisher->wait_for(std::chrono::seconds(1));
 
-  EXPECT_EQ(1, test_publisher->getPublishedCount());
+  EXPECT_EQ(1, test_publisher->getPublishSuccesses());
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
-}
-
-TEST_F(PipelineTest, TestPublisherFailureToFileManager) {
-
-  std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
-  // hookup to the service
-  log_batcher->setLogFileManager(fileManager);
-
-  // batch
-  std::string toBatch("TestBatcherManualPublish");
-  EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
-  bool b1 = cw_service->batchData(toBatch);
-  EXPECT_EQ(1, log_batcher->getCurrentBatchSize());
-  EXPECT_EQ(true, b1);
-
-  // force failure
-  test_publisher->setForceFailure(true);
-
-  // publish
-  bool b2 = cw_service->publishBatchedData();
-  test_publisher->wait_for(std::chrono::seconds(1));
-
-  EXPECT_TRUE(b2);
-  EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
-  EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState());
-  EXPECT_EQ(0, test_publisher->getPublishSuccesses());
-  EXPECT_EQ(1, test_publisher->getPublishAttempts());
-  EXPECT_EQ(0.0f, test_publisher->getPublishSuccessPercentage());
-
-  fileManager->wait_for(std::chrono::seconds(1));
-  //check that the filemanger callback worked
-  EXPECT_EQ(1, fileManager->written_count);
 }
 
 // TODO this currently barfs
@@ -307,11 +267,6 @@ TEST_F(PipelineTest, TestPublisherFailureToFileManager) {
 
 int main(int argc, char ** argv)
 {
-  Aws::Utils::Logging::InitializeAWSLogging(
-      Aws::MakeShared<Aws::Utils::Logging::ConsoleLogSystem>(
-          "RunUnitTests", Aws::Utils::Logging::LogLevel::Trace));
-  ::testing::InitGoogleMock(&argc, argv);
-  int exitCode = RUN_ALL_TESTS();
-  Aws::Utils::Logging::ShutdownAWSLogging();
-  return exitCode;
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

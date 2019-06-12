@@ -40,16 +40,11 @@ namespace CloudWatchLogs {
  * This enum is used by the LogPublisher to track the current runtime state of the Run function
  */
 enum LogPublisherRunState {
-  LOG_PUBLISHER_INITIALIZED,
+  LOG_PUBLISHER_INITIALIZED, // also not connected / offline, need to start from the beginning
   LOG_PUBLISHER_RUN_CREATE_GROUP,
-  LOG_PUBLISHER_FAILED_CREATE_GROUP,
   LOG_PUBLISHER_RUN_CREATE_STREAM,
-  LOG_PUBLISHER_FAILED_CREATE_STREAM,
   LOG_PUBLISHER_RUN_INIT_TOKEN,
-  LOG_PUBLISHER_FAILED_INIT_TOKEN,
   LOG_PUBLISHER_ATTEMPT_SEND_LOGS,
-  LOG_PUBLISHER_FAILED_SEND_LOGS,
-  LOG_PUBLISHER_FINISHED_SEND_LOGS
 };
 
 const static Aws::String EMPTY_TOKEN = "";
@@ -70,7 +65,7 @@ public:
    * CloudWatch.
    */
   LogPublisher(const std::string & log_group, const std::string & log_stream,
-               std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cw_client, Aws::SDKOptions options);
+               const Aws::Client::ClientConfiguration & client_config, Aws::SDKOptions options);
 
   /**
    *  @brief Tears down the LogPublisher object
@@ -82,12 +77,25 @@ public:
   virtual inline void SetLogTaskSource(LogTaskSource &queue_monitor) {
     queue_monitor_ = queue_monitor;
   }
-  virtual bool initialize() override;
   virtual bool shutdown() override;
-  virtual bool start() { return true;};
+  /**
+   * Initialize the AWS API and create the cloudwatch facade
+   * @return
+   */
+  virtual bool start() override;
 
 private:
 
+  bool checkIfConnected(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors error);
+
+  /**
+   * Reset the current init token to EMPTY_TOKEN
+   */
+  void resetInitToken();
+  /**
+  * Handle internal state reset and cleanup when we receive a NOT_CONNECTED status
+  */
+  void markOffline();
   //config
   bool CreateGroup();
   bool CreateStream();
@@ -102,18 +110,19 @@ private:
   bool SendLogFiles(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs);
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data);
 
-  FileManagement::UploadStatusFunction<FileManagement::UploadStatus, LogType> upload_status_function_;
-  std::shared_ptr<Utils::LogFileManager> log_file_manager_ = nullptr;
+  std::shared_ptr<Utils::LogFileManager> log_file_manager_ ;
   LogTaskSource queue_monitor_;
-  std::shared_ptr<Aws::FileManagement::StatusMonitor> network_monitor_ = nullptr;
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
   std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cloudwatch_client_;
   Aws::SDKOptions aws_sdk_options_;
   std::string log_group_; //todo const?
   std::string log_stream_; //todo const?
-  LogPublisherRunState run_state_; //useful for debug
+  Aws::SDKOptions options_; //todo const?
+  Aws::Client::ClientConfiguration client_config_; //todo const?
+
+  LogPublisherRunState run_state_; // todo atomic?
   Aws::String next_token;
-  Aws::SDKOptions options_;
+  mutable std::recursive_mutex mtx_;
 };
 
 }  // namespace CloudWatchLogs
