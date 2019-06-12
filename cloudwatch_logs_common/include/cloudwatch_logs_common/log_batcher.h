@@ -20,7 +20,6 @@
 #include <aws/logs/model/PutLogEventsRequest.h>
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 
 #include <chrono>
@@ -79,9 +78,11 @@ private:
   std::atomic<size_t> max_batch_size_;
 };
 
+using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
+
 //todo this class could entirely be a base worker class
 class LogBatcher :
-  public Aws::DataFlow::OutputStage<Aws::FileManagement::TaskPtr<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>,
+  public Aws::DataFlow::OutputStage<Aws::FileManagement::TaskPtr<LogType>>,
   public DataBatcher<std::string>
 {
 public:
@@ -99,7 +100,7 @@ public:
    *
    *  @param size of the batched data that will trigger a publish
    */
-  explicit LogBatcher(int size);
+  explicit LogBatcher(size_t size);
 
   /**
    *  @brief Tears down a LogBatcher object
@@ -134,21 +135,31 @@ public:
    */
   virtual bool publishBatchedData() override;
 
-  virtual size_t getCurrentBatchSize() override;
-
-  virtual bool initialize() override;
   virtual bool start() override;
   virtual bool shutdown() override;
 
+  /**
+   * Set the log file manager, used for task publishing failures (write to disk if unable to send to CloudWatch).
+   *
+   * @throws invalid argument if the input is null
+   * @param log_file_manager
+   */
+  virtual void setLogFileManager(std::shared_ptr<Aws::CloudWatchLogs::Utils::FileManager<LogType>> log_file_manager);
+
+  /**
+   * Return the number of currently batched items.
+   * @return
+   */
+  virtual size_t getCurrentBatchSize() override;
 protected:
   virtual Aws::CloudWatchLogs::Model::InputLogEvent convertToLogEvent(const std::string & message,
           const std::chrono::milliseconds & milliseconds);
 
 private:
   //todo should probably be atomic, but currently controlled by the publish mutex
-  std::shared_ptr<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>> batched_data_; //todo vector
+  std::shared_ptr<LogType> batched_data_; //todo vector
   std::recursive_mutex batch_and_publish_lock_;
-  int max_batch_size_ = DataBatcher::DEFAULT_SIZE; //todo getter / setter?
+  std::shared_ptr<Aws::CloudWatchLogs::Utils::FileManager<LogType>> log_file_manager_;
   //todo stats? how many times published? rate of publishing? throughput?
 };
 

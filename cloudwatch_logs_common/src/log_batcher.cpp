@@ -19,8 +19,8 @@
 #include <aws/logs/model/PutLogEventsRequest.h>
 #include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_publisher.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_task.h>
+#include <cloudwatch_logs_common/file_upload/file_manager.h>
 
 #include <chrono>
 #include <iostream>
@@ -30,15 +30,16 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <stdexcept>
 
 using namespace Aws::CloudWatchLogs;
 
 LogBatcher::LogBatcher() : DataBatcher() {
-  this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>();
+  this->batched_data_ = std::make_shared<LogType>();
 }
 
-LogBatcher::LogBatcher(int size) : DataBatcher(size) {
-  this->batched_data_ = std::make_shared<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>();
+LogBatcher::LogBatcher(size_t size) : DataBatcher(size) {
+  this->batched_data_ = std::make_shared<LogType>();
 }
 
 LogBatcher::~LogBatcher() = default;
@@ -77,6 +78,15 @@ Aws::CloudWatchLogs::Model::InputLogEvent LogBatcher::convertToLogEvent(const st
   return log_event;
 }
 
+size_t LogBatcher::getCurrentBatchSize()
+{
+  std::lock_guard <std::recursive_mutex> lck(batch_and_publish_lock_);
+  if (this->batched_data_) {
+    return this->batched_data_->size();
+  }
+  return 0;
+}
+
 bool LogBatcher::publishBatchedData() {
 
   std::lock_guard <std::recursive_mutex> lck(batch_and_publish_lock_);
@@ -84,13 +94,28 @@ bool LogBatcher::publishBatchedData() {
   //todo getSink is kind of race-y
   if (getSink()) {
 
-    auto p = std::make_shared<BasicTask<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(batched_data_);
+    auto p = std::make_shared<BasicTask<LogType>>(this->batched_data_);
 
-    //todo register complete with drop data function
-    // todo if file manager reference is set then publish to that when failed
+    if (log_file_manager_ ) {
+
+      // register the task failure function
+      auto function = [&log_file_manager = this->log_file_manager_](const FileManagement::UploadStatus &upload_status,
+              const LogType &log_messages)
+      {
+          if (!log_messages.empty()) {
+            if (FileManagement::SUCCESS != upload_status) {
+              AWS_LOG_INFO(__func__, "Task failed: writing logs to file");
+              log_file_manager->write(log_messages);
+            }
+          }
+      };
+
+      p->setOnCompleteFunction(function);
+    }
+
     getSink()->enqueue(p); //todo should we try enqueue? if we can't queue (too fast then we need to fail to file
 
-    this->batched_data_ = std::make_shared < std::list < Aws::CloudWatchLogs::Model::InputLogEvent >> ();
+    this->batched_data_ = std::make_shared<LogType>();
     return true;
 
   } else {
@@ -99,11 +124,7 @@ bool LogBatcher::publishBatchedData() {
   }
 }
 
-//todo implement drop data function
-
-size_t LogBatcher::getCurrentBatchSize() {
-  return this->batched_data_->size();
-}
+//todo implement drop data function (queued too much too fast, etc)
 
 bool LogBatcher::initialize() {
   return true;
@@ -115,3 +136,12 @@ bool LogBatcher::shutdown() {
   this->batched_data_->clear();
   return true;
 }
+
+void LogBatcher::setLogFileManager(std::shared_ptr<Aws::CloudWatchLogs::Utils::FileManager<LogType>> log_file_manager)
+{
+  if (nullptr == log_file_manager) {
+    throw std::invalid_argument("input LogFileManager cannot be null");
+  }
+  this->log_file_manager_ = log_file_manager;
+}
+

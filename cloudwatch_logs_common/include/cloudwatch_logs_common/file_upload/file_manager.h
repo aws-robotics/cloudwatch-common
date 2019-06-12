@@ -16,6 +16,7 @@
 #pragma once
 #include <list>
 #include <memory>
+#include <stdexcept>
 
 #include <aws/core/utils/logging/LogMacros.h>
 
@@ -34,7 +35,7 @@ public:
   T batch_data;
   size_t batch_size;
   std::list<DataToken> data_tokens;
-};
+}; //todo this should be immutable
 
 //todo move to a different file, e.g. statuses?
 enum UploadStatus {
@@ -77,6 +78,8 @@ public:
    * Default constructor.
    */
   FileManager() {
+    // todo all arguments should be configurable and should have input checking
+    // todo defaults should be defined as constants
     FileManagerStrategyOptions options{"cloudwatchlogs", "/tmp/", ".log", 1024*1024, 1024*1024};
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }
@@ -84,12 +87,33 @@ public:
   /**
    * Initialize the file manager with a custom file manager strategy.
    *
+   * @throws invalid argument for null DataManagerStrategy
    * @param file_manager_strategy custom strategy.
    */
   explicit FileManager(std::shared_ptr<DataManagerStrategy> file_manager_strategy) {
-    file_manager_strategy_ = file_manager_strategy;
-    file_manager_strategy_->initialize();
+//    if (nullptr == file_manager_strategy) {
+//      throw std::invalid_argument("DataManagerStrategy cannot be null");
+//    }
+    //hack for testing
+    if(file_manager_strategy) {
+      file_manager_strategy_ = file_manager_strategy;
+      file_manager_strategy_->initialize(); // todo should be start
+    }
   }
+
+//  virtual bool start() {
+//    if(file_manager_strategy_) {
+//      file_manager_strategy_->start();
+//    }
+//    return true;
+//  }
+//
+//  virtual bool shutdown() {
+//    if(file_manager_strategy_) {
+//      file_manager_strategy_->shutdown();
+//    }
+//    return true;
+//  }
 
   virtual ~FileManager() = default;
 
@@ -101,6 +125,7 @@ public:
    */
   inline DataToken read(std::string &data) {
     DataToken token = file_manager_strategy_->read(data);
+    // todo remove??
 //    if (file_info.file_status == END_OF_READ) {
 //      file_status_monitor_->setStatus(Aws::FileManagement::Status::UNAVAILABLE);
 //    }
@@ -111,7 +136,7 @@ public:
    * Write data to the appropriate file.
    * @param data to write.
    */
-  virtual void write(const T & data) = 0;
+  virtual void write(const T & data) = 0; // todo shouldn't this be a DataWriter interface?
 
 /**
  * Handle an upload complete status.
@@ -119,7 +144,7 @@ public:
  * @param upload_status the status of an attempted upload of data
  * @param log_messages the data which was attempted to be uploaded
  */
-  inline void fileUploadCompleteStatus(
+  virtual void fileUploadCompleteStatus(
       const UploadStatus& upload_status,
       const FileObject<T> &log_messages) override {
     if (UploadStatus::SUCCESS == upload_status) {
@@ -138,9 +163,10 @@ public:
    * Add a file status monitor to notify observers when there
    * @param status_monitor
    */
-  inline void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
+  void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
     file_status_monitor_ = status_monitor;
   }
+
 protected:
   /**
    * The object that keeps track of which files to delete, read, or write to.

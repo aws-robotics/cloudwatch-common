@@ -78,7 +78,7 @@ inline bool operator==(const FileTokenInfo& lhs, const FileTokenInfo& rhs){
 
 inline bool operator!=(const FileTokenInfo& lhs, const FileTokenInfo& rhs){ return !(lhs == rhs); }
 
-class DataManagerStrategy {
+class DataManagerStrategy { // todo this should be a service as well
 public:
   DataManagerStrategy() = default;
   virtual ~DataManagerStrategy() = default;

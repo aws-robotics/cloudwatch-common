@@ -52,7 +52,7 @@ FileObject<LogType> LogFileManager::readBatch(
   file_object.batch_data = log_data;
   file_object.batch_size = actual_batch_size;
   file_object.data_tokens = data_tokens;
-return file_object;
+  return file_object;
 }
 
 void LogFileManager::write(const LogType & data) {

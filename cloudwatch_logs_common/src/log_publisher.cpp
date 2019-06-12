@@ -45,7 +45,16 @@ LogPublisher::LogPublisher(
 }
 
 LogPublisher::~LogPublisher()
-{}
+{
+}
+
+bool LogPublisher::checkIfConnected(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors error) {
+  if (CW_LOGS_NOT_CONNECTED == error) {
+    this->markOffline();
+    return false;
+  }
+  return true;
+}
 
 /**
  * Checks to see if a log group already exists and tries to create it if not.

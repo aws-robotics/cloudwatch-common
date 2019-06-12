@@ -29,6 +29,7 @@
 #include <cloudwatch_logs_common/utils/service.h>
 
 #include <chrono>
+#include <stdexcept>
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -45,8 +46,22 @@ using namespace Aws::FileManagement;
 template<typename T, typename D>
 class CloudWatchService : public Aws::DataFlow::InputStage<TaskPtr<T>>, public RunnableService {
 public:
-  CloudWatchService(std::shared_ptr<Publisher<T>> log_publisher,
-    std::shared_ptr<DataBatcher<D>> log_batcher) : RunnableService() {
+    /**
+     * @throws invalid argument if either publisher or batcher are null
+     * @param publisher
+     * @param batcher
+     * @return
+     */
+  CloudWatchService(std::shared_ptr<Publisher<T>> publisher,
+    std::shared_ptr<DataBatcher<D>> batcher) : RunnableService() {
+
+    if (nullptr == publisher) {
+      throw std::invalid_argument("Invalid argument: log_publisher cannot be null");
+    }
+
+    if (nullptr == batcher) {
+      throw std::invalid_argument("Invalid argument: log_publisher cannot be null");
+    }
 
     this->log_file_upload_streamer_ = nullptr;
     this->log_publisher_ = log_publisher;
@@ -180,6 +195,7 @@ public:
 
     this->log_file_upload_streamer_ = log_file_upload_streamer;
   }
+
 };
 
 }

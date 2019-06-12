@@ -62,6 +62,8 @@ public:
     std::shared_ptr<T> batch_data) : Task<T>()
   {
     this->batch_data_ = batch_data;
+    // null is allowable as there is a guard above (default action do nothing)
+    this->upload_status_function_ = nullptr;
   }
 
   virtual ~BasicTask() = default;
@@ -75,9 +77,8 @@ public:
   void setOnCompleteFunction(
     const UploadStatusFunction<UploadStatus, T> upload_status_function)
   {
-    if (upload_status_function_) {
+      // null is allowable as there is a guard above (default action do nothing)
       upload_status_function_ = upload_status_function;
-    }
   }
 
   T& getBatchData() override {
@@ -86,7 +87,7 @@ public:
 
 private:
   std::shared_ptr<T> batch_data_;
-  UploadStatusFunction<UploadStatus, T> upload_status_function_ = nullptr;
+  UploadStatusFunction<UploadStatus, T> upload_status_function_;
 };
 
 /**

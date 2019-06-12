@@ -37,21 +37,11 @@ using namespace Aws::CloudWatchLogs::Utils;
 using namespace std::chrono_literals;
 
 /**
- * Test the publisher interface while ignoring all of the CloudWatch specific infrastructure.
+ * Class used to provide easy mechanisn to wait and notify
  */
-class TestPublisher : public Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>
+class Waiter
 {
 public:
-  TestPublisher() {};
-  // no-op
-  bool initialize() override {return true;}
-  bool start() override {return true;}
-  // notify just in case anyone is waiting
-  bool shutdown() override {
-    std::unique_lock<std::mutex> lck(this->mtx);
-    this->cv.notify_all(); //don't leave anyone blocking
-    return true;
-  };
 
   void wait() {
     std::unique_lock<std::mutex> lck(this->mtx);
@@ -63,18 +53,86 @@ public:
     cv.wait_for(lck, seconds);
   }
 
+  void notify() {
+    std::unique_lock<std::mutex> lck(this->mtx);
+    this->cv.notify_all(); //don't leave anyone blocking
+  }
+
+private:
+  std::condition_variable cv;
+  mutable std::mutex mtx;
+};
+
+/**
+ * Test the publisher interface while ignoring all of the CloudWatch specific infrastructure.
+ */
+class TestPublisher : public Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>, public Waiter
+{
+public:
+  TestPublisher() : Publisher() {
+    force_failure = false;
+  };
+  virtual ~TestPublisher() {
+    shutdown();
+  };
+
+  bool start() override {return true;}
+  // notify just in case anyone is waiting
+  bool shutdown() override {
+    this->notify(); //don't leave anyone blocking
+    return true;
+  };
+
+  void setForceFailure(bool nv) {
+    force_failure = nv;
+  }
+
 protected:
+
   bool configure() override { return false; };
   bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent>&) override {
     {
-      std::unique_lock <std::mutex> lck(this->mtx);
-      this->cv.notify_all();
+      this->notify();
     }
-    return true;
+    return !force_failure;
   }
 
-  std::condition_variable cv; // todo think about adding this into the interface
-  std::mutex mtx; // todo think about adding this  into  the interface
+  bool force_failure;
+};
+
+/**
+ * Test File Manager
+ */
+class TestLogFileManager : public FileManager<LogType>, public Waiter
+{
+public:
+
+    void wait_for(std::chrono::seconds seconds) {
+      std::unique_lock<std::mutex> lck(this->mtx);
+      cv.wait_for(lck, seconds);
+    }
+
+    TestLogFileManager() : FileManager(nullptr) {
+      written_count.store(0);
+    }
+
+    void write(const LogType & data) override {
+      last_data_size = data.size();
+      written_count++;
+      this->notify();
+    };
+
+    FileObject<LogType> readBatch(size_t batch_size) {
+      // do nothing
+      FileObject<LogType> testFile;
+      testFile.batch_size = batch_size;
+      return testFile;
+    }
+
+    std::atomic<int> written_count;
+    std::atomic<size_t> last_data_size;
+    std::condition_variable cv; // todo think about adding this into the interface
+    mutable std::mutex mtx; // todo think about adding this  into  the interface
 };
 
 
@@ -208,7 +266,51 @@ TEST_F(PipelineTest, TestBatcherSize) {
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
 }
 
-int main(int argc, char** argv)
+TEST_F(PipelineTest, TestPublisherFailureToFileManager) {
+
+  std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
+  // hookup to the service
+  log_batcher->setLogFileManager(fileManager);
+
+  // batch
+  std::string toBatch("TestBatcherManualPublish");
+  EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
+  bool b1 = cw_service->batchData(toBatch);
+  EXPECT_EQ(1, log_batcher->getCurrentBatchSize());
+  EXPECT_EQ(true, b1);
+
+  // force failure
+  test_publisher->setForceFailure(true);
+
+  // publish
+  bool b2 = cw_service->publishBatchedData();
+  test_publisher->wait_for(std::chrono::seconds(1));
+
+  EXPECT_TRUE(b2);
+  EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
+  EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState());
+  EXPECT_EQ(0, test_publisher->getPublishSuccesses());
+  EXPECT_EQ(1, test_publisher->getPublishAttempts());
+  EXPECT_EQ(0.0f, test_publisher->getPublishSuccessPercentage());
+
+  fileManager->wait_for(std::chrono::seconds(1));
+  //check that the filemanger callback worked
+  EXPECT_EQ(1, fileManager->written_count);
+}
+
+// TODO this currently barfs
+//int main(int argc, char** argv)
+//{
+//  Aws::Utils::Logging::InitializeAWSLogging(
+//      Aws::MakeShared<Aws::Utils::Logging::ConsoleLogSystem>(
+//          "RunUnitTests", Aws::Utils::Logging::LogLevel::Trace));
+//  ::testing::InitGoogleMock(&argc, argv);
+//  int exitCode = RUN_ALL_TESTS();
+//  Aws::Utils::Logging::ShutdownAWSLogging();
+//  return exitCode;
+//}
+
+int main(int argc, char ** argv)
 {
   Aws::Utils::Logging::InitializeAWSLogging(
       Aws::MakeShared<Aws::Utils::Logging::ConsoleLogSystem>(
