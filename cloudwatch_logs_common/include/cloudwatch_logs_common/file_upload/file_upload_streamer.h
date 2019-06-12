@@ -119,7 +119,9 @@ public:
   }
 
   void onComplete(const UploadStatus & upload_status, const FileObject<T> &message) {
-    OutputStage<TaskPtr<T>>::getSink()->clear();
+    if (upload_status == UploadStatus::FAIL) {
+      OutputStage<TaskPtr<T>>::getSink()->clear();
+    }
     data_reader_->fileUploadCompleteStatus(upload_status, message);
   }
 
