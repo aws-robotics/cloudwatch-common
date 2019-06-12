@@ -86,7 +86,7 @@ public:
   {
     file_manager = std::make_shared<::testing::StrictMock<MockDataReader>>();
     file_upload_streamer = createFileUploadStreamer<std::string>(file_manager);
-    mock_sink = std::make_shared<MockSink>();
+    mock_sink = std::make_shared<::testing::StrictMock<MockSink>>();
   }
 
   void TearDown() override
@@ -177,6 +177,31 @@ TEST_F(FileStreamerTest, fail_task_clears_queue) {
   task->onComplete(FAIL);
 }
 
+TEST_F(FileStreamerTest, success_task_does_not_clear_queue) {
+  // Create the pipeline
+  file_upload_streamer->setSink(mock_sink);
+
+  // Set the file and network available
+  file_manager->status_monitor_->setStatus(AVAILABLE);
+  file_upload_streamer->onPublisherStateChange(PublisherState::CONNECTED);
+
+  FileObject<std::string> test_file_object;
+  test_file_object.batch_data = "data";
+  test_file_object.batch_size = 1;
+  SharedFileUploadTask task;
+  EXPECT_CALL(*mock_sink, tryEnqueue(testing::_, testing::_))
+          .WillOnce(testing::Invoke([&task](SharedFileUploadTask& data,
+                                            const std::chrono::microseconds &duration){
+            task = data;
+            return true;
+          }));
+  EXPECT_CALL(*file_manager, readBatch(testing::Eq(50)))
+          .WillOnce(testing::Return(test_file_object));
+  EXPECT_CALL(*file_manager, fileUploadCompleteStatus(SUCCESS, testing::_));
+  // Expect a batch call and enqueue from the file upload streamer
+  file_upload_streamer->run();
+  task->onComplete(SUCCESS);
+}
 
 TEST_F(FileStreamerTest, block_on_no_network) {
   // Create the pipeline
