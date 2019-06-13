@@ -18,9 +18,9 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <cloudwatch_logs_common/dataflow/sink.h>
-#include <cloudwatch_logs_common/dataflow/source.h>
-#include <cloudwatch_logs_common/dataflow/observed_queue.h>
+#include <dataflow_lite/dataflow/sink.h>
+#include <dataflow_lite/dataflow/source.h>
+#include <dataflow_lite/dataflow/observed_queue.h>
 
 using namespace Aws::DataFlow;
 
@@ -67,8 +67,8 @@ TEST(observed_queue_test, enqueue_blocked_dequeue_test) {
   EXPECT_TRUE(observed_queue.tryEnqueue("hello", std::chrono::seconds(0)));
 }
 
-int main(int argc, char ** argv)
+int main()
 {
-  testing::InitGoogleMock(&argc, argv);
-  return RUN_ALL_TESTS();
+  int exitCode = RUN_ALL_TESTS();
+  return exitCode;
 }

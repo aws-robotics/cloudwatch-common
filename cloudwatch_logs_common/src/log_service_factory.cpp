@@ -24,7 +24,7 @@
 #include <file_management/file_upload/file_management_factory.h>
 #include <file_management/file_upload/file_upload_task.h>
 
-#include <cloudwatch_logs_common/dataflow/dataflow.h>
+#include <dataflow_lite/dataflow/dataflow.h>
 
 #include <cloudwatch_logs_common/log_service.h>
 

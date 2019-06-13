@@ -29,7 +29,7 @@
 #include "cloudwatch_logs_common/log_batcher.h"
 #include <file_management/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/utils/publisher.h>
-#include <cloudwatch_logs_common/dataflow/dataflow.h>
+#include <dataflow_lite/dataflow/dataflow.h>
 
 #include <aws/core/utils/logging/ConsoleLogSystem.h>
 

@@ -24,10 +24,11 @@
 #include <dataflow_lite/dataflow/status_monitor.h>
 #include <dataflow_lite/dataflow/observed_queue.h>
 #include <dataflow_lite/dataflow/queue_monitor.h>
-#include <dataflow_lite/utils/service.h>
-#include <file_management/file_upload/task_utils.h>
-#include <file_management/file_upload/file_manager.h>
-#include <file_management/file_upload/file_upload_task.h>
+#include <cloudwatch_logs_common/file_upload/task_utils.h>
+#include <cloudwatch_logs_common/file_upload/file_manager.h>
+#include <cloudwatch_logs_common/file_upload/file_upload_task.h>
+#include <cloudwatch_logs_common/utils/service.h>
+#include <cloudwatch_logs_common/utils/publisher.h>
 
 namespace Aws {
 namespace FileManagement {

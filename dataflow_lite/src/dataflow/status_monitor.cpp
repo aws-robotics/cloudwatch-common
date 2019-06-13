@@ -13,8 +13,10 @@
  * permissions and limitations under the License.
  */
 
-#include <cloudwatch_logs_common/dataflow/status_monitor.h>
 #include <numeric>
+
+#include <dataflow_lite/dataflow/status_monitor.h>
+
 using namespace Aws::DataFlow;
 void StatusMonitor::setStatus(const Status &status) {
   status_ = status;

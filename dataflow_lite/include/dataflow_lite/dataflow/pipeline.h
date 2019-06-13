@@ -14,8 +14,8 @@
  */
 
 #pragma once
-#include <cloudwatch_logs_common/dataflow/sink.h>
-#include <cloudwatch_logs_common/dataflow/source.h>
+#include <dataflow_lite/dataflow/sink.h>
+#include <dataflow_lite/dataflow/source.h>
 
 namespace Aws {
 namespace DataFlow {

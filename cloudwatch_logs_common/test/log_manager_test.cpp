@@ -18,7 +18,7 @@
 //#include <cloudwatch_logs_common/log_manager.h>
 //#include <cloudwatch_logs_common/log_publisher.h>
 //#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-//#include <cloudwatch_logs_common/dataflow/dataflow.h>
+//#include <dataflow_lite/dataflow/dataflow.h>
 //
 //#include <gmock/gmock.h>
 //#include <gtest/gtest.h>
