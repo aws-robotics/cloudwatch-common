@@ -19,14 +19,10 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
-#include <cloudwatch_logs_common/file_upload/file_management_factory.h>
-#include <cloudwatch_logs_common/utils/log_file_manager.h>
+#include <file_management/file_upload/file_manager.h>
+#include <file_management/file_upload/file_management_factory.h>
 #include <dataflow_lite/dataflow/dataflow.h>
 
-using namespace Aws::CloudWatchLogs;
-using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
 using namespace Aws::DataFlow;
 
@@ -109,7 +105,7 @@ TEST_F(FileStreamerTest, success_on_network_and_file) {
 
   // Set the file and network available
   file_manager->status_monitor_->setStatus(AVAILABLE);
-  file_upload_streamer->onPublisherStateChange(PublisherState::CONNECTED);
+  file_upload_streamer->onPublisherStateChange(AVAILABLE);
 
   FileObject<std::string> test_file_object;
   test_file_object.batch_data = "data";
@@ -128,7 +124,7 @@ TEST_F(FileStreamerTest, fail_enqueue_retry) {
 
   // Set the file and network available
   file_manager->status_monitor_->setStatus(AVAILABLE);
-  file_upload_streamer->onPublisherStateChange(PublisherState::CONNECTED);
+  file_upload_streamer->onPublisherStateChange(AVAILABLE);
 
   FileObject<std::string> test_file_object;
   test_file_object.batch_data = "data";
@@ -155,7 +151,7 @@ TEST_F(FileStreamerTest, fail_task_clears_queue) {
 
   // Set the file and network available
   file_manager->status_monitor_->setStatus(AVAILABLE);
-  file_upload_streamer->onPublisherStateChange(PublisherState::CONNECTED);
+  file_upload_streamer->onPublisherStateChange(AVAILABLE);
 
   FileObject<std::string> test_file_object;
   test_file_object.batch_data = "data";
@@ -183,7 +179,7 @@ TEST_F(FileStreamerTest, success_task_does_not_clear_queue) {
 
   // Set the file and network available
   file_manager->status_monitor_->setStatus(AVAILABLE);
-  file_upload_streamer->onPublisherStateChange(PublisherState::CONNECTED);
+  file_upload_streamer->onPublisherStateChange(AVAILABLE);
 
   FileObject<std::string> test_file_object;
   test_file_object.batch_data = "data";
@@ -191,7 +187,7 @@ TEST_F(FileStreamerTest, success_task_does_not_clear_queue) {
   SharedFileUploadTask task;
   EXPECT_CALL(*mock_sink, tryEnqueue(testing::_, testing::_))
           .WillOnce(testing::Invoke([&task](SharedFileUploadTask& data,
-                                            const std::chrono::microseconds &duration){
+                                            const std::chrono::microseconds&){
             task = data;
             return true;
           }));
@@ -209,7 +205,7 @@ TEST_F(FileStreamerTest, block_on_no_network) {
 
   // Set the file available, network is still unavailable
   file_manager->status_monitor_->setStatus(AVAILABLE);
-  file_upload_streamer->onPublisherStateChange(PublisherState::NOT_CONNECTED);
+  file_upload_streamer->onPublisherStateChange(UNAVAILABLE);
 
   // The strict mocks will throw an error should the run function pass the status monitor check
   file_upload_streamer->forceWork();
@@ -218,7 +214,7 @@ TEST_F(FileStreamerTest, block_on_no_network) {
 TEST_F(FileStreamerTest, block_on_file_not_available) {
   // Create the pipeline
   file_upload_streamer->setSink(mock_sink);
-  file_upload_streamer->onPublisherStateChange(PublisherState::CONNECTED);
+  file_upload_streamer->onPublisherStateChange(AVAILABLE);
   // The strict mocks will throw an error should the run function pass the status monitor check
   file_upload_streamer->forceWork();
 }

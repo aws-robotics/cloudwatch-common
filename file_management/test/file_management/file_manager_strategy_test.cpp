@@ -25,10 +25,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <aws/logs/model/InputLogEvent.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/file_upload/file_manager_strategy.h>
+#include <file_management/file_upload/file_manager_strategy.h>
 
-using namespace Aws::CloudWatchLogs;
 using namespace Aws::FileManagement;
 
 class FileManagerStrategyTest : public ::testing::Test {

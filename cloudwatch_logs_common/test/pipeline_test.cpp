@@ -27,7 +27,7 @@
 
 #include "cloudwatch_logs_common/log_service.h"
 #include "cloudwatch_logs_common/log_batcher.h"
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
+#include <file_management/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/utils/publisher.h>
 #include <dataflow_lite/dataflow/dataflow.h>
 

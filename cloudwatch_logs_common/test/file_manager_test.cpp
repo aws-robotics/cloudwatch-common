@@ -25,14 +25,12 @@
 #include <aws/core/utils/logging/ConsoleLogSystem.h>
 #include <aws/core/utils/logging/AWSLogging.h>
 
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
-#include <cloudwatch_logs_common/file_upload/file_manager_strategy.h>
-#include <cloudwatch_logs_common/utils/log_file_manager.h>
+#include <file_management/file_upload/file_manager.h>
+#include <file_management/file_upload/file_manager_strategy.h>
+#include <file_management/utils/log_file_manager.h>
 
 
 using namespace Aws::CloudWatchLogs;
-using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
 
 class FileManagerTest : public ::testing::Test {

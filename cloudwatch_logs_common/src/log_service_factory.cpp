@@ -20,9 +20,9 @@
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
-#include <cloudwatch_logs_common/file_upload/file_management_factory.h>
-#include <cloudwatch_logs_common/file_upload/file_upload_task.h>
+#include <file_management/file_upload/file_manager.h>
+#include <file_management/file_upload/file_management_factory.h>
+#include <file_management/file_upload/file_upload_task.h>
 
 #include <dataflow_lite/dataflow/dataflow.h>
 
@@ -54,7 +54,11 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
       Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager, file_upload_options);
 
   // connect publisher state changes to the File Streamer
-  publisher->addPublisherStateListener(std::bind(&FileUploadStreamer<LogType>::onPublisherStateChange, file_upload_streamer, std::placeholders::_1));
+  publisher->addPublisherStateListener([upload_streamer = file_upload_streamer](const PublisherState& state) {
+    auto status =
+      (state == PublisherState::CONNECTED) ? Aws::DataFlow::Status::AVAILABLE : Aws::DataFlow::Status::UNAVAILABLE;
+    upload_streamer->onPublisherStateChange(status);
+  });
 
   // Create an observed queue to trigger a publish when data is available
   auto file_data_queue =

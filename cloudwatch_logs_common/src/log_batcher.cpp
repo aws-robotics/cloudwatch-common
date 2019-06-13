@@ -19,8 +19,8 @@
 #include <aws/logs/model/PutLogEventsRequest.h>
 #include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_publisher.h>
-#include <cloudwatch_logs_common/file_upload/file_upload_task.h>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
+#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
+#include <file_management/file_upload/file_upload_task.h>
 
 #include <chrono>
 #include <iostream>

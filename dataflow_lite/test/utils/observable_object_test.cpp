@@ -17,7 +17,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <cloudwatch_logs_common/utils/observable_object.h>
+#include <dataflow_lite/utils/observable_object.h>
 
 const int INITIAL_VALUE = 0;
 
@@ -128,6 +128,6 @@ TEST_F(ObservableObjectTest, TestFaultyListener) {
 
 int main(int argc, char ** argv)
 {
-  testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleMock(&argc, argv);
   return RUN_ALL_TESTS();
 }

@@ -16,7 +16,8 @@
 #pragma once
 #include <aws/logs/model/InputLogEvent.h>
 
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
+#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
+#include <file_management/file_upload/file_manager.h>
 
 namespace Aws {
 namespace CloudWatchLogs {

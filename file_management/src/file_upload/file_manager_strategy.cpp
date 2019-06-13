@@ -17,10 +17,10 @@
 #include <iostream>
 #include <regex>
 #include <fstream>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
+#include <file_management/file_upload/file_manager.h>
 #include <aws/core/utils/logging/LogMacros.h>
 #include <iomanip>
-#include "cloudwatch_logs_common/file_upload/file_manager_strategy.h"
+#include "file_management/file_upload/file_manager_strategy.h"
 
 namespace fs = std::experimental::filesystem;
 

@@ -19,7 +19,7 @@
 #include <iostream>
 #include <fstream>
 #include "cloudwatch_logs_common/utils/log_file_manager.h"
-#include "cloudwatch_logs_common/file_upload/file_manager_strategy.h"
+#include "file_management/file_upload/file_manager_strategy.h"
 #include <aws/core/utils/json/JsonSerializer.h>
 #include <aws/core/utils/logging/LogMacros.h>
 

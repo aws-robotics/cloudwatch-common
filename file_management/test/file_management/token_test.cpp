@@ -16,7 +16,10 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <cloudwatch_logs_common/file_upload/file_manager_strategy.h>
+#include <aws/core/utils/logging/LogMacros.h>
+#include <aws/core/utils/logging/ConsoleLogSystem.h>
+
+#include <file_management/file_upload/file_manager_strategy.h>
 
 using namespace Aws::FileManagement;
 
@@ -113,4 +116,15 @@ TEST(token_test, test_backup_two_files) {
   token_store.createToken(test_token_2.file_path_, test_token_2.position_, test_token_2.eof_);
   auto backup = token_store.backup();
   EXPECT_THAT(backup, testing::UnorderedElementsAre(kTestToken1, test_token_2));
+}
+
+int main(int argc, char** argv)
+{
+  Aws::Utils::Logging::InitializeAWSLogging(
+      Aws::MakeShared<Aws::Utils::Logging::ConsoleLogSystem>(
+          "RunUnitTests", Aws::Utils::Logging::LogLevel::Trace));
+  ::testing::InitGoogleMock(&argc, argv);
+  int exitCode = RUN_ALL_TESTS();
+  Aws::Utils::Logging::ShutdownAWSLogging();
+  return exitCode;
 }
