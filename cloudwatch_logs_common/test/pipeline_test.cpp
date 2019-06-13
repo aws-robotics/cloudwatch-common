@@ -107,11 +107,6 @@ class TestLogFileManager : public FileManager<LogType>, public Waiter
 {
 public:
 
-    void wait_for(std::chrono::seconds seconds) {
-      std::unique_lock<std::mutex> lck(this->mtx);
-      cv.wait_for(lck, seconds);
-    }
-
     TestLogFileManager() : FileManager(nullptr) {
       written_count.store(0);
     }

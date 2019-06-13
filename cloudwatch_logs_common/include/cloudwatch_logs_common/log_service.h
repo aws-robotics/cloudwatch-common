@@ -171,9 +171,9 @@ protected:
 
   // todo restart?
 
-  std::shared_ptr<FileUploadStreamer<T>> log_file_upload_streamer_; //kept here for startup and shutdown
-  std::shared_ptr<Publisher<T>> log_publisher_; //kept here for startup shutdown
-  std::shared_ptr<DataBatcher<D>> log_batcher_;
+  std::shared_ptr<FileUploadStreamer<T>> log_file_upload_streamer_; // kept here for startup and shutdown
+  std::shared_ptr<Publisher<T>> publisher_; // kept here for startup shutdown
+  std::shared_ptr<DataBatcher<D>> batcher_; // kept here for startup shutdown
   /**
    * Duration to wait for work from the queue.
    */

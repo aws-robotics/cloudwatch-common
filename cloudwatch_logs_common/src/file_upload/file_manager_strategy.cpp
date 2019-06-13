@@ -96,17 +96,22 @@ FileTokenInfo TokenStore::resolve(const DataToken &token) {
 
 FileManagerStrategy::FileManagerStrategy(const FileManagerStrategyOptions &options) {
   options_ = options;
-  storage_size_ = 0;
+  storage_size_ = 0; // todo
   active_write_file_size_ = 0;
-  rotateWriteFile();
+  // validate needs to happen here and throw
 }
 
-void FileManagerStrategy::initialize() {
+bool FileManagerStrategy::start() {
   validateOptions();
   discoverStoredFiles();
+  rotateWriteFile();
+  return true;
 }
 
 void FileManagerStrategy::validateOptions() {
+
+  // todo this needs stricter checking: throw if unrecoverable
+
   if (options_.storage_directory[options_.storage_directory.size()-1] != '/') {
     options_.storage_directory += '/';
   }
@@ -175,12 +180,14 @@ void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
   }
 }
 
-void FileManagerStrategy::onShutdown() {
+bool FileManagerStrategy::shutdown() {
+  // todo can this stuff throw?
   auto config_file_path = std::experimental::filesystem::path(options_.storage_directory + kConfigFile);
   if (std::experimental::filesystem::exists(config_file_path)) {
     std::experimental::filesystem::remove(config_file_path);
   }
   std::ofstream config_file(config_file_path);
+  return true;
 }
 
 void FileManagerStrategy::discoverStoredFiles() {

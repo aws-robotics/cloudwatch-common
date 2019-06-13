@@ -17,6 +17,7 @@
 #include <list>
 #include <memory>
 #include <stdexcept>
+#include <thread>
 
 #include <aws/core/utils/logging/LogMacros.h>
 
@@ -44,7 +45,7 @@ enum UploadStatus {
 };
 
 template <typename T>
-class DataReader {
+class DataReader : public Service {
 public:
   /**
   * Read a specific amount of data from a file.
@@ -72,15 +73,27 @@ public:
  */
 template <typename T>
 class FileManager :
-  public DataReader <T>{
+  public DataReader <T>
+{
 public:
+
+  const FileManagerStrategyOptions kDefaultOptions{"cloudwatchlogs", "/tmp/", ".log", 1024*1024, 1024*1024};
+
   /**
    * Default constructor.
    */
   FileManager() {
+    // todo use customer data to VERIFY that the above kOptions is valid
+    file_manager_strategy_ = std::make_shared<FileManagerStrategy>(kDefaultOptions);
+  }
+
+  /**
+   * Constructor that takes in FileManagerStrategyOptions.
+   *
+   * @param options for the FileManagerStrategy
+   */
+  FileManager(FileManagerStrategyOptions &options) {
     // todo all arguments should be configurable and should have input checking
-    // todo defaults should be defined as constants
-    FileManagerStrategyOptions options{"cloudwatchlogs", "/tmp/", ".log", 1024*1024, 1024*1024};
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }
 
@@ -91,29 +104,27 @@ public:
    * @param file_manager_strategy custom strategy.
    */
   explicit FileManager(std::shared_ptr<DataManagerStrategy> file_manager_strategy) {
-//    if (nullptr == file_manager_strategy) {
-//      throw std::invalid_argument("DataManagerStrategy cannot be null");
-//    }
-    //hack for testing
+    if (nullptr == file_manager_strategy) {
+      throw std::invalid_argument("DataManagerStrategy cannot be null");
+    }
     if(file_manager_strategy) {
       file_manager_strategy_ = file_manager_strategy;
-      file_manager_strategy_->initialize(); // todo should be start
     }
   }
 
-//  virtual bool start() {
-//    if(file_manager_strategy_) {
-//      file_manager_strategy_->start();
-//    }
-//    return true;
-//  }
-//
-//  virtual bool shutdown() {
-//    if(file_manager_strategy_) {
-//      file_manager_strategy_->shutdown();
-//    }
-//    return true;
-//  }
+  virtual bool start() override {
+    if(file_manager_strategy_) {
+      file_manager_strategy_->start();
+    }
+    return true;
+  }
+
+  virtual bool shutdown() override {
+    if(file_manager_strategy_) {
+      file_manager_strategy_->shutdown();
+    }
+    return true;
+  }
 
   virtual ~FileManager() = default;
 
@@ -125,7 +136,7 @@ public:
    */
   inline DataToken read(std::string &data) {
     DataToken token = file_manager_strategy_->read(data);
-    // todo remove??
+    // todo @rddesmon handle appropriately
 //    if (file_info.file_status == END_OF_READ) {
 //      file_status_monitor_->setStatus(Aws::FileManagement::Status::UNAVAILABLE);
 //    }
@@ -153,9 +164,14 @@ public:
                    "Total logs uploaded: %i",
                    total_logs_uploaded_);
     }
+
     // Delete file if empty log_messages.file_location.
     for (const auto &token : log_messages.data_tokens) {
-      file_manager_strategy_->resolve(token, upload_status == SUCCESS);
+      // this may block, file IO can be expensive
+      std::thread t(
+        [&file_manager_strategy = this->file_manager_strategy_, &token, &upload_status]() {
+        file_manager_strategy->resolve(token, upload_status == SUCCESS);
+      });
     }
   }
 

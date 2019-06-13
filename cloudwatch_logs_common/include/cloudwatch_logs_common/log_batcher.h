@@ -80,7 +80,6 @@ private:
 
 using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
 
-//todo this class could entirely be a base worker class
 class LogBatcher :
   public Aws::DataFlow::OutputStage<Aws::FileManagement::TaskPtr<LogType>>,
   public DataBatcher<std::string>
