@@ -24,6 +24,7 @@
 #include <memory>
 #include <experimental/filesystem>
 #include "cloudwatch_logs_common/file_upload/task_utils.h"
+#include <cloudwatch_logs_common/utils/service.h>
 
 namespace Aws {
 namespace FileManagement {
@@ -78,12 +79,10 @@ inline bool operator==(const FileTokenInfo& lhs, const FileTokenInfo& rhs){
 
 inline bool operator!=(const FileTokenInfo& lhs, const FileTokenInfo& rhs){ return !(lhs == rhs); }
 
-class DataManagerStrategy { // todo this should be a service as well
+class DataManagerStrategy : public Service {
 public:
   DataManagerStrategy() = default;
   virtual ~DataManagerStrategy() = default;
-
-  virtual void initialize() = 0;
 
   virtual bool isDataAvailable() = 0;
 
@@ -178,13 +177,11 @@ class FileManagerStrategy : public DataManagerStrategy {
 public:
   explicit FileManagerStrategy(const FileManagerStrategyOptions &options);
 
-  ~FileManagerStrategy() override {
-    onShutdown();
-  }
+  ~FileManagerStrategy() = default;
 
   void validateOptions();
 
-  void initialize() override; //todo consider start from Service
+  bool start() override;
 
   bool isDataAvailable() override;
 
@@ -194,7 +191,7 @@ public:
 
   void resolve(const DataToken &token, bool is_success) override;
 
-  void onShutdown();
+  bool shutdown() override;
 
 private:
   void discoverStoredFiles();
