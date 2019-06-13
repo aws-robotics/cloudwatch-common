@@ -22,10 +22,10 @@
 #include <aws/logs/model/PutLogEventsRequest.h>
 #include <aws/core/Aws.h>
 #include <aws/logs/CloudWatchLogsClient.h>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
-#include <cloudwatch_logs_common/file_upload/file_upload_task.h>
-#include "cloudwatch_logs_common/utils/observable_object.h"
-#include <cloudwatch_logs_common/utils/service.h>
+#include <file_management/file_upload/file_manager.h>
+#include <file_management/file_upload/file_upload_task.h>
+#include <dataflow_lite/utils/observable_object.h>
+#include <dataflow_lite/utils/service.h>
 
 using namespace Aws::FileManagement;
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(cloudwatch_logs_common)
-set(CLOUDWATCH_LOGS_COMMON_VERSION 1.0.0)
+project(file_management)
+set(FILE_MANAGEMENT_VERSION 1.0.0)
 
 # Default to C11
 if(NOT CMAKE_C_STANDARD)
@@ -28,31 +28,31 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_CXX_FLAGS}")
 
 find_package(dataflow_lite REQUIRED)
-find_package(file_management REQUIRED)
 find_package(aws_common REQUIRED)
 
 if(AWSSDK_FOUND)
-  set(SERVICE logs)
+  set(SERVICE core)
   AWSSDK_DETERMINE_LIBS_TO_LINK(SERVICE OUTPUT)
   link_directories("${AWSSDK_LIB_DIR}")
 endif()
 
 set(ALL_SRC_FILES
-    src/log_batcher.cpp
-    src/log_service_factory.cpp
-    src/utils/cloudwatch_facade.cpp
-    src/utils/log_file_manager.cpp
-    src/log_publisher.cpp)
+    src/file_upload/file_manager_strategy.cpp
+    ) 
 
 add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})
-target_link_libraries(${PROJECT_NAME} ${OUTPUT} ${file_management_LIBRARIES} ${dataflow_lite_LIBRARIES} stdc++fs)
+target_link_libraries(${PROJECT_NAME} ${OUTPUT} ${dataflow_lite_LIBRARIES} stdc++fs)
 target_include_directories(${PROJECT_NAME}
-        PRIVATE ${AWSSDK_INCLUDE_DIRS}
-        include ${aws_common_INCLUDE_DIRS} ${file_management_INCLUDE_DIRS} ${dataflow_lite_INCLUDE_DIRS})
+        PRIVATE ${AWSSDK_INCLUDE_DIRS} include ${aws_common_INCLUDE_DIRS} ${dataflow_lite_INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
 
+get_cmake_property(_variableNames VARIABLES)
+list(SORT _variableNames)
+foreach(_variableName ${_variableNames})
+  message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
 
 #############
 ## Install ##
@@ -88,35 +88,19 @@ enable_testing()
 find_common_test_packages()
 if(GMOCK_LIBRARY)
   message("Building tests")
-  add_common_gtest(test_cloudwatch_logs_common
-        test/main_test.cpp
-    #    test/log_publisher_test.cpp
-    #    test/cloudwatch_facade_test.cpp
-        )
-
-  target_include_directories(test_cloudwatch_logs_common
+  add_common_gtest(test_common_utilities
+          test/file_management/file_manager_strategy_test.cpp
+          test/file_management/file_upload_streamer_test.cpp
+          test/file_management/token_test.cpp
+          )
+  target_include_directories(test_common_utilities
         PRIVATE include
         PRIVATE ${aws_common_INCLUDE_DIRS}
         PUBLIC ${PROJECT_SOURCE_DIR}/test/include
         )
-  target_link_libraries(test_cloudwatch_logs_common
+  target_link_libraries(test_common_utilities
         ${GTEST_LIBRARIES}
         pthread
         ${GMOCK_LIBRARY}
         ${PROJECT_NAME})
-
-  add_common_gtest(test_pipelines
-          test/pipeline_test.cpp
-          )
-
-  target_include_directories(test_pipelines
-          PRIVATE include
-          PRIVATE ${aws_common_INCLUDE_DIRS}
-          PUBLIC ${PROJECT_SOURCE_DIR}/test/include
-          )
-  target_link_libraries(test_pipelines
-          ${GTEST_LIBRARIES}
-          pthread
-          ${GMOCK_LIBRARY}
-          ${PROJECT_NAME})
 endif()
