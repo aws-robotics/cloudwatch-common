@@ -20,7 +20,9 @@
 #include <aws/logs/model/PutLogEventsRequest.h>
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
+
+#include <file_management/file_upload/file_upload_streamer.h>
+#include <file_management/file_upload/file_manager.h>
 
 #include <chrono>
 #include <iostream>

@@ -20,13 +20,13 @@
 #include <aws/logs/model/PutLogEventsRequest.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 
-#include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
+#include <file_management/file_upload/file_upload_streamer.h>
+#include <file_management/file_upload/file_manager.h>
 
 #include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_publisher.h>
 
-#include <cloudwatch_logs_common/utils/service.h>
+#include <dataflow_lite/utils/service.h>
 
 #include <chrono>
 #include <stdexcept>

@@ -16,8 +16,8 @@
 #pragma once
 
 #include <future>
-#include <cloudwatch_logs_common/file_upload/task_utils.h>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
+#include <file_management/file_upload/task_utils.h>
+#include <file_management/file_upload/file_manager.h>
 #include <memory>
 #pragma once
 

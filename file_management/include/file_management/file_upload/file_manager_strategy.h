@@ -23,8 +23,8 @@
 #include <set>
 #include <memory>
 #include <experimental/filesystem>
-#include "cloudwatch_logs_common/file_upload/task_utils.h"
-#include <cloudwatch_logs_common/utils/service.h>
+#include <dataflow_lite/utils/service.h>
+#include <file_management/file_upload/task_utils.h>
 
 namespace Aws {
 namespace FileManagement {

@@ -18,7 +18,7 @@
 #include <gmock/gmock.h>
 #include <chrono>
 #include <thread>
-#include <cloudwatch_logs_common/utils/service.h>
+#include <dataflow_lite/utils/service.h>
 
 class HardWorker : public RunnableService
 {

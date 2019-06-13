@@ -67,8 +67,8 @@ TEST(observed_queue_test, enqueue_blocked_dequeue_test) {
   EXPECT_TRUE(observed_queue.tryEnqueue("hello", std::chrono::seconds(0)));
 }
 
-int main()
+int main(int argc, char ** argv)
 {
-  int exitCode = RUN_ALL_TESTS();
-  return exitCode;
+  testing::InitGoogleMock(&argc, argv);
+  return RUN_ALL_TESTS();
 }
