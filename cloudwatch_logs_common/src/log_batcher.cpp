@@ -161,12 +161,12 @@ size_t LogBatcher::getMaxAllowableBatchSize() {
   return this->max_allowable_batch_size_.load();
 }
 
-void LogBatcher::setMaxAllowableBatchSize(size_t new_value) {
+void LogBatcher::setMaxAllowableBatchSize(size_t new_batch_size) {
 
   //todo move all this config to DataBatcher, need to check both variables when set
-  validateConfigurableSizes(this->getPublishTriggerBatchSize(), new_value);
+  validateConfigurableSizes(this->getPublishTriggerBatchSize(), new_batch_size);
 
-  this->max_allowable_batch_size_.store(new_value);
+  this->max_allowable_batch_size_.store(new_batch_size);
 }
 
 void LogBatcher::validateConfigurableSizes(size_t publish_trigger_size, size_t max_allowable_batch_size) {

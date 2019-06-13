@@ -74,7 +74,8 @@ public:
     return this->publish_trigger_batch_size_.load();
 
   }
-  inline void resetPublishTriggerBatchSize(size_t new_value) {
+
+  inline void resetPublishTriggerBatchSize() {
       this->publish_trigger_batch_size_.store(kDefaultTriggerSize);
   }
 
@@ -159,7 +160,7 @@ public:
   virtual size_t getCurrentBatchSize() override;
 
   size_t getMaxAllowableBatchSize(); //todo part of data batcher?
-  void setMaxAllowableBatchSize(size_t new_value); //todo part of data batcher?
+  void setMaxAllowableBatchSize(size_t new_batch_size); //todo part of data batcher?
 
   bool handleSizeExceeded(); //todo part of data batcher?
 
