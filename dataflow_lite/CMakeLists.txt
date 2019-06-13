@@ -92,10 +92,10 @@ if(GMOCK_LIBRARY)
   add_common_gtest(test_service_utilties
           test/utils/observable_object_test.cpp
           test/utils/runnable_service_test.cpp
+          test/utils/data_batcher_test.cpp
           )
   target_include_directories(test_service_utilties
           PRIVATE include
-          PRIVATE ${aws_common_INCLUDE_DIRS}
           PUBLIC ${PROJECT_SOURCE_DIR}/test/include
           )
   target_link_libraries(test_service_utilties

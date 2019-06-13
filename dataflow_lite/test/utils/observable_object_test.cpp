@@ -126,8 +126,7 @@ TEST_F(ObservableObjectTest, TestFaultyListener) {
   EXPECT_EQ(VALID , listened_value);
 }
 
-int main(int argc, char ** argv)
-{
-  testing::InitGoogleMock(&argc, argv);
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
