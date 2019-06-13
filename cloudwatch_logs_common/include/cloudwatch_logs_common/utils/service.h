@@ -47,6 +47,8 @@ public:
      */
     virtual bool shutdown() = 0;
 
+    // todo getStatusString : useful for debugging
+
 //protected:
 //    void getState() {
 //      return state_.load();
@@ -60,6 +62,7 @@ public:
  * in the implemented class should be implemented in the "work" method. Note: start and shutdown methods should be
  * override if the implementing class requires extra steps in either scenarios.
  */
+ //todo consider extending the waiter interface (pipeline test)
 class RunnableService : public Service {
 public:
     RunnableService() {

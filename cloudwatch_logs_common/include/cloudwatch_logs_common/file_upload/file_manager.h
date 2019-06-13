@@ -16,6 +16,8 @@
 #pragma once
 #include <list>
 #include <memory>
+#include <stdexcept>
+#include <thread>
 
 #include <aws/core/utils/logging/LogMacros.h>
 
@@ -36,7 +38,7 @@ public:
   T batch_data;
   size_t batch_size;
   std::list<DataToken> data_tokens;
-};
+}; //todo this should be immutable
 
 //todo move to a different file, e.g. statuses?
 enum UploadStatus {
@@ -45,7 +47,7 @@ enum UploadStatus {
 };
 
 template <typename T>
-class DataReader {
+class DataReader : public Service {
 public:
   /**
   * Read a specific amount of data from a file.
@@ -74,25 +76,58 @@ public:
 template <typename T>
 class FileManager :
   public DataReader <T>
-//  public Service
 {
 public:
+
+  const FileManagerStrategyOptions kDefaultOptions{"cloudwatchlogs", "/tmp/", ".log", 1024*1024, 1024*1024};
+
   /**
    * Default constructor.
    */
   FileManager() {
-    FileManagerStrategyOptions options{"cloudwatchlogs", "/tmp/", ".log", 1024*1024, 1024*1024};
+    // todo use customer data to VERIFY that the above kOptions is valid
+    file_manager_strategy_ = std::make_shared<FileManagerStrategy>(kDefaultOptions);
+  }
+
+  /**
+   * Constructor that takes in FileManagerStrategyOptions.
+   *
+   * @param options for the FileManagerStrategy
+   */
+  FileManager(FileManagerStrategyOptions &options) {
+    // todo all arguments should be configurable and should have input checking
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }
 
   /**
    * Initialize the file manager with a custom file manager strategy.
    *
+   * @throws invalid argument for null DataManagerStrategy
    * @param file_manager_strategy custom strategy.
    */
   explicit FileManager(std::shared_ptr<DataManagerStrategy> file_manager_strategy) {
-    file_manager_strategy_ = file_manager_strategy;
-    file_manager_strategy_->initialize();
+
+    // todo how to allow null for testing?
+//    if (nullptr == file_manager_strategy) {
+//      throw std::invalid_argument("DataManagerStrategy cannot be null");
+//    }
+    if(file_manager_strategy) {
+      file_manager_strategy_ = file_manager_strategy;
+    }
+  }
+
+  virtual bool start() override {
+    if(file_manager_strategy_) {
+      file_manager_strategy_->start();
+    }
+    return true;
+  }
+
+  virtual bool shutdown() override {
+    if(file_manager_strategy_) {
+      file_manager_strategy_->shutdown();
+    }
+    return true;
   }
 
   virtual ~FileManager() = default;
@@ -105,6 +140,7 @@ public:
    */
   inline DataToken read(std::string &data) {
     DataToken token = file_manager_strategy_->read(data);
+    // todo @rddesmon handle appropriately
 //    if (file_info.file_status == END_OF_READ) {
 //      file_status_monitor_->setStatus(Aws::FileManagement::Status::UNAVAILABLE);
 //    }
@@ -115,7 +151,7 @@ public:
    * Write data to the appropriate file.
    * @param data to write.
    */
-  virtual void write(const T & data) = 0;
+  virtual void write(const T & data) = 0; // todo shouldn't this be a DataWriter interface?
 
 /**
  * Handle an upload complete status.
@@ -123,7 +159,7 @@ public:
  * @param upload_status the status of an attempted upload of data
  * @param log_messages the data which was attempted to be uploaded
  */
-  inline void fileUploadCompleteStatus(
+  virtual void fileUploadCompleteStatus(
       const UploadStatus& upload_status,
       const FileObject<T> &log_messages) override {
     if (UploadStatus::SUCCESS == upload_status) {
@@ -132,9 +168,14 @@ public:
                    "Total logs uploaded: %i",
                    total_logs_uploaded_);
     }
+
     // Delete file if empty log_messages.file_location.
     for (const auto &token : log_messages.data_tokens) {
-      file_manager_strategy_->resolve(token, upload_status == SUCCESS);
+      // this may block, file IO can be expensive
+      std::thread t(
+        [&file_manager_strategy = this->file_manager_strategy_, &token, &upload_status]() {
+        file_manager_strategy->resolve(token, upload_status == SUCCESS);
+      });
     }
   }
 
@@ -142,9 +183,10 @@ public:
    * Add a file status monitor to notify observers when there
    * @param status_monitor
    */
-  inline void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
+  void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
     file_status_monitor_ = status_monitor;
   }
+
 protected:
   /**
    * The object that keeps track of which files to delete, read, or write to.

@@ -41,7 +41,8 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   const Aws::SDKOptions & sdk_options,
   const CloudwatchOptions & cloudwatch_options)
 {
-  auto file_manager= std::make_shared<LogFileManager>();
+  // todo options need to be set here!
+  auto file_manager = std::make_shared<LogFileManager>();
 
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, client_config, sdk_options);
   // todo this should be a service to subscribe and status part of the publisher, too much is dependent in File utils / tasks and seems brittle
@@ -50,7 +51,7 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
       std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
   FileUploadStreamerOptions file_upload_options{cloudwatch_options.batch_size, cloudwatch_options.file_max_queue_size};
   auto file_upload_streamer =
-      Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager,file_upload_options);
+      Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager, file_upload_options);
 
   // connect publisher state changes to the File Streamer
   publisher->addPublisherStateListener(std::bind(&FileUploadStreamer<LogType>::onPublisherStateChange, file_upload_streamer, std::placeholders::_1));
@@ -62,7 +63,7 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   auto stream_data_queue =
     std::make_shared<TaskObservedQueue<LogType>>();
 
-  auto log_batcher = std::make_shared<LogBatcher>();
+  auto log_batcher = std::make_shared<LogBatcher>(); // todo pass in options
 
   file_upload_streamer->setSink(file_data_queue);
   queue_monitor->addSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
@@ -71,7 +72,7 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   queue_monitor->addSource(stream_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
 
   auto ls = std::make_shared<LogService>(file_upload_streamer, publisher, log_batcher);
-  queue_monitor >> *ls;
+  queue_monitor >> *ls; // todo rddesmon setSource?
 
   ls->start(); // todo should we allow the user to start?
 

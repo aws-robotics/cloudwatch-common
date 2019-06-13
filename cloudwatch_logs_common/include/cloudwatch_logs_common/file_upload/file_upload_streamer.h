@@ -83,15 +83,7 @@ public:
 
   }
 
-  virtual ~FileUploadStreamer() {
-    if (thread.joinable()) {
-      AWS_LOG_INFO(__func__,
-                   "Shutting down FileUploader thread.");
-      thread.join();
-      AWS_LOG_INFO(__func__,
-                   "FileUploader successfully shutdown");
-    }
-  }
+  virtual ~FileUploadStreamer() = default;
 
   /**
    * Add a status monitor for the file upload manager to wait for work on.
@@ -103,8 +95,10 @@ public:
   }
 
   inline bool shutdown() {
-    // set that the thread should no longer run
-    return RunnableService::shutdown();
+    bool b = true;
+    b &= RunnableService::shutdown();
+    b &= data_reader_->shutdown();
+    return b;
   }
 
   void onPublisherStateChange(const Aws::CloudWatchLogs::PublisherState &newState) {
@@ -169,7 +163,10 @@ public:
    * Start the upload thread.
    */
   bool start() {
-    return RunnableService::start();
+    bool b = true;
+    b &= data_reader_->start();
+    b &= RunnableService::start();
+    return b;
   }
 
   // todo this is a hack. Should just implement an extension in test

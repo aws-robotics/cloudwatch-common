@@ -16,7 +16,6 @@
 #pragma once
 #include <aws/logs/model/InputLogEvent.h>
 
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 
 namespace Aws {
@@ -36,7 +35,7 @@ using FileManagement::FileObject;
  * The log specific file manager. Handles the specific writes of log data.
  */
 class LogFileManager :
-    public FileManager<LogType>{
+    public FileManager<LogType> {
  public:
   /**
    * Default Constructor.
