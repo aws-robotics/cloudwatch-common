@@ -34,6 +34,8 @@ class MockDataReader :
   public DataReader<std::string>
 {
 public:
+  MOCK_METHOD0(start, bool());
+  MOCK_METHOD0(shutdown, bool());
   MOCK_METHOD1(readBatch, FileObject<std::string>(size_t batch_size));
   MOCK_METHOD2(fileUploadCompleteStatus,
     void(const UploadStatus& upload_status, const FileObject<std::string> &log_messages));

@@ -106,9 +106,11 @@ public:
    * @param file_manager_strategy custom strategy.
    */
   explicit FileManager(std::shared_ptr<DataManagerStrategy> file_manager_strategy) {
-    if (nullptr == file_manager_strategy) {
-      throw std::invalid_argument("DataManagerStrategy cannot be null");
-    }
+
+    // todo how to allow null for testing?
+//    if (nullptr == file_manager_strategy) {
+//      throw std::invalid_argument("DataManagerStrategy cannot be null");
+//    }
     if(file_manager_strategy) {
       file_manager_strategy_ = file_manager_strategy;
     }

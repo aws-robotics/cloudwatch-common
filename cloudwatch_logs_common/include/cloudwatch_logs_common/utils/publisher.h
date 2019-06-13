@@ -115,7 +115,7 @@ public:
       return 0;
     }
     int successes = publish_successes_.load();
-    return successes / attempts * 100.0f;
+    return (float) successes / (float) attempts * 100.0f;
   }
 
   /**

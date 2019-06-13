@@ -36,6 +36,8 @@ namespace CloudWatchLogs {
 
 // todo this can be moved to utils for metrics
 // todo could to a template of <T, D> where D is the data to be stored in the list / vector
+// todo this SHOULD have a backing list / vector as act as a container, also handle drop
+//   where drop is abstract (when max allowable size is reached)
 /**
  * Abstract class used to define a batching interface.
  * @tparam T the type of data to be batched.
@@ -43,31 +45,44 @@ namespace CloudWatchLogs {
 template<typename T>
 class DataBatcher : public Service {
 public:
-  static const size_t kDefaultBatchSize = SIZE_MAX;
+
+  static const size_t kDefaultTriggerSize = SIZE_MAX;
+
   DataBatcher() {
-    this->max_batch_size_.store(DataBatcher::kDefaultBatchSize);
+    this->publish_trigger_batch_size_.store(DataBatcher::kDefaultTriggerSize);
   }
+
   DataBatcher(size_t size) {
-    this->max_batch_size_.store(size);
+    this->publish_trigger_batch_size_.store(size);
   }
+
+  ~DataBatcher() = default;
+
   virtual bool batchData(const T &data_to_batch) = 0;
+
   virtual bool batchData(const T &data_to_batch, const std::chrono::milliseconds & milliseconds) = 0;
+
   virtual bool publishBatchedData() = 0;
+
   virtual size_t getCurrentBatchSize() = 0;
-  inline void setMaxBatchSize(size_t new_value) {
-    this->max_batch_size_.store(new_value);
+
+  inline void setPublishTriggerBatchSize(size_t new_value) {
+    this->publish_trigger_batch_size_.store(new_value);
   }
-  inline size_t getMaxBatchSize() {
-    return this->max_batch_size_.load();
+
+  inline size_t getPublishTriggerBatchSize() {
+    return this->publish_trigger_batch_size_.load();
+
   }
-  inline void resetSize(size_t new_value) {
-      this->max_batch_size_.store(kDefaultBatchSize);
+  inline void resetPublishTriggerBatchSize(size_t new_value) {
+      this->publish_trigger_batch_size_.store(kDefaultTriggerSize);
   }
+
 private:
   /**
    * Size used for the internal storage
    */
-  std::atomic<size_t> max_batch_size_;
+  std::atomic<size_t> publish_trigger_batch_size_;
 };
 
 using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
@@ -77,21 +92,19 @@ class LogBatcher :
   public DataBatcher<std::string>
 {
 public:
-  /**
-   *  @brief Creates a new LogBatcher
-   *  Creates a new LogBatcher that will group/buffer logs. Note: logs are only automatically published if the
-   *  size is set, otherwise the publishBatchedData is necesary to push data to be published.
-   */
-  explicit LogBatcher();
+
+  static const size_t kDefaultMaxBatchSize = 1024; // todo is this even reasonable? need data
 
   /**
    *  @brief Creates a new LogBatcher
    *  Creates a new LogBatcher that will group/buffer logs. Note: logs are only automatically published if the
    *  size is set, otherwise the publishBatchedData is necesary to push data to be published.
    *
+   *  @throws invalid argument if publish_trigger_size is strictly greater than max_allowable_batch_size
    *  @param size of the batched data that will trigger a publish
    */
-  explicit LogBatcher(size_t size);
+  explicit LogBatcher(size_t max_allowable_batch_size = kDefaultMaxBatchSize,
+                      size_t publish_trigger_size = DataBatcher::kDefaultTriggerSize);
 
   /**
    *  @brief Tears down a LogBatcher object
@@ -142,15 +155,30 @@ public:
    * @return
    */
   virtual size_t getCurrentBatchSize() override;
+
+  size_t getMaxAllowableBatchSize(); //todo part of data batcher?
+  void setMaxAllowableBatchSize(size_t new_value); //todo part of data batcher?
+
+  bool handleSizeExceeded(); //todo part of data batcher?
+
 protected:
   virtual Aws::CloudWatchLogs::Model::InputLogEvent convertToLogEvent(const std::string & message,
           const std::chrono::milliseconds & milliseconds);
+  /**
+   *
+   * @throws invalid argument if the publish_trigger_size is strictly greater than max_allowable_batch_size
+   * @param publish_trigger_size
+   * @param max_allowable_batch_size
+   */
+  void validateConfigurableSizes(size_t publish_trigger_size, size_t max_allowable_batch_size);
 
 private:
   //todo should probably be atomic, but currently controlled by the publish mutex
-  std::shared_ptr<LogType> batched_data_; //todo vector
+  std::shared_ptr<LogType> batched_data_; //todo vector, part of data batcher?
   std::recursive_mutex batch_and_publish_lock_;
   std::shared_ptr<Aws::CloudWatchLogs::Utils::FileManager<LogType>> log_file_manager_;
+  std::atomic<size_t> max_allowable_batch_size_; //todo part of data batcher?
+
   //todo stats? how many times published? rate of publishing? throughput?
 };
 

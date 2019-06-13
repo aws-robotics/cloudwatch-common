@@ -21,6 +21,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <string>
+#include <random>
 
 #include <aws/core/Aws.h>
 
@@ -49,6 +50,11 @@ public:
   void wait() {
     std::unique_lock<std::mutex> lck(this->mtx);
     cv.wait(lck);
+  }
+
+  void wait_for_millis(std::chrono::milliseconds millis) {
+    std::unique_lock<std::mutex> lck(this->mtx);
+    cv.wait_for(lck, millis);
   }
 
   void wait_for(std::chrono::seconds seconds) {
@@ -240,24 +246,24 @@ TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
  */
 TEST_F(PipelineTest, TestBatcherSize) {
 
-  EXPECT_EQ(SIZE_MAX, log_batcher->getMaxBatchSize()); // not initialized
-
-  log_batcher->setMaxBatchSize(5); // setting the size will trigger a publish when the collection is full
-  EXPECT_EQ(5, log_batcher->getMaxBatchSize());
+  EXPECT_EQ(SIZE_MAX, log_batcher->getPublishTriggerBatchSize()); // not initialized
+  size_t size = 5;
+  log_batcher->setPublishTriggerBatchSize(size); // setting the size will trigger a publish when the collection is full
+  EXPECT_EQ(size, log_batcher->getPublishTriggerBatchSize());
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
 
-  for(int i=1; i<5; i++) {
+  for(size_t i=1; i<size; i++) {
     std::string toBatch("test message " + std::to_string(i));
     bool b1 = cw_service->batchData(toBatch);
 
     EXPECT_TRUE(b1);
-    EXPECT_EQ(0, test_publisher->getPublishSuccesses());
+    EXPECT_EQ(0, test_publisher->getPublishAttempts());
     EXPECT_EQ(i, log_batcher->getCurrentBatchSize());
     EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   }
 
-  ASSERT_EQ(5, log_batcher->getMaxBatchSize());
+  ASSERT_EQ(size, log_batcher->getPublishTriggerBatchSize());
   std::string toBatch("test message publish trigger");
   bool b1 = cw_service->batchData(toBatch);
 
@@ -265,12 +271,13 @@ TEST_F(PipelineTest, TestBatcherSize) {
 
   test_publisher->wait_for(std::chrono::seconds(1));
 
+  EXPECT_EQ(1, test_publisher->getPublishAttempts());
   EXPECT_EQ(1, test_publisher->getPublishSuccesses());
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
 }
 
-TEST_F(PipelineTest, TestPublisherFailureToFileManager) {
+TEST_F(PipelineTest, TestSinglePublisherFailureToFileManager) {
 
   std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
   // hookup to the service
@@ -302,17 +309,94 @@ TEST_F(PipelineTest, TestPublisherFailureToFileManager) {
   EXPECT_EQ(1, fileManager->written_count);
 }
 
-// TODO this currently barfs
-//int main(int argc, char** argv)
-//{
-//  Aws::Utils::Logging::InitializeAWSLogging(
-//      Aws::MakeShared<Aws::Utils::Logging::ConsoleLogSystem>(
-//          "RunUnitTests", Aws::Utils::Logging::LogLevel::Trace));
-//  ::testing::InitGoogleMock(&argc, argv);
-//  int exitCode = RUN_ALL_TESTS();
-//  Aws::Utils::Logging::ShutdownAWSLogging();
-//  return exitCode;
-//}
+TEST_F(PipelineTest, TestPublisherIntermittant) {
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  // 50-50 chance
+  std::bernoulli_distribution d(0.5);
+
+  int expected_success = 0;
+
+  for(int i=1; i<=50; i++) {
+
+      bool force_failure = d(gen);
+
+      std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
+      // hookup to the service
+      log_batcher->setLogFileManager(fileManager);
+
+      // batch
+      std::string toBatch("TestPublisherIntermittant");
+      EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
+      bool b1 = cw_service->batchData(toBatch);
+      EXPECT_EQ(1, log_batcher->getCurrentBatchSize());
+      EXPECT_EQ(true, b1);
+
+      // force failure
+      test_publisher->setForceFailure(force_failure);
+
+      if (!force_failure) {
+        expected_success++;
+      }
+
+      // publish
+      bool b2 = cw_service->publishBatchedData();
+      test_publisher->wait_for(std::chrono::seconds(1));
+
+      EXPECT_TRUE(b2);
+      EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
+
+      auto expected_state = force_failure ? PublisherState::NOT_CONNECTED : PublisherState::CONNECTED;
+      EXPECT_EQ(expected_state, test_publisher->getPublisherState());
+      EXPECT_EQ(expected_success, test_publisher->getPublishSuccesses());
+      EXPECT_EQ(i, test_publisher->getPublishAttempts());
+
+      float expected_percentage = (float) expected_success / (float) i * 100.0f;
+      EXPECT_FLOAT_EQ(expected_percentage, test_publisher->getPublishSuccessPercentage());
+
+      fileManager->wait_for_millis(std::chrono::milliseconds(100));
+      //check that the filemanger callback worked
+      EXPECT_EQ(force_failure ? 1 : 0, fileManager->written_count);
+    }
+}
+
+TEST_F(PipelineTest, TestBatchDataTooFast) {
+
+  size_t max = 10;
+  std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
+  // hookup to the service
+  log_batcher->setLogFileManager(fileManager);
+  log_batcher->setMaxAllowableBatchSize(max);
+
+  EXPECT_EQ(max, log_batcher->getMaxAllowableBatchSize());
+
+  for(size_t i=1; i<=max; i++) {
+    std::string toBatch("test message " + std::to_string(i));
+    bool b1 = cw_service->batchData(toBatch);
+
+    EXPECT_TRUE(b1);
+    EXPECT_EQ(0, test_publisher->getPublishAttempts());
+    EXPECT_EQ(i, log_batcher->getCurrentBatchSize());
+    EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
+  }
+
+  std::string toBatch("iocaine powder");
+  bool b = cw_service->batchData(toBatch);
+
+  EXPECT_TRUE(b);
+  EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
+  EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState()); // hasn't changed since not attempted
+  EXPECT_EQ(0, test_publisher->getPublishSuccesses());
+  EXPECT_EQ(0, test_publisher->getPublishAttempts());
+  EXPECT_EQ(0.0f, test_publisher->getPublishSuccessPercentage());
+
+  fileManager->wait_for_millis(std::chrono::milliseconds(200));
+
+  // check that the filemanger callback worked
+  EXPECT_EQ(1, fileManager->written_count);
+  EXPECT_EQ(max + 1, fileManager->last_data_size);
+}
 
 int main(int argc, char ** argv)
 {

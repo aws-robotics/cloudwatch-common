@@ -57,13 +57,13 @@ TEST_F(FileManagerStrategyTest, restart_without_token) {
   const std::string data2 = "test_data_2";
   {
     FileManagerStrategy file_manager_strategy(options);
-    EXPECT_NO_THROW(file_manager_strategy.initialize());
+    EXPECT_NO_THROW(file_manager_strategy.start());
     file_manager_strategy.write(data1);
     file_manager_strategy.write(data2);
   }
   {
     FileManagerStrategy file_manager_strategy(options);
-    EXPECT_NO_THROW(file_manager_strategy.initialize());
+    EXPECT_NO_THROW(file_manager_strategy.start());
     std::string result1, result2;
     file_manager_strategy.read(result1);
     file_manager_strategy.read(result2);
@@ -78,7 +78,7 @@ TEST_F(FileManagerStrategyTest, restart_without_token) {
 //  const std::string data2 = "test_data_2";
 //  {
 //    FileManagerStrategy file_manager_strategy(options);
-//    EXPECT_NO_THROW(file_manager_strategy.initialize());
+//    EXPECT_NO_THROW(file_manager_strategy.start());
 //    file_manager_strategy.write(data1);
 //    file_manager_strategy.write(data2);
 //    std::string result1;
@@ -87,7 +87,7 @@ TEST_F(FileManagerStrategyTest, restart_without_token) {
 //  }
 //  {
 //    FileManagerStrategy file_manager_strategy(options);
-//    EXPECT_NO_THROW(file_manager_strategy.initialize());
+//    EXPECT_NO_THROW(file_manager_strategy.start());
 //    std::string result2;
 //    DataToken token2 = file_manager_strategy.read(result2);
 //    EXPECT_EQ(data2, result2);
@@ -98,7 +98,7 @@ TEST_F(FileManagerStrategyTest, fail_token_restart_from_last_location) {
   const std::string data1 = "test_data_1";
   const std::string data2 = "test_data_2";
   FileManagerStrategy file_manager_strategy(options);
-  EXPECT_NO_THROW(file_manager_strategy.initialize());
+  EXPECT_NO_THROW(file_manager_strategy.start());
   file_manager_strategy.write(data1);
   file_manager_strategy.write(data2);
   std::string result1;
@@ -118,21 +118,21 @@ TEST_F(FileManagerStrategyTest, fail_token_restart_from_last_location) {
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
-TEST_F(FileManagerStrategyTest, initialize_success) {
+TEST_F(FileManagerStrategyTest, start_success) {
   FileManagerStrategy file_manager_strategy(options);
-  EXPECT_NO_THROW(file_manager_strategy.initialize());
+  EXPECT_NO_THROW(file_manager_strategy.start());
 }
 
 TEST_F(FileManagerStrategyTest, discover_stored_files) {
   const std::string test_data = "test_data";
   {
     FileManagerStrategy file_manager_strategy(options);
-    EXPECT_NO_THROW(file_manager_strategy.initialize());
+    EXPECT_NO_THROW(file_manager_strategy.start());
     file_manager_strategy.write(test_data);
   }
   {
     FileManagerStrategy file_manager_strategy(options);
-    EXPECT_NO_THROW(file_manager_strategy.initialize());
+    EXPECT_NO_THROW(file_manager_strategy.start());
     EXPECT_TRUE(file_manager_strategy.isDataAvailable());
     std::string result;
     DataToken token = file_manager_strategy.read(result);
@@ -147,7 +147,7 @@ TEST_F(FileManagerStrategyTest, rotate_large_files) {
   options.maximum_file_size_in_bytes = max_file_size_in_bytes;
   {
     FileManagerStrategy file_manager_strategy(options);
-    file_manager_strategy.initialize();
+    file_manager_strategy.start();
     std::string data1 = "This is some long data that is longer than 10 bytes";
     file_manager_strategy.write(data1);
     long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
@@ -163,7 +163,7 @@ TEST_F(FileManagerStrategyTest, resolve_token_deletes_file) {
   const std::string test_data = "test_data";
   {
     FileManagerStrategy file_manager_strategy(options);
-    file_manager_strategy.initialize();
+    file_manager_strategy.start();
     EXPECT_FALSE(file_manager_strategy.isDataAvailable());
     file_manager_strategy.write(test_data);
     EXPECT_TRUE(file_manager_strategy.isDataAvailable());
@@ -173,7 +173,7 @@ TEST_F(FileManagerStrategyTest, resolve_token_deletes_file) {
   }
   {
     FileManagerStrategy file_manager_strategy(options);
-    file_manager_strategy.initialize();
+    file_manager_strategy.start();
     EXPECT_FALSE(file_manager_strategy.isDataAvailable());
   }
 }
@@ -186,7 +186,7 @@ TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
   options.storage_limit_in_bytes = storage_limit;
   {
     FileManagerStrategy file_manager_strategy(options);
-    file_manager_strategy.initialize();
+    file_manager_strategy.start();
     const std::string string_25_bytes = "This is 25 bytes of data.";
     file_manager_strategy.write(string_25_bytes);
     long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
