@@ -30,6 +30,7 @@
 
 #include <chrono>
 #include <stdexcept>
+#include <string>
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -45,11 +46,17 @@ static const std::chrono::milliseconds kDequeueDuration = std::chrono::milliseco
  * @tparam T the type to be published to cloudwatch
  * @tparam D the type to be batched and converted to the cloudwatch published type T
  */
-template<typename T, typename D>
-class CloudWatchService : public Aws::DataFlow::InputStage<TaskPtr<T>>, public RunnableService {
+template<typename D, typename T> //logtype, string
+class CloudWatchService : public Aws::DataFlow::InputStage<TaskPtr<std::list<T>>>, public RunnableService {
 public:
-  CloudWatchService(std::shared_ptr<Publisher<T>> publisher,
-    std::shared_ptr<DataBatcher<D>> batcher) : RunnableService() {
+    /**
+     * @throws invalid argument if either publisher or batcher are null
+     * @param publisher
+     * @param batcher
+     * @return
+     */
+  CloudWatchService(std::shared_ptr<Publisher<std::list<T>>> publisher,
+    std::shared_ptr<DataBatcher<T>> batcher) : RunnableService() {
 
     if (nullptr == publisher) {
       throw "Invalid argument: log_publisher cannot be null";
@@ -107,11 +114,19 @@ public:
    * @param data_to_batch
    */
   virtual inline bool batchData(const D &data_to_batch) {
-    return batcher_->batchData(data_to_batch);
+
+    // get the current timestamp
+    std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch());
+
+    return this->batchData(data_to_batch, ms);
   }
 
   virtual inline bool batchData(const D &data_to_batch, const std::chrono::milliseconds &milliseconds) {
-    return batcher_->batchData(data_to_batch, milliseconds);
+
+    // convert
+    T t = convertInputToBatched(data_to_batch, milliseconds);
+    return batcher_->batchData(t);
   }
 
   /**
@@ -145,15 +160,19 @@ public:
     return this->number_dequeued_.load();
   }
 
+
 protected:
+
+  virtual T convertInputToBatched(const D &input, const std::chrono::milliseconds &milliseconds) = 0;
+
 
   /**
    * Main workhorse thread that dequeues from the source and calls Task run.
    */
   void work() {
 
-    TaskPtr<T> task_to_publish;
-    bool is_dequeued = Aws::DataFlow::InputStage<TaskPtr<T>>::getSource()->dequeue(task_to_publish, dequeue_duration_);
+    TaskPtr<std::list<T>> task_to_publish;
+    bool is_dequeued = Aws::DataFlow::InputStage<TaskPtr<std::list<T>>>::getSource()->dequeue(task_to_publish, dequeue_duration_);
 
     if (is_dequeued) {
       AWS_LOGSTREAM_INFO(__func__, "Dequeued " << this->number_dequeued_++);
@@ -165,10 +184,9 @@ protected:
     }
   }
 
-
-  std::shared_ptr<FileUploadStreamer<T>> log_file_upload_streamer_; //kept here for startup and shutdown
-  std::shared_ptr<Publisher<T>> publisher_; //kept here for startup shutdown
-  std::shared_ptr<DataBatcher<D>> batcher_;
+  std::shared_ptr<FileUploadStreamer<std::list<T>>> log_file_upload_streamer_; // kept here for startup and shutdown
+  std::shared_ptr<Publisher<std::list<T>>> publisher_; // kept here for startup shutdown
+  std::shared_ptr<DataBatcher<T>> batcher_; // kept here for startup shutdown
   /**
    * Duration to wait for work from the queue.
    */
@@ -182,15 +200,32 @@ private:
 };
 
 // hide the template from userland
-class LogService : public CloudWatchService<LogType, std::string> {
+class LogService : public CloudWatchService<std::string, Aws::CloudWatchLogs::Model::InputLogEvent> {
 public:
 
   LogService(std::shared_ptr<FileUploadStreamer<LogType>> log_file_upload_streamer,
           std::shared_ptr<Publisher<LogType>> log_publisher,
-          std::shared_ptr<DataBatcher<std::string>> log_batcher)
+          std::shared_ptr<DataBatcher<Aws::CloudWatchLogs::Model::InputLogEvent>> log_batcher)
           : CloudWatchService(log_publisher, log_batcher) {
 
-    this->log_file_upload_streamer_ = log_file_upload_streamer;
+    this->log_file_upload_streamer_ = log_file_upload_streamer; // allow null
+  }
+
+  /**
+  * Convert an input string and timestamp to a log event.
+  *
+  * @param input
+  * @param milliseconds
+  * @return
+  */
+  virtual Aws::CloudWatchLogs::Model::InputLogEvent convertInputToBatched(const std::string &input, const std::chrono::milliseconds &milliseconds) override {
+
+    Aws::CloudWatchLogs::Model::InputLogEvent log_event;
+
+    log_event.SetMessage(input.c_str());
+    log_event.SetTimestamp(milliseconds.count());
+
+    return log_event;
   }
 
 };

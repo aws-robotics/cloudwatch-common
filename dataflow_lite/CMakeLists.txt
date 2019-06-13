@@ -78,15 +78,29 @@ if(GMOCK_LIBRARY)
           test/dataflow/observed_queue_test.cpp
           test/dataflow/queue_monitor_test.cpp
           )
+  target_include_directories(test_dataflow_utilities
+          PRIVATE include
+          PRIVATE ${aws_common_INCLUDE_DIRS}
+          PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+          )
+  target_link_libraries(test_dataflow_utilities
+          ${GTEST_LIBRARIES}
+          pthread
+          ${GMOCK_LIBRARY}
+          ${PROJECT_NAME})
 
-  target_include_directories(test_common_utilities
-        PRIVATE include
-        PRIVATE ${aws_common_INCLUDE_DIRS}
-        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
-        )
-  target_link_libraries(test_common_utilities
-        ${GTEST_LIBRARIES}
-        pthread
-        ${GMOCK_LIBRARY}
-        ${PROJECT_NAME})
+  add_common_gtest(test_service_utilties
+          test/utils/observable_object_test.cpp
+          test/utils/runnable_service_test.cpp
+          test/utils/data_batcher_test.cpp
+          )
+  target_include_directories(test_service_utilties
+          PRIVATE include
+          PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+          )
+  target_link_libraries(test_service_utilties
+          ${GTEST_LIBRARIES}
+          pthread
+          ${GMOCK_LIBRARY}
+          ${PROJECT_NAME})
 endif()

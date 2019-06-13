@@ -132,7 +132,7 @@ public:
       log_batcher = std::make_shared<LogBatcher>();
 
       //  log service owns the streamer, batcher, and publisher
-      cw_service = std::make_shared<CloudWatchService<LogType, std::string>> (test_publisher, log_batcher);
+      cw_service = std::make_shared<LogService> (nullptr, test_publisher, log_batcher);
 
       stream_data_queue = std::make_shared<TaskObservedQueue<LogType>>();
       queue_monitor = std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
@@ -154,9 +154,9 @@ public:
     }
 
 protected:
-    std::shared_ptr<LogBatcher> log_batcher;
     std::shared_ptr<TestPublisher> test_publisher;
-    std::shared_ptr<CloudWatchService<LogType, std::string>> cw_service;
+    std::shared_ptr<LogBatcher> log_batcher;
+    std::shared_ptr<LogService> cw_service;
 
     std::shared_ptr<TaskObservedQueue<LogType>> stream_data_queue;
     std::shared_ptr<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>queue_monitor;
@@ -229,10 +229,10 @@ TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
  */
 TEST_F(PipelineTest, TestBatcherSize) {
 
-  EXPECT_EQ(SIZE_MAX, log_batcher->getPublishTriggerBatchSize()); // not initialized
+  EXPECT_EQ(SIZE_MAX, log_batcher->getTriggerBatchSize()); // not initialized
   size_t size = 5;
-  log_batcher->setPublishTriggerBatchSize(size); // setting the size will trigger a publish when the collection is full
-  EXPECT_EQ(size, log_batcher->getPublishTriggerBatchSize());
+  log_batcher->setTriggerBatchSize(size); // setting the size will trigger a publish when the collection is full
+  EXPECT_EQ(size, log_batcher->getTriggerBatchSize());
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
 
@@ -246,7 +246,7 @@ TEST_F(PipelineTest, TestBatcherSize) {
     EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   }
 
-  ASSERT_EQ(size, log_batcher->getPublishTriggerBatchSize());
+  ASSERT_EQ(size, log_batcher->getTriggerBatchSize());
   std::string toBatch("test message publish trigger");
   bool b1 = cw_service->batchData(toBatch);
 
@@ -367,7 +367,7 @@ TEST_F(PipelineTest, TestBatchDataTooFast) {
   std::string toBatch("iocaine powder");
   bool b = cw_service->batchData(toBatch);
 
-  EXPECT_TRUE(b);
+  EXPECT_FALSE(b);
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState()); // hasn't changed since not attempted
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());

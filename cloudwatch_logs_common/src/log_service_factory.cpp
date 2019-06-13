@@ -75,9 +75,9 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   queue_monitor->addSource(stream_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
 
   auto ls = std::make_shared<LogService>(file_upload_streamer, publisher, log_batcher);
-  queue_monitor >> *ls;
+  ls->setSource(queue_monitor);
 
   ls->start(); // todo should we allow the user to start?
 
-  return ls;
+  return nullptr;
 }
