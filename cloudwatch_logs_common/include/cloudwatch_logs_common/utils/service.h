@@ -47,6 +47,8 @@ public:
      */
     virtual bool shutdown() = 0;
 
+    // todo getStatusString : useful for debugging
+
 //protected:
 //    void getState() {
 //      return state_.load();

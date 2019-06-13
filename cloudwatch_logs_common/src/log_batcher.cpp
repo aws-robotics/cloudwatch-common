@@ -34,11 +34,12 @@
 
 using namespace Aws::CloudWatchLogs;
 
-LogBatcher::LogBatcher() : DataBatcher() {
-  this->batched_data_ = std::make_shared<LogType>();
-}
 
-LogBatcher::LogBatcher(size_t size) : DataBatcher(size) {
+LogBatcher::LogBatcher(size_t max_allowable_batch_size, size_t publish_trigger_size) : DataBatcher(publish_trigger_size) {
+
+  validateConfigurableSizes(publish_trigger_size, max_allowable_batch_size);
+
+  this->max_allowable_batch_size_.store(max_allowable_batch_size);
   this->batched_data_ = std::make_shared<LogType>();
 }
 
@@ -63,9 +64,12 @@ bool LogBatcher::batchData(const std::string &log_msg_formatted, const std::chro
   auto log_event = convertToLogEvent(log_msg_formatted, milliseconds);
   this->batched_data_->push_back(log_event);
 
+  // check if we exceeded our allowable limit
+  handleSizeExceeded();
+
   // publish if the size has been configured
-  auto mbs = this->getMaxBatchSize();
-  if (mbs != DataBatcher::kDefaultBatchSize && this->batched_data_->size() >= mbs) {
+  auto mbs = this->getPublishTriggerBatchSize();
+  if (mbs != DataBatcher::kDefaultTriggerSize && this->batched_data_->size() >= mbs) {
     this->publishBatchedData();
   }
   return true;
@@ -114,7 +118,28 @@ bool LogBatcher::publishBatchedData() {
   }
 }
 
-//todo implement drop data function (queued too much too fast, etc)
+bool LogBatcher::handleSizeExceeded() {
+
+  std::lock_guard <std::recursive_mutex> lck(batch_and_publish_lock_);
+
+  auto allowed_max = this->max_allowable_batch_size_.load();
+
+  if (getCurrentBatchSize() > allowed_max) {
+    AWS_LOG_WARN(__func__, "Current batch size exceeded");
+
+    if (this->log_file_manager_) {
+      AWS_LOG_INFO(__func__, "Writing data to file");
+      log_file_manager_->write(*this->batched_data_);
+      this->batched_data_ = std::make_shared<LogType>();
+
+    } else {
+      AWS_LOG_WARN(__func__, "Dropping data");
+    }
+
+    return true;
+  }
+  return false;
+}
 
 bool LogBatcher::start() {
   return true;
@@ -132,3 +157,23 @@ void LogBatcher::setLogFileManager(std::shared_ptr<Aws::CloudWatchLogs::Utils::F
   this->log_file_manager_ = log_file_manager;
 }
 
+size_t LogBatcher::getMaxAllowableBatchSize() {
+  return this->max_allowable_batch_size_.load();
+}
+
+void LogBatcher::setMaxAllowableBatchSize(size_t new_value) {
+
+  //todo move all this config to DataBatcher, need to check both variables when set
+  validateConfigurableSizes(this->getPublishTriggerBatchSize(), new_value);
+
+  this->max_allowable_batch_size_.store(new_value);
+}
+
+void LogBatcher::validateConfigurableSizes(size_t publish_trigger_size, size_t max_allowable_batch_size) {
+  // if the publish_trigger_sizeis defined and larger than the max_allowable_batch_size then data
+  // will never be published, but dropped every time limit has been reached
+
+  if (publish_trigger_size != DataBatcher::kDefaultTriggerSize && publish_trigger_size > max_allowable_batch_size) {
+    throw std::invalid_argument("publish_trigger_size cannot be greater than max_allowable_batch_size");
+  }
+}
