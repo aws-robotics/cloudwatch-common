@@ -19,8 +19,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <cloudwatch_logs_common/dataflow/observed_queue.h>
-#include <cloudwatch_logs_common/dataflow/queue_monitor.h>
+#include <dataflow_lite/dataflow/observed_queue.h>
+#include <dataflow_lite/dataflow/queue_monitor.h>
 
 using namespace Aws::DataFlow;
 using namespace ::testing;

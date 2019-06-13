@@ -20,10 +20,10 @@
 
 #include <aws/core/utils/logging/LogMacros.h>
 
-#include <cloudwatch_logs_common/dataflow/pipeline.h>
-#include <cloudwatch_logs_common/dataflow/status_monitor.h>
-#include <cloudwatch_logs_common/dataflow/observed_queue.h>
-#include <cloudwatch_logs_common/dataflow/queue_monitor.h>
+#include <dataflow_lite/dataflow/pipeline.h>
+#include <dataflow_lite/dataflow/status_monitor.h>
+#include <dataflow_lite/dataflow/observed_queue.h>
+#include <dataflow_lite/dataflow/queue_monitor.h>
 #include <cloudwatch_logs_common/file_upload/task_utils.h>
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_task.h>

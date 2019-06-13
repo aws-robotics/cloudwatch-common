@@ -20,9 +20,9 @@
 #include <mutex>
 #include <semaphore.h>
 
-#include <cloudwatch_logs_common/dataflow/sink.h>
-#include <cloudwatch_logs_common/dataflow/source.h>
-#include <cloudwatch_logs_common/dataflow/status_monitor.h>
+#include <dataflow_lite/dataflow/sink.h>
+#include <dataflow_lite/dataflow/source.h>
+#include <dataflow_lite/dataflow/status_monitor.h>
 
 namespace Aws {
 namespace DataFlow {

@@ -23,7 +23,7 @@
 
 #include "cloudwatch_logs_common/file_upload/task_utils.h"
 #include "cloudwatch_logs_common/file_upload/file_manager_strategy.h"
-#include "cloudwatch_logs_common/dataflow/status_monitor.h"
+#include <dataflow_lite/dataflow/status_monitor.h>
 
 #include <cloudwatch_logs_common/utils/service.h>
 

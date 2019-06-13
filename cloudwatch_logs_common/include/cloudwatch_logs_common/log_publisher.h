@@ -21,8 +21,8 @@
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
 #include <cloudwatch_logs_common/utils/log_file_manager.h>
 #include <cloudwatch_logs_common/file_upload/task_utils.h>
-#include <cloudwatch_logs_common/dataflow/status_monitor.h>
-#include <cloudwatch_logs_common/dataflow/queue_monitor.h>
+#include <dataflow_lite/dataflow/status_monitor.h>
+#include <dataflow_lite/dataflow/queue_monitor.h>
 #include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
 
 #include <cloudwatch_logs_common/utils/publisher.h>

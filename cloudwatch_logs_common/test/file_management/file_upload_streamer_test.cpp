@@ -23,7 +23,7 @@
 #include <cloudwatch_logs_common/file_upload/file_manager.h>
 #include <cloudwatch_logs_common/file_upload/file_management_factory.h>
 #include <cloudwatch_logs_common/utils/log_file_manager.h>
-#include <cloudwatch_logs_common/dataflow/dataflow.h>
+#include <dataflow_lite/dataflow/dataflow.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
