@@ -26,6 +26,26 @@ using namespace Aws::FileManagement;
 static const FileTokenInfo kTestToken1("fake_file", 0, false);
 static const FileTokenInfo kTestToken2("fake_file", 10, true);
 
+class TokenTest : public ::testing::Test {
+public:
+  void SetUp() override
+  {
+  }
+
+  void TearDown() override
+  {
+    std::experimental::filesystem::path test_folder{"token_backups/"};
+    if (std::experimental::filesystem::exists(test_folder)) {
+      std::experimental::filesystem::remove_all(test_folder);
+    }
+  }
+
+protected:
+  std::string backup_folder = "token_backups/";
+  std::string kBackupFilename = "token_store.info";
+  TokenStoreOptions options{backup_folder};
+};
+
 TEST(token_test, fail_unknown_token) {
   TokenStore token_store;
   EXPECT_THROW(token_store.fail(0), std::runtime_error);
@@ -94,7 +114,7 @@ TEST(token_test, test_backup_failed_file) {
   EXPECT_THAT(backup, testing::ElementsAre(kTestToken1));
 }
 
-TEST(token_test, test_token_backup_constructor) {
+TEST(token_test, test_token_restore) {
   std::vector<FileTokenInfo> backup;
   {
     TokenStore token_store;
@@ -103,7 +123,8 @@ TEST(token_test, test_token_backup_constructor) {
     EXPECT_THAT(backup, testing::ElementsAre(kTestToken1));
   }
   {
-    TokenStore token_store(backup);
+    TokenStore token_store;
+    token_store.restore(backup);
     EXPECT_TRUE(token_store.isTokenAvailable(kTestToken1.file_path_));
     EXPECT_EQ(kTestToken1, token_store.popAvailableToken(kTestToken1.file_path_));
   }
@@ -117,6 +138,34 @@ TEST(token_test, test_backup_two_files) {
   auto backup = token_store.backup();
   EXPECT_THAT(backup, testing::UnorderedElementsAre(kTestToken1, test_token_2));
 }
+
+TEST_F(TokenTest, test_backup_to_disk) {
+  TokenStore token_store(options);
+  FileTokenInfo test_token_2("different_file", 10, true);
+  token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
+  token_store.createToken(test_token_2.file_path_, test_token_2.position_, test_token_2.eof_);
+  EXPECT_NO_THROW(token_store.backup_to_disk());
+  std::string backup_file = options.backup_directory + kBackupFilename;
+  EXPECT_TRUE(std::experimental::filesystem::exists(backup_file));
+}
+
+TEST_F(TokenTest, test_restore_from_disk) {
+  FileTokenInfo test_token_2("different_file", 10, true);
+  {
+    TokenStore token_store(options);
+    token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
+    token_store.createToken(test_token_2.file_path_, test_token_2.position_, test_token_2.eof_);
+    EXPECT_NO_THROW(token_store.backup_to_disk());
+    std::string backup_file = options.backup_directory + kBackupFilename;
+    EXPECT_TRUE(std::experimental::filesystem::exists(backup_file));
+  }
+  {
+    TokenStore token_store(options);
+    token_store.restore_from_disk();
+    EXPECT_THAT(token_store.backup(), testing::UnorderedElementsAre(kTestToken1, test_token_2));
+  }
+}
+
 
 int main(int argc, char** argv)
 {
