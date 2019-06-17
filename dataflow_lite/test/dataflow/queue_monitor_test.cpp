@@ -76,6 +76,10 @@ bool dequeueFunc(
 using std::placeholders::_1;
 using std::placeholders::_2;
 
+TEST(queue_demux_test, Sanity) {
+  ASSERT_TRUE(true);
+}
+
 TEST(queue_demux_test, single_source_test)
 {
   auto observed_queue = std::make_shared<MockObservedQueue>();
@@ -113,3 +117,8 @@ TEST(queue_demux_test, multi_source_test)
   EXPECT_FALSE(queue_monitor.dequeue(data, std::chrono::microseconds(0)));
 }
 
+int main(int argc, char ** argv)
+{
+  testing::InitGoogleMock(&argc, argv);
+  return RUN_ALL_TESTS();
+}

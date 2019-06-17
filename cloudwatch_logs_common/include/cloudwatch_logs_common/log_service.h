@@ -42,9 +42,12 @@ using namespace Aws::FileManagement;
 static const std::chrono::milliseconds kDequeueDuration = std::chrono::milliseconds(100);
 
 /**
+ * Generic class to batch and publish data to CloudWatch. Note: if the file_upload_streamer is set then data will be
+ * stored on disk if offline (data cannot be successfully sent) and in the event of send success data will be read
+ * from disk and sent.
  *
- * @tparam T the type to be published to cloudwatch
- * @tparam D the type to be batched and converted to the cloudwatch published type T
+ * @tparam D the type to be batched and converted to the CloudWatch published type T
+ * @tparam T the type to be published to CloudWatch, specific to the AWS SDk
  */
 template<typename D, typename T> //logtype, string
 class CloudWatchService : public Aws::DataFlow::InputStage<TaskPtr<std::list<T>>>, public RunnableService {
@@ -66,9 +69,9 @@ public:
       throw std::invalid_argument("Invalid argument: log_publisher cannot be null");
     }
 
-    this->log_file_upload_streamer_ = nullptr;
     this->publisher_ = publisher;
     this->batcher_ = batcher;
+    this->file_upload_streamer_ = nullptr;
     this->dequeue_duration_ = kDequeueDuration;
     this->number_dequeued_.store(0);
   }
@@ -76,42 +79,51 @@ public:
   ~CloudWatchService() = default;
 
   /**
-   * Start everything up.
+   * Start the publisher, batcher, and file upload streamer.
+   *
+   * @return true if everything started correctly
    */
   virtual bool start() {
+    bool started = true;
 
-    publisher_->start();
-    batcher_->start();
+    started &= publisher_->start();
+    started &= batcher_->start();
 
-    if (log_file_upload_streamer_) {
-      log_file_upload_streamer_->start();
+    if (file_upload_streamer_) {
+      started &= file_upload_streamer_->start();
     }
 
     //start the thread to dequeue
-    return RunnableService::start();
+    started &= RunnableService::start();
+
+    return started;
   }
 
   /**
    * Shut everything down.
+   *
+   * @return true if everything started correctly
    */
   virtual inline bool shutdown() {
-    bool b = true;
+    bool shutdown = true;
 
-    b &= publisher_->shutdown();
-    b &= batcher_->shutdown();
+    shutdown &= publisher_->shutdown();
+    shutdown &= batcher_->shutdown();
 
-    if (log_file_upload_streamer_) {
-      b &= log_file_upload_streamer_->shutdown();
+    if (file_upload_streamer_) {
+      shutdown &= file_upload_streamer_->shutdown();
     }
 
-    b &= RunnableService::shutdown();
+    shutdown &= RunnableService::shutdown();
 
-    return b;
+    return shutdown;
   }
 
   /**
-   * Userland entry point to batch data for publishing
+   * Entry point to batch data for publishing
+   *
    * @param data_to_batch
+   * @return true of the data was successfully batched, false otherwise
    */
   virtual inline bool batchData(const D &data_to_batch) {
 
@@ -122,6 +134,14 @@ public:
     return this->batchData(data_to_batch, ms);
   }
 
+
+  /**
+   * Entry point to batch data for publishing
+   *
+   * @param data_to_batch
+   * @param milliseconds timestamp of the data
+   * @return true of the data was successfully batched, false otherwise
+   */
   virtual inline bool batchData(const D &data_to_batch, const std::chrono::milliseconds &milliseconds) {
 
     // convert
@@ -130,8 +150,10 @@ public:
   }
 
   /**
-   * Publishing mechanism
+   * Publishing mechanism, force the batcher to yield its data to the publisher and attempt to send.
+   *
    * @param data_to_batch
+   *
    */
   virtual inline bool publishBatchedData() {
     if (batcher_) {
@@ -160,7 +182,6 @@ public:
     return this->number_dequeued_.load();
   }
 
-
 protected:
 
   virtual T convertInputToBatched(const D &input, const std::chrono::milliseconds &milliseconds) = 0;
@@ -184,9 +205,9 @@ protected:
     }
   }
 
-  std::shared_ptr<FileUploadStreamer<std::list<T>>> log_file_upload_streamer_; // kept here for startup and shutdown
-  std::shared_ptr<Publisher<std::list<T>>> publisher_; // kept here for startup shutdown
-  std::shared_ptr<DataBatcher<T>> batcher_; // kept here for startup shutdown
+  std::shared_ptr<FileUploadStreamer<std::list<T>>> file_upload_streamer_;
+  std::shared_ptr<Publisher<std::list<T>>> publisher_;
+  std::shared_ptr<DataBatcher<T>> batcher_;
   /**
    * Duration to wait for work from the queue.
    */
@@ -199,26 +220,31 @@ private:
   std::atomic<int> number_dequeued_;
 };
 
-// hide the template from userland
+/**
+ * Implementation to send logs to Cloudwatch. Note: though the batcher and publisher are required, the file streamer
+ * is not. If the file streamer is not provided then log data is dropped if any failure is observed during the
+ * attempt to publish.
+ */
 class LogService : public CloudWatchService<std::string, Aws::CloudWatchLogs::Model::InputLogEvent> {
 public:
 
-  LogService(std::shared_ptr<FileUploadStreamer<LogType>> log_file_upload_streamer,
-          std::shared_ptr<Publisher<LogType>> log_publisher,
-          std::shared_ptr<DataBatcher<Aws::CloudWatchLogs::Model::InputLogEvent>> log_batcher)
+  LogService(std::shared_ptr<Publisher<LogType>> log_publisher,
+          std::shared_ptr<DataBatcher<Aws::CloudWatchLogs::Model::InputLogEvent>> log_batcher,
+           std::shared_ptr<FileUploadStreamer<LogType>> log_file_upload_streamer = nullptr)
           : CloudWatchService(log_publisher, log_batcher) {
 
-    this->log_file_upload_streamer_ = log_file_upload_streamer; // allow null
+    this->file_upload_streamer_ = log_file_upload_streamer; // allow null, all this means is failures aren't written to file
   }
 
   /**
   * Convert an input string and timestamp to a log event.
   *
-  * @param input
-  * @param milliseconds
-  * @return
+  * @param input string input to be sent as a log
+  * @param milliseconds timestamp of the log event
+  * @return the AWS SDK log object to  be send to CloudWatch
   */
-  virtual Aws::CloudWatchLogs::Model::InputLogEvent convertInputToBatched(const std::string &input, const std::chrono::milliseconds &milliseconds) override {
+  virtual Aws::CloudWatchLogs::Model::InputLogEvent convertInputToBatched(const std::string &input,
+          const std::chrono::milliseconds &milliseconds) override {
 
     Aws::CloudWatchLogs::Model::InputLogEvent log_event;
 
@@ -230,6 +256,6 @@ public:
 
 };
 
-}
-}
+}  // namespace CloudWatchlogs
+}  // namespace AWS
 

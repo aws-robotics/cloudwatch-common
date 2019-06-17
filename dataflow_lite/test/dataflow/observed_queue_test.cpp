@@ -24,6 +24,7 @@
 
 using namespace Aws::DataFlow;
 
+
 void test_enqueue_dequeue(IObservedQueue<std::string> &observed_queue) {
   auto status_monitor = std::make_shared<StatusMonitor>();
   observed_queue.setStatusMonitor(status_monitor);
@@ -36,6 +37,10 @@ void test_enqueue_dequeue(IObservedQueue<std::string> &observed_queue) {
   EXPECT_EQ("hello", data);
   EXPECT_TRUE(observed_queue.empty());
   EXPECT_EQ(Status::UNAVAILABLE, status_monitor->getStatus());
+}
+
+TEST(observed_queue_test, Sanity) {
+  ASSERT_TRUE(true);
 }
 
 TEST(observed_queue_test, enqueue_dequeue_test) {
@@ -65,10 +70,4 @@ TEST(observed_queue_test, enqueue_blocked_dequeue_test) {
   ASSERT_TRUE(observed_queue.dequeue(data, std::chrono::microseconds(0)));
   EXPECT_EQ("hello", data);
   EXPECT_TRUE(observed_queue.tryEnqueue("hello", std::chrono::seconds(0)));
-}
-
-int main(int argc, char ** argv)
-{
-  testing::InitGoogleMock(&argc, argv);
-  return RUN_ALL_TESTS();
 }
