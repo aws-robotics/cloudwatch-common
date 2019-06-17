@@ -18,59 +18,28 @@
 #include <gmock/gmock.h>
 
 #include <chrono>
-#include <mutex>
 #include <condition_variable>
-#include <string>
+#include <mutex>
 #include <random>
+#include <string>
+#include <thread>
 
 #include <aws/core/Aws.h>
-
-#include "cloudwatch_logs_common/log_service.h"
-#include "cloudwatch_logs_common/log_batcher.h"
-#include <file_management/file_upload/file_manager.h>
-#include <cloudwatch_logs_common/utils/publisher.h>
-#include <dataflow_lite/dataflow/dataflow.h>
-
 #include <aws/core/utils/logging/ConsoleLogSystem.h>
 
-#include <thread>         // std::this_thread::sleep_for
-#include <chrono>
+#include <cloudwatch_logs_common/log_service.h>
+#include <cloudwatch_logs_common/log_batcher.h>
+
+#include <cloudwatch_logs_common/utils/publisher.h>
+
+#include <file_management/file_upload/file_manager.h>
+
+#include <dataflow_lite/dataflow/dataflow.h>
+#include <dataflow_lite/utils/waiter.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 using namespace std::chrono_literals;
-
-/**
- * Class used to provide easy mechanisn to wait and notify
- */
-class Waiter
-{
-public:
-
-  void wait() {
-    std::unique_lock<std::mutex> lck(this->mtx);
-    cv.wait(lck);
-  }
-
-  void wait_for_millis(std::chrono::milliseconds millis) {
-    std::unique_lock<std::mutex> lck(this->mtx);
-    cv.wait_for(lck, millis);
-  }
-
-  void wait_for(std::chrono::seconds seconds) {
-    std::unique_lock<std::mutex> lck(this->mtx);
-    cv.wait_for(lck, seconds);
-  }
-
-  void notify() {
-    std::unique_lock<std::mutex> lck(this->mtx);
-    this->cv.notify_all(); //don't leave anyone blocking
-  }
-
-private:
-  std::condition_variable cv;
-  mutable std::mutex mtx;
-};
 
 /**
  * Test the publisher interface while ignoring all of the CloudWatch specific infrastructure.
@@ -149,7 +118,7 @@ public:
       log_batcher = std::make_shared<LogBatcher>();
 
       //  log service owns the streamer, batcher, and publisher
-      cw_service = std::make_shared<CloudWatchService<LogType, std::string>> (test_publisher, log_batcher);
+      cw_service = std::make_shared<LogService> (test_publisher, log_batcher);
 
       stream_data_queue = std::make_shared<TaskObservedQueue<LogType>>();
       queue_monitor = std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
@@ -171,9 +140,9 @@ public:
     }
 
 protected:
-    std::shared_ptr<LogBatcher> log_batcher;
     std::shared_ptr<TestPublisher> test_publisher;
-    std::shared_ptr<CloudWatchService<LogType, std::string>> cw_service;
+    std::shared_ptr<LogBatcher> log_batcher;
+    std::shared_ptr<LogService> cw_service;
 
     std::shared_ptr<TaskObservedQueue<LogType>> stream_data_queue;
     std::shared_ptr<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>queue_monitor;
@@ -246,10 +215,10 @@ TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
  */
 TEST_F(PipelineTest, TestBatcherSize) {
 
-  EXPECT_EQ(SIZE_MAX, log_batcher->getPublishTriggerBatchSize()); // not initialized
+  EXPECT_EQ(SIZE_MAX, log_batcher->getTriggerBatchSize()); // not initialized
   size_t size = 5;
-  log_batcher->setPublishTriggerBatchSize(size); // setting the size will trigger a publish when the collection is full
-  EXPECT_EQ(size, log_batcher->getPublishTriggerBatchSize());
+  log_batcher->setTriggerBatchSize(size); // setting the size will trigger a publish when the collection is full
+  EXPECT_EQ(size, log_batcher->getTriggerBatchSize());
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
 
@@ -263,7 +232,7 @@ TEST_F(PipelineTest, TestBatcherSize) {
     EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   }
 
-  ASSERT_EQ(size, log_batcher->getPublishTriggerBatchSize());
+  ASSERT_EQ(size, log_batcher->getTriggerBatchSize());
   std::string toBatch("test message publish trigger");
   bool b1 = cw_service->batchData(toBatch);
 
@@ -384,7 +353,7 @@ TEST_F(PipelineTest, TestBatchDataTooFast) {
   std::string toBatch("iocaine powder");
   bool b = cw_service->batchData(toBatch);
 
-  EXPECT_TRUE(b);
+  EXPECT_FALSE(b);
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState()); // hasn't changed since not attempted
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());

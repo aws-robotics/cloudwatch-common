@@ -15,25 +15,22 @@
 
 #include <list>
 #include <string>
+
 #include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_service_factory.h>
 #include <cloudwatch_logs_common/log_publisher.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
+#include <cloudwatch_logs_common/log_service.h>
+
 #include <file_management/file_upload/file_manager.h>
 #include <file_management/file_upload/file_management_factory.h>
 #include <file_management/file_upload/file_upload_task.h>
 
 #include <dataflow_lite/dataflow/dataflow.h>
 
-#include <cloudwatch_logs_common/log_service.h>
-
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
 
-
-// why not do all of this in the setup of LogService? it has ownership of everything
 std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   const std::string & log_group,
   const std::string & log_stream,
@@ -50,11 +47,11 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   auto queue_monitor =
       std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
   FileUploadStreamerOptions file_upload_options{cloudwatch_options.batch_size, cloudwatch_options.file_max_queue_size};
-  auto file_upload_streamer =
+  auto log_file_upload_streamer =
       Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager, file_upload_options);
 
   // connect publisher state changes to the File Streamer
-  publisher->addPublisherStateListener([upload_streamer = file_upload_streamer](const PublisherState& state) {
+  publisher->addPublisherStateListener([upload_streamer = log_file_upload_streamer](const PublisherState& state) {
     auto status =
       (state == PublisherState::CONNECTED) ? Aws::DataFlow::Status::AVAILABLE : Aws::DataFlow::Status::UNAVAILABLE;
     upload_streamer->onPublisherStateChange(status);
@@ -69,16 +66,16 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
 
   auto log_batcher = std::make_shared<LogBatcher>(); // todo pass in options
 
-  file_upload_streamer->setSink(file_data_queue);
+  log_file_upload_streamer->setSink(file_data_queue);
   queue_monitor->addSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
 
   log_batcher->setSink(stream_data_queue);
   queue_monitor->addSource(stream_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
 
-  auto ls = std::make_shared<LogService>(file_upload_streamer, publisher, log_batcher);
-  queue_monitor >> *ls; // todo rddesmon setSource?
+  auto log_service = std::make_shared<LogService>(publisher, log_batcher, log_file_upload_streamer);
+  log_service->setSource(queue_monitor);
 
-  ls->start(); // todo should we allow the user to start?
+  log_service->start(); // todo should we allow the user to start?
 
-  return ls;
+  return log_service;
 }
