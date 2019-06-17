@@ -18,72 +18,28 @@
 #include <gmock/gmock.h>
 
 #include <chrono>
-#include <mutex>
 #include <condition_variable>
-#include <string>
+#include <mutex>
 #include <random>
+#include <string>
+#include <thread>
 
 #include <aws/core/Aws.h>
-
-#include "cloudwatch_logs_common/log_service.h"
-#include "cloudwatch_logs_common/log_batcher.h"
-#include <file_management/file_upload/file_manager.h>
-#include <cloudwatch_logs_common/utils/publisher.h>
-#include <dataflow_lite/dataflow/dataflow.h>
-
 #include <aws/core/utils/logging/ConsoleLogSystem.h>
 
-#include <thread>         // std::this_thread::sleep_for
-#include <chrono>
+#include <cloudwatch_logs_common/log_service.h>
+#include <cloudwatch_logs_common/log_batcher.h>
+
+#include <cloudwatch_logs_common/utils/publisher.h>
+
+#include <file_management/file_upload/file_manager.h>
+
+#include <dataflow_lite/dataflow/dataflow.h>
+#include <dataflow_lite/utils/waiter.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 using namespace std::chrono_literals;
-
-/**
- * Class used to provide easy mechanisn to wait and notify
- */
-class Waiter
-{
-public:
-  TestPublisher() : Publisher() {};
-  virtual ~TestPublisher() {
-    shutdown();
-  };
-
-  bool start() override {return true;}
-
-  // notify just in case anyone is waiting
-  bool shutdown() override {
-    std::unique_lock<std::mutex> lck(this->mtx);
-    this->cv.notify_all(); //don't leave anyone blocking
-    return true;
-  };
-
-  void wait() {
-    std::unique_lock<std::mutex> lck(this->mtx);
-    cv.wait(lck);
-  }
-
-  void wait_for_millis(std::chrono::milliseconds millis) {
-    std::unique_lock<std::mutex> lck(this->mtx);
-    cv.wait_for(lck, millis);
-  }
-
-  void wait_for(std::chrono::seconds seconds) {
-    std::unique_lock<std::mutex> lck(this->mtx);
-    cv.wait_for(lck, seconds);
-  }
-
-  void notify() {
-    std::unique_lock<std::mutex> lck(this->mtx);
-    this->cv.notify_all(); //don't leave anyone blocking
-  }
-
-private:
-  std::condition_variable cv;
-  mutable std::mutex mtx;
-};
 
 /**
  * Test the publisher interface while ignoring all of the CloudWatch specific infrastructure.
@@ -132,7 +88,7 @@ public:
       log_batcher = std::make_shared<LogBatcher>();
 
       //  log service owns the streamer, batcher, and publisher
-      cw_service = std::make_shared<LogService> (nullptr, test_publisher, log_batcher);
+      cw_service = std::make_shared<LogService> (test_publisher, log_batcher);
 
       stream_data_queue = std::make_shared<TaskObservedQueue<LogType>>();
       queue_monitor = std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();

@@ -52,8 +52,8 @@ bool LogBatcher::publishBatchedData() {
   if (getSink()) {
     auto data_to_queue = std::make_shared<BasicTask<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(this->batched_data_);
 
-    std::shared_ptr<LogType> lt = this->batched_data_;
-    std::shared_ptr<BasicTask<LogType>> p = std::make_shared<BasicTask<LogType>>(lt);
+    std::shared_ptr<LogType> log_type = this->batched_data_;
+    std::shared_ptr<BasicTask<LogType>> log_task = std::make_shared<BasicTask<LogType>>(log_type);
 
     if (log_file_manager_ ) {
 
@@ -69,10 +69,10 @@ bool LogBatcher::publishBatchedData() {
           }
       };
 
-      p->setOnCompleteFunction(function);
+      log_task->setOnCompleteFunction(function);
     }
 
-    getSink()->enqueue(p); //todo should we try enqueue? if we can't queue (too fast then we need to fail to file
+    getSink()->enqueue(log_task); //todo should we try enqueue? if we can't queue (too fast then we need to fail to file
 
     this->resetBatchedData();
     return true;
@@ -99,7 +99,7 @@ bool LogBatcher::start() {
   return true;
 }
 bool LogBatcher::shutdown() {
-  DataBatcher::resetBatchedData();
+  this->resetBatchedData();
   return true;
 }
 

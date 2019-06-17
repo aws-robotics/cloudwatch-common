@@ -56,7 +56,7 @@ public:
   /**
    *
    * @param data_to_batch
-   * @return
+   * @return true if the data was accepted, false if internal size limit was exceeded
    */
   virtual bool batchData(const T &data_to_batch) {
     std::lock_guard<std::recursive_mutex> lk(mtx);
@@ -73,7 +73,7 @@ public:
     // publish if the size has been configured
     auto mbs = this->getTriggerBatchSize();
     if (mbs != kDefaultTriggerSize && this->batched_data_->size() >= mbs) {
-      publishBatchedData();
+      publishBatchedData(); // don't return publisher success / fail here
     }
 
     return true;
