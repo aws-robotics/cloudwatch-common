@@ -124,13 +124,13 @@ void TokenStore::backup_to_disk() {
     std::experimental::filesystem::remove(file_path);
   }
   std::ofstream token_store_file;
-  token_store_file.open(file_path, std::ios_base::app);
+  token_store_file.open(file_path);
   if (token_store_file.bad()) {
     AWS_LOG_WARN(__func__,
                  "Unable to open file: %s", file_path.c_str());
   }
   for (const FileTokenInfo &token_info : token_store_backup) {
-    token_store_file << token_info << std::endl;
+    token_store_file << token_info.serialize() << std::endl;
   }
   token_store_file.close();
 }
@@ -156,7 +156,12 @@ void TokenStore::restore_from_disk() {
     std::getline(token_store_read_stream, line);
     if (!line.empty()) {
       FileTokenInfo token_info;
-      token_info.deserialize(line);
+      try {
+        token_info.deserialize(line);
+      } catch (std::runtime_error e) {
+        AWS_LOG_ERROR(__func__, "Unable to parse token backup line: %s. Skipping.", line.c_str());
+        continue;
+      }
       file_tokens.push_back(token_info);
     }
   }

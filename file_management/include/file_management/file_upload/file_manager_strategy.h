@@ -73,31 +73,23 @@ public:
 
   };
 
-  friend std::ostream & operator<<(std::ostream &out, const FileTokenInfo &token_info) {
+  std::string serialize() const {
     Aws::Utils::Json::JsonValue json_value;
-    Aws::String file_path(token_info.file_path_.c_str());
+    Aws::String file_path(file_path_.c_str());
     json_value
-        .WithInt64(kPositionKey, token_info.position_)
-        .WithBool(kEofKey, token_info.eof_)
+        .WithInt64(kPositionKey, position_)
+        .WithBool(kEofKey, eof_)
         .WithString(kFilePathKey, file_path);
-    out <<  json_value.View().WriteCompact();
-    return out;
+    std::string serialized_json(json_value.View().WriteCompact().c_str());
+    return serialized_json;
   }
-
-  // TODO: Want to get this to work instead of deserialize but can't figure out how.
-//  friend std::istream & operator>>(std::istream &in, FileTokenInfo &token_info) {
-//    Aws::String aws_str(in.rdbuf().c_str());
-//    Aws::Utils::Json::JsonValue json_value(aws_str);
-//    auto view = json_value.View();
-//    token_info.position_ = view.GetInt64(kPositionKey);
-//    token_info.eof_ = view.GetBool(kEofKey);
-//    token_info.file_path_ = view.GetString(kFilePathKey).c_str();
-//    return in;
-//  }
 
   void deserialize(std::string token_info_json) {
     Aws::String aws_str(token_info_json.c_str());
     Aws::Utils::Json::JsonValue json_value(aws_str);
+    if (!json_value.WasParseSuccessful()) {
+      throw std::runtime_error("Unable to parse JSON");
+    }
     auto view = json_value.View();
     position_ = view.GetInt64(kPositionKey);
     eof_ = view.GetBool(kEofKey);
