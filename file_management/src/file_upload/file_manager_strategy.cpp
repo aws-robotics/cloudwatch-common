@@ -32,10 +32,10 @@ static const std::string kTokenStoreFile("token_store.info");
 
 TokenStore::TokenStore(const TokenStoreOptions &options) {
   options_ = options;
-  validateOptions();
+  initializeBackupDirectory();
 }
 
-void TokenStore::validateOptions() {
+void TokenStore::initializeBackupDirectory() {
   // todo this needs stricter checking: throw if unrecoverable
 
   if (options_.backup_directory[options_.backup_directory.size()-1] != '/') {
@@ -175,27 +175,24 @@ FileManagerStrategy::FileManagerStrategy(const FileManagerStrategyOptions &optio
   options_ = options;
   stored_files_size_ = 0;
   active_write_file_size_ = 0;
-  // validate needs to happen here and throw
 }
 
 bool FileManagerStrategy::start() {
-  validateOptions();
+  initializeStorage();
   initializeTokenStore();
   discoverStoredFiles();
   rotateWriteFile();
   return true;
 }
 
-void FileManagerStrategy::validateOptions() {
-
-  // todo this needs stricter checking: throw if unrecoverable
-
+void FileManagerStrategy::initializeStorage() {
   if (options_.storage_directory[options_.storage_directory.size()-1] != '/') {
     options_.storage_directory += '/';
   }
   auto storage = std::experimental::filesystem::path(options_.storage_directory);
   if (!std::experimental::filesystem::exists(storage)) {
     std::experimental::filesystem::create_directory(storage);
+    stored_files_size_ = 0;
   }
 }
 
@@ -211,6 +208,7 @@ bool FileManagerStrategy::isDataAvailable() {
 }
 
 // @todo (rddesmon) catch and wrap failure to open exceptions
+// @todo Deal with race conditions if there are multiple writers
 void FileManagerStrategy::write(const std::string &data) {
   checkIfFileShouldRotate(data.size());
   checkIfStorageLimitHasBeenReached(data.size());

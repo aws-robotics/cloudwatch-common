@@ -142,8 +142,6 @@ public:
 
   explicit TokenStore(const TokenStoreOptions &options);
 
-  void validateOptions();
-
   /**
    * @param file_name to lookup
    * @return true if a staged token is available to read for that file
@@ -209,6 +207,8 @@ public:
 
 
 private:
+  void initializeBackupDirectory();
+
   std::unordered_map<DataToken, FileTokenInfo> token_store_;
   std::unordered_map<std::string, std::list<DataToken>> file_tokens_;
   std::unordered_map<std::string, FileTokenInfo> staged_tokens_;
@@ -237,9 +237,7 @@ public:
 
   ~FileManagerStrategy() = default;
 
-  void validateOptions();
-
-  void initialize() override; //todo consider start from Service
+  bool start() override;
 
   bool isDataAvailable() override;
 
@@ -252,6 +250,8 @@ public:
   bool shutdown() override;
 
 private:
+  void initializeStorage();
+
   void initializeTokenStore();
 
   void discoverStoredFiles();
@@ -278,13 +278,13 @@ private:
   /**
    * Disk space used by all stored files. Does not include active_write_file_size_.
    */
-  size_t  stored_files_size_;
+  std::atomic<size_t> stored_files_size_;
 
   /**
    * Current file name to write to.
    */
   std::string active_write_file_;
-  size_t active_write_file_size_;
+  std::atomic<size_t> active_write_file_size_;
 
   std::string active_read_file_;
   std::unique_ptr<std::ifstream> active_read_file_stream_ = nullptr;
