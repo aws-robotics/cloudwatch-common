@@ -214,6 +214,8 @@ private:
   std::unordered_map<std::string, FileTokenInfo> staged_tokens_;
 
   TokenStoreOptions options_;
+
+  std::random_device rand_device;
 };
 
 /**
