@@ -58,7 +58,8 @@ FileTokenInfo TokenStore::popAvailableToken(const std::string &file_name) {
 }
 
 DataToken TokenStore::createToken(const std::string &file_name, const long & streampos, bool is_eof) {
-  DataToken token = std::rand() % UINT64_MAX;
+  std::mt19937_64 rand( rand_device() );
+  DataToken token = rand();
   FileTokenInfo token_info = FileTokenInfo(file_name, streampos, is_eof);
   token_store_[token] = token_info;
   if (file_tokens_.find(file_name) == file_tokens_.end()) {
