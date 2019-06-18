@@ -135,6 +135,7 @@ TEST_F(PipelineTest, TestBatcherManualPublish) {
   EXPECT_TRUE(b1);
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
+  EXPECT_FALSE(cw_service->isConnected());
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());
   EXPECT_EQ(0, test_publisher->getPublishAttempts());
   EXPECT_EQ(0.0f, test_publisher->getPublishSuccessPercentage());
@@ -146,6 +147,7 @@ TEST_F(PipelineTest, TestBatcherManualPublish) {
   EXPECT_TRUE(b2);
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
+  EXPECT_TRUE(cw_service->isConnected());
   EXPECT_EQ(1, test_publisher->getPublishSuccesses());
   EXPECT_EQ(1, test_publisher->getPublishAttempts());
   EXPECT_EQ(100.0f, test_publisher->getPublishSuccessPercentage());
@@ -168,6 +170,7 @@ TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
   EXPECT_TRUE(b1);
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
+  EXPECT_FALSE(cw_service->isConnected());
   EXPECT_EQ(100, log_batcher->getCurrentBatchSize());
 
   // force a publish
@@ -178,6 +181,7 @@ TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
   EXPECT_EQ(1, test_publisher->getPublishSuccesses());
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
+  EXPECT_TRUE(cw_service->isConnected());
 }
 
 /**
@@ -191,6 +195,7 @@ TEST_F(PipelineTest, TestBatcherSize) {
   EXPECT_EQ(size, log_batcher->getTriggerBatchSize());
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
+  EXPECT_FALSE(cw_service->isConnected());
 
   for(size_t i=1; i<size; i++) {
     std::string toBatch("test message " + std::to_string(i));
@@ -200,6 +205,7 @@ TEST_F(PipelineTest, TestBatcherSize) {
     EXPECT_EQ(0, test_publisher->getPublishAttempts());
     EXPECT_EQ(i, log_batcher->getCurrentBatchSize());
     EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
+    EXPECT_FALSE(cw_service->isConnected());
   }
 
   ASSERT_EQ(size, log_batcher->getTriggerBatchSize());
@@ -214,6 +220,7 @@ TEST_F(PipelineTest, TestBatcherSize) {
   EXPECT_EQ(1, test_publisher->getPublishSuccesses());
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
+  EXPECT_TRUE(cw_service->isConnected());
 }
 
 TEST_F(PipelineTest, TestSinglePublisherFailureToFileManager) {
@@ -239,6 +246,7 @@ TEST_F(PipelineTest, TestSinglePublisherFailureToFileManager) {
   EXPECT_TRUE(b2);
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState());
+  EXPECT_FALSE(cw_service->isConnected());
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());
   EXPECT_EQ(1, test_publisher->getPublishAttempts());
   EXPECT_EQ(0.0f, test_publisher->getPublishSuccessPercentage());
@@ -288,6 +296,8 @@ TEST_F(PipelineTest, TestPublisherIntermittant) {
 
       auto expected_state = force_failure ? PublisherState::NOT_CONNECTED : PublisherState::CONNECTED;
       EXPECT_EQ(expected_state, test_publisher->getPublisherState());
+      EXPECT_EQ(!force_failure, cw_service->isConnected());  // if failure forced then not connected
+
       EXPECT_EQ(expected_success, test_publisher->getPublishSuccesses());
       EXPECT_EQ(i, test_publisher->getPublishAttempts());
 
@@ -326,6 +336,7 @@ TEST_F(PipelineTest, TestBatchDataTooFast) {
   EXPECT_FALSE(b);
   EXPECT_EQ(0, log_batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState()); // hasn't changed since not attempted
+  EXPECT_FALSE(cw_service->isConnected());
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());
   EXPECT_EQ(0, test_publisher->getPublishAttempts());
   EXPECT_EQ(0.0f, test_publisher->getPublishSuccessPercentage());

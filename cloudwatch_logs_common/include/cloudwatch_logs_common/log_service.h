@@ -182,6 +182,15 @@ public:
     return this->number_dequeued_.load();
   }
 
+  /**
+   * Return the current connected state.
+   *
+   * @return true if a connection to CloudWatch has been made, false if offline.
+   */
+  virtual bool isConnected() {
+    return this->publisher_->getPublisherState() == PublisherState::CONNECTED;
+  }
+
 protected:
 
   virtual T convertInputToBatched(const D &input, const std::chrono::milliseconds &milliseconds) = 0;
