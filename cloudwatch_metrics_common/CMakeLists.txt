@@ -63,6 +63,7 @@ if(GMOCK_LIBRARY)
           test/metric_manager_test.cpp
           test/metric_publisher_test.cpp
           test/file_manager_test.cpp
+          test/metric_serialization_test.cpp
           )
   target_include_directories(test_cloudwatch_metrics
           PRIVATE include
