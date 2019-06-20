@@ -27,8 +27,8 @@ namespace Metrics {
 namespace Utils {
 
 //------------- Definitions --------------//
-using MetricType = std::list<Aws::CloudWatch::Model::MetricDatum>;
-using MetricTypePtr = MetricType *;
+using MetricDatumList = std::list<Aws::CloudWatch::Model::MetricDatum>;
+using MetricDatumListPtr = MetricDatumList *;
 //----------------------------------------//
 
 using FileManagement::FileManager;
@@ -36,10 +36,10 @@ using FileManagement::FileManagerStrategy;
 using FileManagement::FileObject;
 
 /**
- * The log specific file manager. Handles the specific writes of log data.
+ * The metric specific file manager. Handles the specific writes of metric data.
  */
 class MetricFileManager :
-    public FileManager<MetricType> {
+    public FileManager<MetricDatumList> {
 public:
   /**
    * Default Constructor.
@@ -53,9 +53,17 @@ public:
 
   ~MetricFileManager() override = default;
 
-  void write(const MetricType &data) override;
+  /**
+   * Write data to disk
+   * @param data - A reference to a list of metrics to write to disk
+   */
+  void write(const MetricDatumList &data) override;
 
-  FileObject<MetricType> readBatch(size_t batch_size) override;
+  /**
+   * Read a batch of data from disk
+   * @param batch_size - The number of items to read
+   */
+  FileObject<MetricDatumList> readBatch(size_t batch_size) override;
 };
 
 }  // namespace Utils
