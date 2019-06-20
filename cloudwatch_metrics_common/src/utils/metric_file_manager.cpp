@@ -30,9 +30,9 @@ namespace CloudWatch {
 namespace Metrics {
 namespace Utils {
 
-FileObject<MetricType> MetricFileManager::readBatch(
+FileObject<MetricDatumList> MetricFileManager::readBatch(
     size_t batch_size) {
-  MetricType log_data;
+  MetricDatumList log_data;
   FileManagement::DataToken data_token;
   std::list<FileManagement::DataToken> data_tokens;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
@@ -40,29 +40,36 @@ FileObject<MetricType> MetricFileManager::readBatch(
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line;
     if (!file_manager_strategy_->isDataAvailable()) {
+      AWS_LOG_DEBUG(__func__, "No more metric data available on disk");
       break;
     }
     data_token = read(line);
     Aws::String aws_line(line.c_str());
-    auto metric_datum = deserializeMetricDatum(aws_line);
+    Aws::CloudWatch::Model::MetricDatum metric_datum;
+    try {
+      metric_datum = deserializeMetricDatum(aws_line);
+    } catch (std::invalid_argument &e) {
+      AWS_LOG_ERROR(__func__, e.what());
+      continue;
+    }
     actual_batch_size++;
     log_data.push_back(metric_datum);
     data_tokens.push_back(data_token);
   }
-  FileObject<MetricType> file_object;
+  FileObject<MetricDatumList> file_object;
   file_object.batch_data = log_data;
   file_object.batch_size = actual_batch_size;
   file_object.data_tokens = data_tokens;
   return file_object;
 }
 
-void MetricFileManager::write(const MetricType &data) {
+void MetricFileManager::write(const MetricDatumList &data) {
   for (const Model::MetricDatum &model: data) {
     auto metric_serial = serializeMetricDatum(model);
     file_manager_strategy_->write(metric_serial.c_str());
   }
   if (FileManager::file_status_monitor_) {
-    AWS_LOG_INFO(__func__,
+    AWS_LOG_DEBUG(__func__,
                  "Set file status available");
     FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
   }

@@ -50,17 +50,23 @@ static const std::vector<Aws::String> required_properties = {
     kTimestampKey
 };
 
-Model::MetricDatum deserializeMetricDatum(const Aws::String  &basic_string) {
+/**
+ * Take a JSON string and turn it into a MetricDatum object.
+ * @throws invalid_argument if the JSON is invalid or is missing required parameters.
+ * @param basic_string - a reference to a JSON string. This should be a single object.
+ * @return datum - a MetricDatum created from this string.
+ */
+Model::MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
   Aws::String aws_str(basic_string.c_str());
   JsonValue json_value(aws_str);
   if (!json_value.WasParseSuccessful()) {
-    throw std::invalid_argument("Failed to parse JSON value");
+    throw std::invalid_argument("Failed to parse metric JSON string");
   }
   auto view = json_value.View();
   for (const auto property : required_properties) {
     if (!view.KeyExists(property)) {
       std::string property_name(property.c_str());
-      throw std::invalid_argument("Could not find required property " + property_name + " in JSON data");
+      throw std::invalid_argument("Could not find required property " + property_name + " in JSON string");
     }
   }
 
@@ -121,6 +127,11 @@ Model::MetricDatum deserializeMetricDatum(const Aws::String  &basic_string) {
   return datum;
 }
 
+/**
+ * Take a MetricDatum object and turn it into a JSON string
+ * @param datum - A single MetricDatum object
+ * @return json_string - a JSON representation of the passed in MetricDatum object.
+ */
 Aws::String serializeMetricDatum(const Model::MetricDatum &datum) {
   Aws::Utils::Json::JsonValue json_value;
 

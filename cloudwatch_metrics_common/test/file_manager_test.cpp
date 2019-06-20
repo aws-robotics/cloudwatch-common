@@ -56,7 +56,7 @@ TEST_F(FileManagerTest, file_manager_write) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   MetricFileManager file_manager(file_manager_strategy);
   file_manager.start();
-  MetricType metric_data;
+  MetricDatumList metric_data;
   Aws::CloudWatch::Model::MetricDatum input_event;
   input_event.AddCounts(2);
   input_event.SetMetricName("MetricName");
