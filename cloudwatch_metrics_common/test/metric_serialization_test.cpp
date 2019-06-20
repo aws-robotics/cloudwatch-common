@@ -9,7 +9,7 @@
 #include <cloudwatch_metrics_common/utils/metric_serialization.hpp>
 
 using namespace Aws::CloudWatch::Metrics::Utils;
-using MetricDatum = Aws::CloudWatch::Model::MetricDatum;
+using namespace Aws::CloudWatch::Model;
 
 class TestMetricSerialization : public ::testing::Test
 {
@@ -64,12 +64,14 @@ TEST_F(TestMetricSerialization, serialize_returns_valid_string) {
   const Aws::Vector<double> counts = {111, 222};
   const int storage_resolution = 25;
   const auto metric_unit = Aws::CloudWatch::Model::StandardUnit::Seconds;
+  const double value = 42;
 
   metric_datum.SetTimestamp(ts);
   metric_datum.SetMetricName(metric_name);
   metric_datum.SetCounts(counts);
   metric_datum.SetStorageResolution(storage_resolution);
   metric_datum.SetUnit(metric_unit);
+  metric_datum.SetValue(value);
   Aws::String serialized_metric_datum;
   EXPECT_NO_THROW(serialized_metric_datum = serializeMetricDatum(metric_datum));
   MetricDatum result;
@@ -79,6 +81,7 @@ TEST_F(TestMetricSerialization, serialize_returns_valid_string) {
   EXPECT_EQ(result.GetCounts(), counts);
   EXPECT_EQ(result.GetStorageResolution(), storage_resolution);
   EXPECT_EQ(result.GetUnit(), metric_unit);
+  EXPECT_EQ(result.GetValue(), value);
 }
 
 TEST_F(TestMetricSerialization, statistic_values_work) {
@@ -96,4 +99,33 @@ TEST_F(TestMetricSerialization, statistic_values_work) {
   EXPECT_EQ(result.GetStatisticValues().GetMaximum(), statistic_values.GetMaximum());
   EXPECT_EQ(result.GetStatisticValues().GetSampleCount(), statistic_values.GetSampleCount());
   EXPECT_EQ(result.GetStatisticValues().GetSum(), statistic_values.GetSum());
+}
+
+TEST_F(TestMetricSerialization, values_work) {
+  const Aws::Vector<double> values = {44, 55, 66};
+
+  metric_datum.SetValues(values);
+  Aws::String serialized_metric_datum =  serializeMetricDatum(metric_datum);
+  MetricDatum result = deserializeMetricDatum(serialized_metric_datum);
+
+  EXPECT_EQ(result.GetValues(), values);
+}
+
+TEST_F(TestMetricSerialization, dimensions_work) {
+  auto d1 = Dimension();
+  d1.SetName("d1");
+  d1.SetValue("d1-value");
+  auto d2 = Dimension();
+  d2.SetName("d2");
+  d2.SetValue("d2-value");
+  const Aws::Vector<Dimension> dimensions = {d1, d2};
+
+  metric_datum.SetDimensions(dimensions);
+  Aws::String serialized_metric_datum =  serializeMetricDatum(metric_datum);
+  MetricDatum result = deserializeMetricDatum(serialized_metric_datum);
+
+  EXPECT_EQ(result.GetDimensions()[0].GetName(), d1.GetName());
+  EXPECT_EQ(result.GetDimensions()[0].GetValue(), d1.GetValue());
+  EXPECT_EQ(result.GetDimensions()[1].GetName(), d2.GetName());
+  EXPECT_EQ(result.GetDimensions()[1].GetValue(), d2.GetValue());
 }
