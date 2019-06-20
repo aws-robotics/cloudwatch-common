@@ -21,6 +21,7 @@
 
 #include <cloudwatch_metrics_common/metric_publisher.hpp>
 #include <cloudwatch_metrics_common/utils/shared_object.hpp>
+#include <cloudwatch_metrics_common/utils/metric_file_manager.hpp>
 #include <iostream>
 #include <list>
 #include <map>
