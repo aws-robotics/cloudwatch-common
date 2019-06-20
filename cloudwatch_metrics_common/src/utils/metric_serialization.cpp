@@ -33,6 +33,10 @@ static constexpr const char* kCountsKey = "counts";
 static constexpr const char* kCountKey = "count";
 static constexpr const char* kDimensionsKey = "dimensions";
 static constexpr const char* kStatisticValuesKey = "statisticvalues";
+static constexpr const char* kStatisticValuesMinimumKey = "minimum";
+static constexpr const char* kStatisticValuesMaximumKey = "maximum";
+static constexpr const char* kStatisticValuesSampleCountKey = "sample_count";
+static constexpr const char* kStatisticValuesSumKey = "sum";
 static constexpr const char* kValuesKey = "values";
 static constexpr const char* kStorageResolutionKey = "storage_resolution";
 static constexpr const char* kUnitKey = "unit";
@@ -70,8 +74,18 @@ Model::MetricDatum deserializeMetricDatum(const Aws::String  &basic_string) {
   }
   // @todo (rddesmon) deserialization of complex types
   // datum.SetDimensions();
-  // datum.SetStatisticValues();
   // datum.SetValues();
+
+  if (view.KeyExists(kStatisticValuesKey)) {
+    auto sv_view = view.GetObject(kStatisticValuesKey);
+    auto statistic_values = Aws::CloudWatch::Model::StatisticSet();
+    statistic_values.SetMinimum(sv_view.GetDouble(kStatisticValuesMinimumKey));
+    statistic_values.SetMaximum(sv_view.GetDouble(kStatisticValuesMaximumKey));
+    statistic_values.SetSampleCount(sv_view.GetDouble(kStatisticValuesSampleCountKey));
+    statistic_values.SetSum(sv_view.GetDouble(kStatisticValuesSumKey));
+    datum.SetStatisticValues(statistic_values);
+  }
+
   if (view.KeyExists(kStorageResolutionKey)) {
     datum.SetStorageResolution(view.GetInteger(kStorageResolutionKey));
   }
@@ -93,12 +107,21 @@ Aws::String serializeMetricDatum(const Model::MetricDatum &datum) {
     counts_array[i] = count_json;
   }
 
+  const Aws::CloudWatch::Model::StatisticSet statistic_values = datum.GetStatisticValues();
+  JsonValue statistic_values_json;
+  statistic_values_json
+    .WithDouble(kStatisticValuesMinimumKey, statistic_values.GetMinimum())
+    .WithDouble(kStatisticValuesMaximumKey, statistic_values.GetMaximum())
+    .WithDouble(kStatisticValuesSampleCountKey, statistic_values.GetSampleCount())
+    .WithDouble(kStatisticValuesSumKey, statistic_values.GetSum());
+
   json_value
     .WithInt64(kTimestampKey, datum.GetTimestamp().Millis())
     .WithString(kMetricNameKey, datum.GetMetricName())
     .WithInteger(kStorageResolutionKey, datum.GetStorageResolution())
     .WithInteger(kUnitKey, static_cast<int>(datum.GetUnit()))
-    .WithArray(kCountsKey, counts_array);
+    .WithArray(kCountsKey, counts_array)
+    .WithObject(kStatisticValuesKey, statistic_values_json);
   return json_value.View().WriteCompact();
 }
 
