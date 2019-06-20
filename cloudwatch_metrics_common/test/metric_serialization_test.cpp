@@ -17,8 +17,7 @@ protected:
   MetricDatum metric_datum;
 
   void SetUp() override {
-
-
+    metric_datum = MetricDatum();
   }
 
   void TearDown() override {
@@ -73,7 +72,6 @@ TEST_F(TestMetricSerialization, serialize_returns_valid_string) {
   metric_datum.SetUnit(metric_unit);
   Aws::String serialized_metric_datum;
   EXPECT_NO_THROW(serialized_metric_datum = serializeMetricDatum(metric_datum));
-
   MetricDatum result;
   EXPECT_NO_THROW(result = deserializeMetricDatum(serialized_metric_datum));
   EXPECT_EQ(result.GetTimestamp().Millis(), ts.Millis());
@@ -81,4 +79,21 @@ TEST_F(TestMetricSerialization, serialize_returns_valid_string) {
   EXPECT_EQ(result.GetCounts(), counts);
   EXPECT_EQ(result.GetStorageResolution(), storage_resolution);
   EXPECT_EQ(result.GetUnit(), metric_unit);
+}
+
+TEST_F(TestMetricSerialization, statistic_values_work) {
+  auto statistic_values = Aws::CloudWatch::Model::StatisticSet();
+  statistic_values.SetMinimum(5);
+  statistic_values.SetMaximum(15);
+  statistic_values.SetSampleCount(3);
+  statistic_values.SetSum(30);
+
+  metric_datum.SetStatisticValues(statistic_values);
+  Aws::String serialized_metric_datum =  serializeMetricDatum(metric_datum);
+  MetricDatum result = deserializeMetricDatum(serialized_metric_datum);
+
+  EXPECT_EQ(result.GetStatisticValues().GetMinimum(), statistic_values.GetMinimum());
+  EXPECT_EQ(result.GetStatisticValues().GetMaximum(), statistic_values.GetMaximum());
+  EXPECT_EQ(result.GetStatisticValues().GetSampleCount(), statistic_values.GetSampleCount());
+  EXPECT_EQ(result.GetStatisticValues().GetSum(), statistic_values.GetSum());
 }
