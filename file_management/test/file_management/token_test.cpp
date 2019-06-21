@@ -144,7 +144,7 @@ TEST_F(TokenTest, test_backup_to_disk) {
   FileTokenInfo test_token_2("different_file", 10, true);
   token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
   token_store.createToken(test_token_2.file_path_, test_token_2.position_, test_token_2.eof_);
-  EXPECT_NO_THROW(token_store.backup_to_disk());
+  EXPECT_NO_THROW(token_store.backupToDisk());
   std::string backup_file = options.backup_directory + kBackupFilename;
   EXPECT_TRUE(std::experimental::filesystem::exists(backup_file));
 }
@@ -156,12 +156,12 @@ TEST_F(TokenTest, test_restore_from_disk) {
     TokenStore token_store(options);
     token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
     token_store.createToken(test_token_2.file_path_, test_token_2.position_, test_token_2.eof_);
-    EXPECT_NO_THROW(token_store.backup_to_disk());
+    EXPECT_NO_THROW(token_store.backupToDisk());
     EXPECT_TRUE(std::experimental::filesystem::exists(backup_file));
   }
   {
     TokenStore token_store(options);
-    token_store.restore_from_disk();
+    token_store.restoreFromDisk();
     EXPECT_THAT(token_store.backup(), testing::UnorderedElementsAre(kTestToken1, test_token_2));
   }
 }
@@ -173,7 +173,7 @@ TEST_F(TokenTest, test_restoring_from_disk_with_invalid_json) {
     TokenStore token_store(options);
     token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
     token_store.createToken(test_token_2.file_path_, test_token_2.position_, test_token_2.eof_);
-    EXPECT_NO_THROW(token_store.backup_to_disk());
+    EXPECT_NO_THROW(token_store.backupToDisk());
     EXPECT_TRUE(std::experimental::filesystem::exists(backup_file));
   }
   {
@@ -183,7 +183,7 @@ TEST_F(TokenTest, test_restoring_from_disk_with_invalid_json) {
   }
   {
     TokenStore token_store(options);
-    EXPECT_NO_THROW(token_store.restore_from_disk());
+    EXPECT_NO_THROW(token_store.restoreFromDisk());
     EXPECT_THAT(token_store.backup(), testing::UnorderedElementsAre(kTestToken1, test_token_2));
   }
 }

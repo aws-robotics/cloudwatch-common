@@ -75,18 +75,17 @@ public:
 
   std::string serialize() const {
     Aws::Utils::Json::JsonValue json_value;
-    Aws::String file_path(file_path_.c_str());
+    const Aws::String file_path(file_path_.c_str());
     json_value
         .WithInt64(kPositionKey, position_)
         .WithBool(kEofKey, eof_)
         .WithString(kFilePathKey, file_path);
-    std::string serialized_json(json_value.View().WriteCompact().c_str());
-    return serialized_json;
+    return std::string(json_value.View().WriteCompact().c_str());
   }
 
-  void deserialize(std::string token_info_json) {
-    Aws::String aws_str(token_info_json.c_str());
-    Aws::Utils::Json::JsonValue json_value(aws_str);
+  void deserialize(const std::string token_info_json) {
+    const Aws::String aws_str(token_info_json.c_str());
+    const Aws::Utils::Json::JsonValue json_value(aws_str);
     if (!json_value.WasParseSuccessful()) {
       throw std::runtime_error("Unable to parse JSON");
     }
@@ -191,7 +190,7 @@ public:
    * Backup the token store to a file on disk
    * @param directory
    */
-  void backup_to_disk();
+  void backupToDisk();
 
   /**
    * Restore tokens from a vector
@@ -202,7 +201,7 @@ public:
   /**
    * Restore the token store from a file saved to disk
    */
-  void restore_from_disk();
+  void restoreFromDisk();
 
 
 
