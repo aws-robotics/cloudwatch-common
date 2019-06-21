@@ -2,8 +2,8 @@
 Changelog for package cloudwatch_metrics_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.2 (2019-06-21)
+------------------
 * Adding old release to change log
 * Update package.xml for 1.0.2 release
   Signed-off-by: Ryan Newell <ryanewel@amazon.com>
