@@ -30,15 +30,14 @@ namespace FileManagement {
 static const std::string kConfigFile("file_management.info");
 static const std::string kTokenStoreFile("token_store.info");
 
-TokenStore::TokenStore(const TokenStoreOptions &options) {
-  options_ = options;
+TokenStore::TokenStore(const TokenStoreOptions &options) : options_{options}{
   initializeBackupDirectory();
 }
 
 void TokenStore::initializeBackupDirectory() {
   // todo this needs stricter checking: throw if unrecoverable
 
-  if (options_.backup_directory[options_.backup_directory.size()-1] != '/') {
+  if (options_.backup_directory.back() != '/') {
     options_.backup_directory += '/';
   }
   auto backup_directory = std::experimental::filesystem::path(options_.backup_directory);
@@ -60,11 +59,7 @@ FileTokenInfo TokenStore::popAvailableToken(const std::string &file_name) {
 DataToken TokenStore::createToken(const std::string &file_name, const long & streampos, bool is_eof) {
   std::mt19937_64 rand( rand_device() );
   DataToken token = rand();
-  FileTokenInfo token_info = FileTokenInfo(file_name, streampos, is_eof);
-  token_store_[token] = token_info;
-  if (file_tokens_.find(file_name) == file_tokens_.end()) {
-    file_tokens_[file_name] = std::list<DataToken>();
-  }
+  token_store_.emplace(token, FileTokenInfo(file_name, streampos, is_eof));
   file_tokens_[file_name].push_back(token);
   return token;
 }
@@ -118,7 +113,7 @@ std::vector<FileTokenInfo> TokenStore::backup() {
   return token_backup;
 }
 
-void TokenStore::backup_to_disk() {
+void TokenStore::backupToDisk() {
   auto file_path = std::experimental::filesystem::path(options_.backup_directory + kTokenStoreFile);
   std::vector<FileTokenInfo> token_store_backup = backup();
   if (std::experimental::filesystem::exists(file_path)) {
@@ -142,7 +137,7 @@ void TokenStore::restore(const std::vector<FileTokenInfo> &file_tokens) {
   }
 }
 
-void TokenStore::restore_from_disk() {
+void TokenStore::restoreFromDisk() {
   // read through each line.
   // For each line the first 4 bytes are position, next byte is eof, the remainder are a string of file path
   // Will this change depending on OS / platform? Will that matter? Should I use another serialization library.
@@ -187,7 +182,7 @@ bool FileManagerStrategy::start() {
 }
 
 void FileManagerStrategy::initializeStorage() {
-  if (options_.storage_directory[options_.storage_directory.size()-1] != '/') {
+  if (options_.storage_directory.back() != '/') {
     options_.storage_directory += '/';
   }
   auto storage = std::experimental::filesystem::path(options_.storage_directory);
@@ -201,7 +196,7 @@ void FileManagerStrategy::initializeTokenStore() {
 
   TokenStoreOptions options{options_.storage_directory};
   token_store_ = std::make_unique<TokenStore>(options);
-  token_store_->restore_from_disk();
+  token_store_->restoreFromDisk();
 }
 
 bool FileManagerStrategy::isDataAvailable() {
@@ -266,7 +261,7 @@ void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
 
 bool FileManagerStrategy::shutdown() {
   // todo can this stuff throw?
-  token_store_->backup_to_disk();
+  token_store_->backupToDisk();
   auto config_file_path = std::experimental::filesystem::path(options_.storage_directory + kConfigFile);
   if (std::experimental::filesystem::exists(config_file_path)) {
     std::experimental::filesystem::remove(config_file_path);
