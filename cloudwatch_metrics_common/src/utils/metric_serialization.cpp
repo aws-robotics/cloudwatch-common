@@ -20,10 +20,10 @@
 #include <aws/monitoring/model/StandardUnit.h>
 #include <iterator>
 #include <string>
+#include <cloudwatch_metrics_common/definitions/definitions.h>
 
 namespace Aws {
-namespace CloudWatch {
-namespace Metrics {
+namespace CloudWatchMetrics {
 namespace Utils {
 
 using JsonValue = Aws::Utils::Json::JsonValue;
@@ -56,7 +56,7 @@ static const std::vector<Aws::String> required_properties = {
  * @param basic_string - a reference to a JSON string. This should be a single object.
  * @return datum - a MetricDatum created from this string.
  */
-Model::MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
+MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
   Aws::String aws_str(basic_string.c_str());
   JsonValue json_value(aws_str);
   if (!json_value.WasParseSuccessful()) {
@@ -70,7 +70,7 @@ Model::MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
     }
   }
 
-  Model::MetricDatum datum;
+  MetricDatum datum;
   datum.SetMetricName(view.GetString(kMetricNameKey));
   datum.SetTimestamp(view.GetInt64(kTimestampKey));
 
@@ -109,7 +109,7 @@ Model::MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
     datum.SetStorageResolution(view.GetInteger(kStorageResolutionKey));
   }
   if (view.KeyExists(kUnitKey)) {
-    datum.SetUnit(Model::StandardUnit(view.GetInteger(kUnitKey)));
+    datum.SetUnit(Aws::CloudWatch::Model::StandardUnit(view.GetInteger(kUnitKey)));
   }
   if (view.KeyExists(kValueKey)) {
     datum.SetValue(view.GetDouble(kValueKey));
@@ -132,7 +132,7 @@ Model::MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
  * @param datum - A single MetricDatum object
  * @return json_string - a JSON representation of the passed in MetricDatum object.
  */
-Aws::String serializeMetricDatum(const Model::MetricDatum &datum) {
+Aws::String serializeMetricDatum(const MetricDatum &datum) {
   Aws::Utils::Json::JsonValue json_value;
 
   const Aws::Vector<double> counts = datum.GetCounts();
@@ -180,6 +180,5 @@ Aws::String serializeMetricDatum(const Model::MetricDatum &datum) {
 }
 
 }  // namespace Utils
-}  // namespace Metrics
-}  // namespace Cloudwatch
+}  // namespace CloudwatchMetrics
 }  // namespace Aws

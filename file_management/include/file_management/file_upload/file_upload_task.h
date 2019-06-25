@@ -15,10 +15,15 @@
 
 #pragma once
 
-#include <future>
 #include <file_management/file_upload/task_utils.h>
 #include <file_management/file_upload/file_manager.h>
+
+#include <dataflow_lite/dataflow/observed_queue.h>
+#include <dataflow_lite/dataflow/sink.h>
+
+#include <future>
 #include <memory>
+
 #pragma once
 
 namespace Aws {
@@ -52,7 +57,6 @@ class Task {
 
   virtual T& getBatchData() = 0;
 };
-
 
 template<typename T>
 class BasicTask :

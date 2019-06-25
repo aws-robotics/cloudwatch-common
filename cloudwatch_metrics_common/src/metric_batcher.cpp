@@ -15,7 +15,8 @@
 
 #include <aws/core/Aws.h>
 #include <aws/core/utils/logging/LogMacros.h>
-#include <cloudwatch_logs_common/log_batcher.h>
+
+#include <cloudwatch_metrics_common/metric_batcher.h>
 
 #include <file_management/file_upload/file_upload_task.h>
 
@@ -29,54 +30,52 @@
 #include <string>
 #include <stdexcept>
 
-using namespace Aws::CloudWatchLogs;
+using namespace Aws::CloudWatchMetrics;
 using namespace Aws::FileManagement;
 
-
-LogBatcher::LogBatcher(size_t max_allowable_batch_size,
+MetricBatcher::MetricBatcher(size_t max_allowable_batch_size,
                        size_t publish_trigger_size)
-                       : DataBatcher(max_allowable_batch_size, publish_trigger_size) {
+        : DataBatcher(max_allowable_batch_size, publish_trigger_size) {
 }
 
-LogBatcher::~LogBatcher() = default;
+MetricBatcher::~MetricBatcher() = default;
 
-bool LogBatcher::publishBatchedData() {
+bool MetricBatcher::publishBatchedData() {
   std::lock_guard<std::recursive_mutex> lk(mtx);
 
   // is there anything to send?
   if (getCurrentBatchSize() == 0) {
-    AWS_LOGSTREAM_DEBUG(__func__, "LogBatcher: nothing batched to publish");
+    AWS_LOGSTREAM_DEBUG(__func__, "Nothing batched to publish");
     return false;
   }
 
-  // getSink is kind of race-y: filed as ROS-2169
   if (getSink()) {
 
-    std::shared_ptr<LogType> log_type = this->batched_data_;
-    std::shared_ptr<BasicTask<LogType>> log_task = std::make_shared<BasicTask<LogType>>(log_type);
+    auto metrics_to_publish = this->batched_data_;
+    std::shared_ptr<BasicTask<MetricDatumCollection>> metric_task = std::make_shared<BasicTask<MetricDatumCollection>>(metrics_to_publish);
 
-    if (log_file_manager_ ) {
+    if (metric_file_manager_ ) {
 
       // register the task failure function
-      auto function = [&log_file_manager = this->log_file_manager_](const FileManagement::UploadStatus &upload_status,
-              const LogType &log_messages)
+      auto function = [&metric_file_manager = this->metric_file_manager_](const FileManagement::UploadStatus &upload_status,
+                                                                    const MetricDatumCollection &metrics_to_publish)
       {
-          if (!log_messages.empty()) {
+          if (!metrics_to_publish.empty()) {
             if (FileManagement::SUCCESS != upload_status) {
-              AWS_LOG_INFO(__func__, "Task failed: writing logs to file");
-              log_file_manager->write(log_messages);
+              AWS_LOG_INFO(__func__, "Task failed: writing metrics to file");
+              metric_file_manager->write(metrics_to_publish);
             }
           }
       };
 
-      log_task->setOnCompleteFunction(function);
+      metric_task->setOnCompleteFunction(function);
     }
 
-    bool enqueue_success = getSink()->tryEnqueue(log_task, this->getTryEnqueueDuration());
+    bool enqueue_success = getSink()->tryEnqueue(metric_task, this->getTryEnqueueDuration());
 
     if (!enqueue_success) {
-      AWS_LOG_WARN(__func__, "Unable to enqueue log data, marking as failed");
-      log_task->onComplete(FileManagement::UploadStatus::FAIL);
+      AWS_LOG_WARN(__func__, "Unable to enqueue data, marking as failed");
+      metric_task->onComplete(FileManagement::UploadStatus::FAIL);
     }
 
     this->resetBatchedData();
@@ -88,11 +87,11 @@ bool LogBatcher::publishBatchedData() {
   }
 }
 
-void LogBatcher::handleSizeExceeded() {
+void MetricBatcher::handleSizeExceeded() {
 
-  if (this->log_file_manager_) {
+  if (this->metric_file_manager_) {
     AWS_LOG_INFO(__func__, "Writing data to file");
-    log_file_manager_->write(*this->batched_data_);
+    metric_file_manager_->write(*this->batched_data_);
   } else {
     AWS_LOG_WARN(__func__, "Dropping data");
   }
@@ -100,22 +99,22 @@ void LogBatcher::handleSizeExceeded() {
 }
 
 
-bool LogBatcher::start() {
-  if (log_file_manager_ == nullptr) {
+bool MetricBatcher::start() {
+  if (metric_file_manager_ == nullptr) {
     AWS_LOGSTREAM_WARN(__func__, "FileManager not found: data will be dropped on failure.");
   }
   return true;
 }
 
-bool LogBatcher::shutdown() {
+bool MetricBatcher::shutdown() {
   this->resetBatchedData();
   return true;
 }
 
-void LogBatcher::setLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogType>> log_file_manager)
+void MetricBatcher::setMetricFileManager(std::shared_ptr<Aws::FileManagement::FileManager<MetricDatumCollection>> metric_file_manager)
 {
-  if (nullptr == log_file_manager) {
+  if (nullptr == metric_file_manager) {
     throw std::invalid_argument("input FileManager cannot be null");
   }
-  this->log_file_manager_ = log_file_manager;
+  this->metric_file_manager_ = metric_file_manager;
 }

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(cloudwatch_logs_common)
-set(CLOUDWATCH_LOGS_COMMON_VERSION 1.0.0)
+set(CLOUDWATCH_LOGS_COMMON_VERSION 1.0.0) #todo
 
 # Default to C11
 if(NOT CMAKE_C_STANDARD)
@@ -42,6 +42,7 @@ set(ALL_SRC_FILES
     src/log_service_factory.cpp
     src/utils/cloudwatch_facade.cpp
     src/utils/log_file_manager.cpp
+    src/log_service_factory.cpp
     src/log_publisher.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})
@@ -53,12 +54,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
 
-get_cmake_property(_variableNames VARIABLES)
-list(SORT _variableNames)
-foreach(_variableName ${_variableNames})
-  message(STATUS "${_variableName}=${${_variableName}}")
-endforeach()
-
 #############
 ## Install ##
 #############
@@ -68,6 +63,7 @@ install(TARGETS ${PROJECT_NAME}
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
 
+## Mark cpp header files for installation
 install(DIRECTORY include/
         DESTINATION include)
 

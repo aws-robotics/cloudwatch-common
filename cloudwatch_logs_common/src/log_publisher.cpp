@@ -22,6 +22,9 @@
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
 
+#include <dataflow_lite/utils/publisher.h>
+#include <dataflow_lite/dataflow/source.h>
+
 #include <list>
 #include <memory>
 #include <fstream>
@@ -40,7 +43,6 @@ LogPublisher::LogPublisher(
   this->log_stream_ = log_stream;
   this->options_ = options;
   this->cloudwatch_facade_ = nullptr;
-  this->log_file_manager_ = nullptr;
   this->markOffline(); // reset token and set state to init
 }
 
@@ -205,7 +207,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String 
                   "Unable to obtain the sequence token to use");
   }
 
-  checkIfConnected(send_logs_status); //mark offline if needed
+  checkIfConnected(send_logs_status);  // mark offline if needed
   return send_logs_status;
 }
 
@@ -222,7 +224,7 @@ void LogPublisher::resetInitToken()
 
 bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data)
 {
-  // attempt to configure
+  // attempt to configure, this will fail if offline
   bool b = this->configure();
   if (!b) {
     AWS_LOG_WARN(__func__, "configure FAILED");
@@ -239,9 +241,6 @@ bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEve
 
 bool LogPublisher::configure()
 {
-
-  this->start(); // init the API if needed (went offline or starting for the first time
-
   // attempt to fully configure
   if(!CreateGroup()) {
     AWS_LOG_WARN(__func__, "CreateGroup FAILED");
@@ -276,7 +275,8 @@ bool LogPublisher::start() {
     return false;
   }
 
-  Aws::InitAPI(this->options_); // this n eeds to be called if ever offline
+  Aws::InitAPI(this->options_); // per the SDK team this only ever needs to be called once
+
   if (!this->cloudwatch_facade_) {
     this->cloudwatch_facade_ = std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchFacade>(this->client_config_);
   }
@@ -286,8 +286,5 @@ bool LogPublisher::start() {
 
 bool LogPublisher::shutdown() {
   Aws::ShutdownAPI(this->options_);
-  //todo teardown the facade?
-  //todo teardown references?
-  //todo if we have any batched data mark as failure?
   return true;
 }

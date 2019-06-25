@@ -55,7 +55,7 @@ protected:
 TEST_F(FileManagerTest, file_manager_write) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   LogFileManager file_manager(file_manager_strategy);
-  LogType log_data;
+  LogEventCollection log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
   input_event.SetTimestamp(0);
   input_event.SetMessage("Hello my name is foo");

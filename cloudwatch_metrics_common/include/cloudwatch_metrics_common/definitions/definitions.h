@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -15,16 +15,11 @@
 
 #pragma once
 
-#include <aws/core/utils/StringUtils.h>
-#include <cloudwatch_metrics_common/definitions/definitions.h>
+#include <aws/core/Aws.h>
+#include <aws/monitoring/model/PutMetricDataRequest.h>
 
-namespace Aws {
-namespace CloudWatchMetrics {
-namespace Utils {
+//--------------------------Metrics Definitions--------------------------------
+using MetricDatum = Aws::CloudWatch::Model::MetricDatum;
+using MetricDatumCollection = std::list<Aws::CloudWatch::Model::MetricDatum>;
+//-----------------------------------------------------------------------------
 
-MetricDatum deserializeMetricDatum(const Aws::String &basic_string);
-Aws::String  serializeMetricDatum(const MetricDatum &datum);
-
-}  // namespace Utils
-}  // namespace CloudWatchMetrics
-}  // namespace Aws

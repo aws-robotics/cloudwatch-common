@@ -7,8 +7,9 @@
 #include <aws/core/utils/StringUtils.h>
 #include <aws/monitoring/model/MetricDatum.h>
 #include <cloudwatch_metrics_common/utils/metric_serialization.hpp>
+#include <cloudwatch_metrics_common/definitions/definitions.h>
 
-using namespace Aws::CloudWatch::Metrics::Utils;
+using namespace Aws::CloudWatchMetrics::Utils;
 using namespace Aws::CloudWatch::Model;
 
 class TestMetricSerialization : public ::testing::Test
