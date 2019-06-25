@@ -19,18 +19,10 @@
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/log_service.h>
 
+#include <dataflow_lite/cloudwatch/cloudwatch_options.h>
+
 namespace Aws {
 namespace CloudWatchLogs {
-
-struct CloudwatchOptions {
-  size_t batch_size;
-  size_t file_max_queue_size;
-  size_t stream_max_queue_size;
-  size_t batch_max_queue_size;
-  size_t batch_trigger_publish_size;
-};
-
-static constexpr CloudwatchOptions kDefaultCloudwatchOptions{50, 2, 20, 1024, SIZE_MAX};
 
 // todo should we validate options here?
 

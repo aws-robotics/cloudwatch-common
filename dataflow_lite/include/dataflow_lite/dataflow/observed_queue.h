@@ -287,11 +287,11 @@ public:
    * Create an observed blocking queue.
    *
    * @param max_queue_size to configure.
-   * @throws std::runtime_error max_queue_size is 0
+   * @throws std::invalid_argument max_queue_size is 0
    */
   explicit ObservedBlockingQueue(const size_t &max_queue_size) {
     if (max_queue_size == 0) {
-      throw std::runtime_error("Max queue size invalid: 0");
+      throw std::invalid_argument("Max queue size invalid: 0");
     }
     max_queue_size_ = max_queue_size;
   }

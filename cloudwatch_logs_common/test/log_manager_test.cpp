@@ -32,7 +32,7 @@
 //  MOCK_METHOD0(StopPublisherThread, Aws::CloudWatchLogs::ROSCloudWatchLogsErrors());
 //};
 //
-//using LogTaskPtr = Aws::FileManagement::TaskPtr<Utils::LogType>;
+//using LogTaskPtr = Aws::FileManagement::TaskPtr<Utils::LogEventCollection>;
 //
 //class MockSink :
 //  public Aws::DataFlow::Sink<LogTaskPtr>

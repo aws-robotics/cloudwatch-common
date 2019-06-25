@@ -28,7 +28,6 @@
 
 #include <dataflow_lite/utils/service.h>
 
-
 /**
  * Abstract class used to define a batching interface.
  *
@@ -42,18 +41,22 @@ public:
   static const size_t kDefaultMaxBatchSize = 1024; // todo is this even reasonable? need data
 
   DataBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
-              size_t trigger_size = DataBatcher::kDefaultTriggerSize) {
+              size_t trigger_size = DataBatcher::kDefaultTriggerSize,
+              std::chrono::microseconds try_enqueue_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(2))) {
 
     validateConfigurableSizes(max_allowable_batch_size, trigger_size);
 
     this->max_allowable_batch_size_.store(max_allowable_batch_size);
     this->trigger_batch_size_.store(trigger_size);
+    this->try_enqueue_duration_ = try_enqueue_duration;
+
     resetBatchedData();
   }
 
   ~DataBatcher() = default;
 
   /**
+   * Batch an item.
    *
    * @param data_to_batch
    * @return true if the data was accepted, false if internal size limit was exceeded
@@ -79,6 +82,10 @@ public:
     return true;
   }
 
+  /**
+   * Return the number of currently batched items.
+   * @return
+   */
   size_t getCurrentBatchSize() {
     std::lock_guard<std::recursive_mutex> lk(mtx);
 
@@ -86,7 +93,7 @@ public:
   }
 
   /**
-   *
+   * Reset the batched data shared pointer.
    */
   virtual void resetBatchedData() {
     std::lock_guard<std::recursive_mutex> lk(mtx);
@@ -134,10 +141,19 @@ public:
   }
 
   /**
-   *
+   * Reset the trigger batch size to the default value, which means the mechanism is no longer set. Publish will
+   * need to be called manually.
    */
   void resetTriggerBatchSize() {
     this->trigger_batch_size_.store(kDefaultTriggerSize);
+  }
+
+  void setTryEnqueueDuration(std::chrono::microseconds duration) {
+    this->try_enqueue_duration_.store(duration);
+  }
+
+  std::chrono::microseconds getTryEnqueueDuration() {
+    return this->try_enqueue_duration_.load();
   }
 
   /**
@@ -146,7 +162,6 @@ public:
    * @return
    */
   virtual bool publishBatchedData() = 0; //todo this name is awfully specific, maybe handle trigger size?
-
 
   /**
    *
@@ -185,7 +200,8 @@ private:
     /**
      * Size used for the internal storage
      */
-    std::atomic <size_t> max_allowable_batch_size_;
-    std::atomic <size_t> trigger_batch_size_;
+    std::atomic<size_t> max_allowable_batch_size_;
+    std::atomic<size_t> trigger_batch_size_;
+    std::atomic<std::chrono::microseconds> try_enqueue_duration_;
 };
 

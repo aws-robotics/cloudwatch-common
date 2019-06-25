@@ -21,11 +21,13 @@
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/log_service.h>
 
-#include <file_management/file_upload/file_manager.h>
+#include <cloudwatch_logs_common/utils/log_file_manager.h>
+
 #include <file_management/file_upload/file_management_factory.h>
 #include <file_management/file_upload/file_upload_task.h>
 
 #include <dataflow_lite/dataflow/dataflow.h>
+#include <dataflow_lite/cloudwatch/cloudwatch_options.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
@@ -38,16 +40,19 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   const Aws::SDKOptions & sdk_options,
   const CloudwatchOptions & cloudwatch_options)
 {
-  auto file_manager= std::make_shared<LogFileManager>();
+
+  // todo options need to be set here!
+  auto log_file_manager = std::make_shared<LogFileManager>();
 
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, client_config, sdk_options);
-  // todo this should be a service to subscribe and status part of the publisher, too much is dependent in File utils / tasks and seems brittle
 
   auto queue_monitor =
       std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
-  FileUploadStreamerOptions file_upload_options{cloudwatch_options.batch_size, cloudwatch_options.file_max_queue_size};
+
+  FileUploadStreamerOptions file_upload_options{cloudwatch_options.file_upload_batch_size, cloudwatch_options.file_max_queue_size};
+
   auto log_file_upload_streamer =
-      Aws::FileManagement::createFileUploadStreamer<LogType>(file_manager, file_upload_options);
+      Aws::FileManagement::createFileUploadStreamer<LogType>(log_file_manager, file_upload_options);
 
   // connect publisher state changes to the File Streamer
   publisher->addPublisherStateListener([upload_streamer = log_file_upload_streamer](const PublisherState& state) {
@@ -60,10 +65,10 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   auto file_data_queue =
       std::make_shared<TaskObservedBlockingQueue<LogType>>(cloudwatch_options.file_max_queue_size);
 
-  auto stream_data_queue =
-    std::make_shared<TaskObservedQueue<LogType>>();
+  auto stream_data_queue = std::make_shared<TaskObservedQueue<LogType>>();
 
   auto log_batcher = std::make_shared<LogBatcher>(); // todo pass in options
+  log_batcher->setLogFileManager(log_file_manager);
 
   log_file_upload_streamer->setSink(file_data_queue);
   queue_monitor->addSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
@@ -74,7 +79,5 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   auto log_service = std::make_shared<LogService>(publisher, log_batcher, log_file_upload_streamer);
   log_service->setSource(queue_monitor);
 
-  log_service->start(); // todo should we allow the user to start?
-
-  return log_service;
+  return log_service;  // allow user to start
 }

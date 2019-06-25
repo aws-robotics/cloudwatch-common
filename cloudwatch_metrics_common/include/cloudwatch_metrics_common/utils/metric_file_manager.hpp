@@ -17,19 +17,13 @@
 
 #include <list>
 
-#include <aws/logs/model/InputLogEvent.h>
-#include <aws/monitoring/model/MetricDatum.h>
 #include <file_management/file_upload/file_manager.h>
+#include <cloudwatch_metrics_common/definitions/definitions.h>
 
 namespace Aws {
-namespace CloudWatch {
-namespace Metrics {
+namespace CloudWatchMetrics {
 namespace Utils {
 
-//------------- Definitions --------------//
-using MetricDatumList = std::list<Aws::CloudWatch::Model::MetricDatum>;
-using MetricDatumListPtr = MetricDatumList *;
-//----------------------------------------//
 
 using FileManagement::FileManager;
 using FileManagement::FileManagerStrategy;
@@ -39,7 +33,7 @@ using FileManagement::FileObject;
  * The metric specific file manager. Handles the specific writes of metric data.
  */
 class MetricFileManager :
-    public FileManager<MetricDatumList> {
+    public FileManager<MetricDatumCollection> {
 public:
   /**
    * Default Constructor.
@@ -57,16 +51,15 @@ public:
    * Write data to disk
    * @param data - A reference to a list of metrics to write to disk
    */
-  void write(const MetricDatumList &data) override;
+  void write(const MetricDatumCollection &data) override;
 
   /**
    * Read a batch of data from disk
    * @param batch_size - The number of items to read
    */
-  FileObject<MetricDatumList> readBatch(size_t batch_size) override;
+  FileObject<MetricDatumCollection> readBatch(size_t batch_size) override;
 };
 
 }  // namespace Utils
-}  // namespace Metrics
-}  // namespace Cloudwatch
+}  // namespace CloudwatchMetrics
 }  // namespace Aws

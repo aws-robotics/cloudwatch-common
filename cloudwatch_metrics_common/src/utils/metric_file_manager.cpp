@@ -24,15 +24,15 @@
 #include "file_management/file_upload/file_manager_strategy.h"
 #include <aws/core/utils/json/JsonSerializer.h>
 #include <aws/core/utils/logging/LogMacros.h>
+#include <cloudwatch_metrics_common/definitions/definitions.h>
 
 namespace Aws {
-namespace CloudWatch {
-namespace Metrics {
+namespace CloudWatchMetrics {
 namespace Utils {
 
-FileObject<MetricDatumList> MetricFileManager::readBatch(
+FileObject<MetricDatumCollection> MetricFileManager::readBatch(
     size_t batch_size) {
-  MetricDatumList log_data;
+  MetricDatumCollection log_data;
   FileManagement::DataToken data_token;
   std::list<FileManagement::DataToken> data_tokens;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
@@ -45,9 +45,9 @@ FileObject<MetricDatumList> MetricFileManager::readBatch(
     }
     data_token = read(line);
     Aws::String aws_line(line.c_str());
-    Aws::CloudWatch::Model::MetricDatum metric_datum;
+    MetricDatum metric_datum;
     try {
-      metric_datum = deserializeMetricDatum(aws_line);
+      metric_datum = Aws::CloudWatchMetrics::Utils::deserializeMetricDatum(aws_line);
     } catch (std::invalid_argument &e) {
       AWS_LOG_ERROR(__func__, e.what());
       continue;
@@ -56,16 +56,16 @@ FileObject<MetricDatumList> MetricFileManager::readBatch(
     log_data.push_back(metric_datum);
     data_tokens.push_back(data_token);
   }
-  FileObject<MetricDatumList> file_object;
+  FileObject<MetricDatumCollection> file_object;
   file_object.batch_data = log_data;
   file_object.batch_size = actual_batch_size;
   file_object.data_tokens = data_tokens;
   return file_object;
 }
 
-void MetricFileManager::write(const MetricDatumList &data) {
-  for (const Model::MetricDatum &model: data) {
-    auto metric_serial = serializeMetricDatum(model);
+void MetricFileManager::write(const MetricDatumCollection &data) {
+  for (const MetricDatum &model: data) {
+    auto metric_serial = Aws::CloudWatchMetrics::Utils::serializeMetricDatum(model);
     file_manager_strategy_->write(metric_serial.c_str());
   }
   if (FileManager::file_status_monitor_) {
@@ -76,6 +76,5 @@ void MetricFileManager::write(const MetricDatumList &data) {
 }
 
 }  // namespace Utils
-}  // namespace Metrics
-}  // namespace Cloudwatch
+}  // namespace Cloudwatchmetrics
 }  // namespace Aws

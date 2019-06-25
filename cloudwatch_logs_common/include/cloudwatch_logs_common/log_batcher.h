@@ -17,8 +17,6 @@
 
 #include <aws/core/Aws.h>
 #include <aws/logs/model/InputLogEvent.h>
-#include <aws/logs/model/PutLogEventsRequest.h>
-#include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 
 #include <file_management/file_upload/file_upload_streamer.h>
@@ -27,13 +25,8 @@
 #include <dataflow_lite/utils/data_batcher.h>
 
 #include <chrono>
-#include <iostream>
 #include <list>
-#include <map>
 #include <memory>
-#include <mutex>
-#include <string>
-#include <unordered_map>
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -81,12 +74,10 @@ public:
    * @throws invalid argument if the input is null
    * @param log_file_manager
    */
-  virtual void setLogFileManager(std::shared_ptr<Aws::CloudWatchLogs::Utils::FileManager<LogType>> log_file_manager);
+  virtual void setLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogType>> log_file_manager);
 
 private:
-  //todo should probably be atomic, but currently controlled by the publish mutex
-  std::shared_ptr<Aws::CloudWatchLogs::Utils::FileManager<LogType>> log_file_manager_;
-  //todo stats? how many times published? rate of publishing? throughput?
+  std::shared_ptr<Aws::FileManagement::FileManager<LogType>> log_file_manager_; // todo consider moving to base class
 };
 
 }  // namespace CloudWatchLogs

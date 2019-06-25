@@ -17,15 +17,12 @@
 
 #include <aws/core/Aws.h>
 #include <aws/logs/CloudWatchLogsClient.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
-#include <cloudwatch_logs_common/utils/log_file_manager.h>
-#include <cloudwatch_logs_common/file_upload/task_utils.h>
-#include <dataflow_lite/dataflow/status_monitor.h>
-#include <dataflow_lite/dataflow/queue_monitor.h>
-#include <cloudwatch_logs_common/file_upload/file_upload_streamer.h>
 
-#include <cloudwatch_logs_common/utils/publisher.h>
+#include <dataflow_lite/utils/publisher.h>
+#include <dataflow_lite/dataflow/source.h>
+
+#include <file_management/file_upload/file_upload_task.h>
 
 #include <list>
 #include <memory>
@@ -33,6 +30,10 @@
 
 namespace Aws {
 namespace CloudWatchLogs {
+
+using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
+using LogTask = Aws::FileManagement::Task<LogType>;
+using LogTaskSource = std::shared_ptr<Aws::DataFlow::Source<std::shared_ptr<LogTask>>>;
 
 /** 
  * @enum Aws::CloudWatchLogs::LogPublisherRunState
@@ -52,10 +53,9 @@ const static Aws::String EMPTY_TOKEN = "";
 /**
  * Wrapping class around the CloudWatch Logs API.
  */
-class LogPublisher : public Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>
+class LogPublisher : public Publisher<LogType>
 {
 public:
-  using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>; //todo in types class? this was not easy to find
   /**
    *  @brief Creates a LogPublisher object that uses the provided client and SDK configuration
    *  Constructs a LogPublisher object that will use the provided CloudWatchClient and SDKOptions
@@ -67,16 +67,14 @@ public:
   LogPublisher(const std::string & log_group, const std::string & log_stream,
                const Aws::Client::ClientConfiguration & client_config, Aws::SDKOptions options);
 
+
+
   /**
    *  @brief Tears down the LogPublisher object
    */
   virtual ~LogPublisher();
 
-  using Task = Aws::FileManagement::Task<LogType>;
-  using LogTaskSource = std::shared_ptr<Aws::DataFlow::Source<std::shared_ptr<Task>>>;
-  virtual inline void SetLogTaskSource(LogTaskSource &queue_monitor) {
-    queue_monitor_ = queue_monitor;
-  }
+
   virtual bool shutdown() override;
   /**
    * Initialize the AWS API and create the cloudwatch facade
@@ -96,24 +94,21 @@ private:
   * Handle internal state reset and cleanup when we receive a NOT_CONNECTED status
   */
   void markOffline();
+
+  //overall config
+  bool configure();
+  //main publish mechanism
+  bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) override;
+
   //config
   bool CreateGroup();
   bool CreateStream();
   bool InitToken(Aws::String & next_token);
-
-  //overall config
-  bool configure() override;
-
-  //main publish mechanism
-  bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) override;
-
   bool SendLogFiles(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs);
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data);
 
-  std::shared_ptr<Utils::LogFileManager> log_file_manager_ ;
   LogTaskSource queue_monitor_;
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
-  std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cloudwatch_client_;
   Aws::SDKOptions aws_sdk_options_;
   std::string log_group_; //todo const?
   std::string log_stream_; //todo const?

@@ -30,7 +30,7 @@
 #include <cloudwatch_metrics_common/utils/metric_file_manager.hpp>
 
 
-using namespace Aws::CloudWatch::Metrics::Utils;
+using namespace Aws::CloudWatchMetrics::Utils;
 using namespace Aws::FileManagement;
 
 class FileManagerTest : public ::testing::Test {
@@ -56,7 +56,7 @@ TEST_F(FileManagerTest, file_manager_write) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   MetricFileManager file_manager(file_manager_strategy);
   file_manager.start();
-  MetricDatumList metric_data;
+  MetricDatumCollection metric_data;
   Aws::CloudWatch::Model::MetricDatum input_event;
   input_event.AddCounts(2);
   input_event.SetMetricName("MetricName");
