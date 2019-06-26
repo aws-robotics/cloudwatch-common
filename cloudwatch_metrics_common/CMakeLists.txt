@@ -2,7 +2,14 @@ cmake_minimum_required(VERSION 2.8.3)
 project(cloudwatch_metrics_common)
 set(CLOUDWATCH_METRICS_COMMON_VERSION 1.0.0)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -std=c++14 ")
+# Default to C11
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 11)
+endif()
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
 
 find_package(aws_common REQUIRED)
 if(AWSSDK_FOUND)
@@ -13,7 +20,7 @@ endif()
 
 set(ALL_SRC_FILES src/utils/cloudwatch_facade.cpp src/metric_manager.cpp src/metric_manager_factory.cpp src/metric_publisher.cpp)
 
-add_library(${PROJECT_NAME} ${ALL_SRC_FILES})
+add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})
 target_link_libraries(${PROJECT_NAME} ${OUTPUT})
 target_include_directories(${PROJECT_NAME} PRIVATE ${aws_common_INCLUDE_DIRS} ${AWSSDK_INCLUDE_DIR})
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -26,24 +33,20 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 #############
 
 enable_testing()
-find_package(GTest QUIET)
-if(NOT GTEST_FOUND)
-  message(WARNING "Could not find GTest. Not building unit tests.")
-else()
-  add_executable(test_cloudwatch_metrics_common
-    test/main_test.cpp
-    test/shared_object_test.cpp
-    test/metric_manager_test.cpp
-    test/metric_publisher_test.cpp)
-  target_include_directories(test_cloudwatch_metrics_common PRIVATE ${aws_common_INCLUDE_DIRS} ${AWSSDK_INCLUDE_DIR})
-  target_link_libraries(test_cloudwatch_metrics_common
-    ${GTEST_LIBRARIES}
-    pthread
-    ${aws_common_LIBRARIES}
-    ${PROJECT_NAME}
-    ${rclcpp_LIBRARIES})
-  add_test(NAME test_cloudwatch_metrics_common COMMAND test_cloudwatch_metrics_common --gtest_output=xml:test_results/)
-endif()
+find_common_test_packages()
+add_common_gtest(test_cloudwatch_metrics_common
+  test/main_test.cpp
+  test/shared_object_test.cpp
+  test/metric_manager_test.cpp
+  test/metric_publisher_test.cpp
+)
+target_link_libraries(test_cloudwatch_metrics_common
+  ${PROJECT_NAME}
+  ${aws_common_LIBRARIES}
+  ${GMOCK_LIBRARY}
+  pthread
+)
+
 
 #############
 ## Install ##
