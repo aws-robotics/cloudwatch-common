@@ -40,11 +40,12 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   const Aws::SDKOptions & sdk_options,
   const CloudwatchOptions & cloudwatch_options)
 {
+  Aws::InitAPI(sdk_options); // per the SDK team this only ever needs to be called once
 
   // todo options need to be set here!
   auto log_file_manager = std::make_shared<LogFileManager>();
 
-  auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, client_config, sdk_options);
+  auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, client_config);
 
   auto queue_monitor =
       std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
