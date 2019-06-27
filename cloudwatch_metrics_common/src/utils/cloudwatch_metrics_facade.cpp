@@ -33,7 +33,8 @@ using namespace Aws::CloudWatchMetrics::Utils;
 
 CloudWatchMetricsFacade::CloudWatchMetricsFacade(const Aws::Client::ClientConfiguration & client_config)
 : cw_client_(client_config)
-{}
+{
+}
 
 CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsRequest(
   const Aws::CloudWatch::Model::PutMetricDataRequest & request)

@@ -65,7 +65,7 @@ public:
    * CloudWatch.
    */
   LogPublisher(const std::string & log_group, const std::string & log_stream,
-               const Aws::Client::ClientConfiguration & client_config, Aws::SDKOptions options);
+               const Aws::Client::ClientConfiguration & client_config);
 
 
 
