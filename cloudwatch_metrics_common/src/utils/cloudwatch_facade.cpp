@@ -18,7 +18,11 @@
 #include <aws/monitoring/model/PutMetricDataRequest.h>
 #include <aws_common/sdk_utils/aws_error.h>
 
-#include <cloudwatch_metrics_common/utils/cloudwatch_facade.hpp>
+#include <cloudwatch_metrics_common/utils/cloudwatch_metrics_facade.hpp>
+
+#include <cloudwatch_metrics_common/definitions/definitions.h>
+
+#include <string>
 
 using namespace Aws::CloudWatch::Utils;
 
@@ -36,27 +40,38 @@ Aws::AwsError CloudWatchFacade::SendMetricsRequest(
   Aws::AwsError status = Aws::AwsError::AWS_ERR_OK;
   auto response = this->cw_client_.PutMetricData(request);
   if (!response.IsSuccess()) {
-    // TODO: Better error handling and logging
-    status = AWS_ERR_FAILURE;
+
+    AWS_LOGSTREAM_DEBUG( __func__, "CloudWatchMetricsFacade: failed to send metric request: "
+                         << static_cast<int>(response.GetError().GetErrorType()));
+
+    switch(response.GetError().GetErrorType()) {
+      //case Aws::CloudWatch::CloudWatchErrors::REQUEST_TIMEOUT:
+      case Aws::CloudWatch::CloudWatchErrors::NETWORK_CONNECTION:
+        status =  NETWORK_FAILURE;
+        break;
+      default:
+        status =  FAILURE;
+    }
   }
   return status;
 }
 
-Aws::AwsError CloudWatchFacade::SendMetricsToCloudWatch(
-  const std::string & metric_namespace, std::list<Aws::CloudWatch::Model::MetricDatum> * metrics)
+CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsToCloudWatch(
+  const std::string & metric_namespace, MetricDatumCollection &metrics)
 {
   Aws::AwsError status = Aws::AwsError::AWS_ERR_OK;
   Aws::CloudWatch::Model::PutMetricDataRequest request;
   Aws::Vector<Aws::CloudWatch::Model::MetricDatum> datums;
-  if (!metrics) {
-    return AWS_ERR_NULL_PARAM;
-  } else if (metrics->empty()) {
-    return AWS_ERR_EMPTY;
+
+  if (metrics.empty()) {
+    AWS_LOGSTREAM_DEBUG( __func__, "CloudWatchMetricsFacade: no metrics to send");
+    return FAILURE;
   }
 
   request.SetNamespace(metric_namespace.c_str());
 
-  for (auto it = metrics->begin(); it != metrics->end(); ++it) {
+  // Note: this fails an entire set of metrics, even if some are sent back successfully
+  for (auto it = metrics.begin(); it != metrics.end(); ++it) {
     datums.push_back(*it);
     if (datums.size() >= MAX_METRIC_DATUMS_PER_REQUEST) {
       request.SetMetricData(datums);
