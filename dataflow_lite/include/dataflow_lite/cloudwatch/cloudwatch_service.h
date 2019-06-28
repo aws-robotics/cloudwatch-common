@@ -57,11 +57,11 @@ CloudWatchService(std::shared_ptr<Publisher<std::list<T>>> publisher,
                   std::shared_ptr<DataBatcher<T>> batcher) : RunnableService() {
 
   if (nullptr == publisher) {
-    throw std::invalid_argument("Invalid argument: log_publisher cannot be null");
+    throw std::invalid_argument("Invalid argument: publisher cannot be null");
   }
 
   if (nullptr == batcher) {
-    throw std::invalid_argument("Invalid argument: log_publisher cannot be null");
+    throw std::invalid_argument("Invalid argument: batcher cannot be null");
   }
 
   this->publisher_ = publisher;
@@ -88,6 +88,7 @@ virtual bool start() {
 
   if (file_upload_streamer_) {
     started &= file_upload_streamer_->start();
+
   }
 
   //start the thread to dequeue

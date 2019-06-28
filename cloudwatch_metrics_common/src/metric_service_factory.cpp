@@ -18,6 +18,7 @@
 #include <cloudwatch_metrics_common/metric_publisher.hpp>
 #include <cloudwatch_metrics_common/metric_service.hpp>
 #include <cloudwatch_metrics_common/metric_service_factory.hpp>
+#include <cloudwatch_metrics_common/utils/metric_file_manager.hpp>
 
 #include <file_management/file_upload/file_management_factory.h>
 #include <file_management/file_upload/file_upload_task.h>
@@ -36,29 +37,27 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
         const Aws::SDKOptions & sdk_options,
         const CloudwatchOptions & cloudwatch_options)
 {
-  // todo options need to be set here!
-  // todo needs to be implemented
-  //auto metric_file_manager = std::make_shared<MetricFileManager>();
+  Aws::InitAPI(sdk_options); // per the SDK team this only ever needs to be called once
 
-  auto metric_publisher = std::make_shared<MetricPublisher>(metrics_namespace, client_config, sdk_options);
+  // todo options need to be set here!
+  auto metric_file_manager = std::make_shared<MetricFileManager>();
+
+  auto metric_publisher = std::make_shared<MetricPublisher>(metrics_namespace, client_config);
 
   auto queue_monitor =
           std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<MetricDatumCollection>>>();
 
-  //FileUploadStreamerOptions file_upload_options{cloudwatch_options.file_upload_batch_size, cloudwatch_options.file_max_queue_size};
+  FileUploadStreamerOptions file_upload_options{cloudwatch_options.file_upload_batch_size, cloudwatch_options.file_max_queue_size};
 
-  // todo, can't create if the file manager is null
-
-  //auto metric_file_upload_streamer =
-  //        Aws::FileManagement::createFileUploadStreamer<MetricDatumCollection>(metric_file_manager, file_upload_options);
+  auto metric_file_upload_streamer =
+          Aws::FileManagement::createFileUploadStreamer<MetricDatumCollection>(metric_file_manager, file_upload_options);
 
   // connect publisher state changes to the File Streamer
-  // todo
-//  metric_publisher->addPublisherStateListener([upload_streamer = metric_file_upload_streamer](const PublisherState& state) {
-//      auto status =
-//              (state == PublisherState::CONNECTED) ? Aws::DataFlow::Status::AVAILABLE : Aws::DataFlow::Status::UNAVAILABLE;
-//      metric_file_upload_streamer->onPublisherStateChange(status);
-//  });
+  metric_publisher->addPublisherStateListener([upload_streamer = metric_file_upload_streamer](const PublisherState& state) {
+      auto status =
+              (state == PublisherState::CONNECTED) ? Aws::DataFlow::Status::AVAILABLE : Aws::DataFlow::Status::UNAVAILABLE;
+      upload_streamer->onPublisherStateChange(status);
+  });
 
   // Create an observed queue to trigger a publish when data is available
   auto file_data_queue =
@@ -66,18 +65,17 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
 
   auto stream_data_queue = std::make_shared<TaskObservedQueue<MetricDatumCollection>>(); //todo set size
 
-  // metric_file_upload_streamer->setSink(file_data_queue);
-  // queue_monitor->addSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
+  metric_file_upload_streamer->setSink(file_data_queue);
+  queue_monitor->addSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
 
   auto metric_batcher = std::make_shared<MetricBatcher>(); // todo pass in options
+  metric_batcher->setMetricFileManager(metric_file_manager);
 
   metric_batcher->setSink(stream_data_queue);
   queue_monitor->addSource(stream_data_queue, Aws::DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
 
-  auto metric_service = std::make_shared<MetricService>(metric_publisher, nullptr, nullptr);
+  auto metric_service = std::make_shared<MetricService>(metric_publisher, metric_batcher, metric_file_upload_streamer);
   metric_service->setSource(queue_monitor);
 
-  metric_service->start();
-
-  return nullptr;
+  return metric_service;
 }

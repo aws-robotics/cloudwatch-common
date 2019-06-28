@@ -35,13 +35,12 @@ using namespace Aws::CloudWatchLogs;
 
 LogPublisher::LogPublisher(
   const std::string & log_group, const std::string & log_stream,
-  const Aws::Client::ClientConfiguration & client_config, const Aws::SDKOptions options)
+  const Aws::Client::ClientConfiguration & client_config)
   : Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>()
 {
   this->client_config_ = client_config;
   this->log_group_ = log_group;
   this->log_stream_ = log_stream;
-  this->options_ = options;
   this->cloudwatch_facade_ = nullptr;
   this->markOffline(); // reset token and set state to init
 }
@@ -274,8 +273,6 @@ bool LogPublisher::start() {
     AWS_LOG_DEBUG(__func__, "Not initialized, skipping");
     return false;
   }
-
-  Aws::InitAPI(this->options_); // per the SDK team this only ever needs to be called once
 
   if (!this->cloudwatch_facade_) {
     this->cloudwatch_facade_ = std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchFacade>(this->client_config_);

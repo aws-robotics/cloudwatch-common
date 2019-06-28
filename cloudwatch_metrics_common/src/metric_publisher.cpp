@@ -29,12 +29,10 @@ using namespace Aws::CloudWatchMetrics::Utils;
 
 MetricPublisher::MetricPublisher(
   const std::string & metrics_namespace,
-  const Aws::Client::ClientConfiguration & client_config,
-  const Aws::SDKOptions & options)
+  const Aws::Client::ClientConfiguration & client_config)
 {
   this->metrics_namespace_ = metrics_namespace;
   this->client_config_ = client_config;
-  this->aws_sdk_options_ = options;
 }
 
 bool MetricPublisher::start() {

@@ -16,7 +16,6 @@
 #pragma once
 
 #include <aws/core/Aws.h>
-#include <aws/monitoring/CloudWatchClient.h>
 #include <aws_common/sdk_utils/aws_error.h>
 
 #include <cloudwatch_metrics_common/definitions/definitions.h>
@@ -42,8 +41,7 @@ class MetricPublisher : public Publisher<MetricDatumCollection>
 public:
 
 
-  MetricPublisher(const std::string & metrics_namespace, const Aws::Client::ClientConfiguration & client_config,
-          const Aws::SDKOptions & options);
+  MetricPublisher(const std::string & metrics_namespace, const Aws::Client::ClientConfiguration & client_config);
 
   /**
    *  @brief Tears down the MetricPublisher object
@@ -67,11 +65,11 @@ public:
 
 private:
 
-  std::shared_ptr <Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade> cloudwatch_metrics_facade_;
+  std::shared_ptr<Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade> cloudwatch_metrics_facade_;
 
-  Aws::Client::ClientConfiguration client_config_; //const?
-  Aws::SDKOptions aws_sdk_options_; //todo const
-  std::string metrics_namespace_; //todo const
+  Aws::Client::ClientConfiguration client_config_;
+  Aws::SDKOptions aws_sdk_options_;
+  std::string metrics_namespace_;
   mutable std::recursive_mutex mtx_;
 };
 
