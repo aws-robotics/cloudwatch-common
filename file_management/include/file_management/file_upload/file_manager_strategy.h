@@ -24,6 +24,7 @@
 #include <memory>
 #include <experimental/filesystem>
 #include <dataflow_lite/utils/service.h>
+#include <file_management/file_manager_options.h>
 #include <file_management/file_upload/task_utils.h>
 #include <aws/core/utils/json/JsonSerializer.h>
 
@@ -127,10 +128,6 @@ public:
   virtual void resolve(const DataToken &token, bool is_success) = 0;
 };
 
-struct TokenStoreOptions {
-  std::string backup_directory;
-};
-
 /**
  * Stores all tokens and manages failed or loaded tokens.
  */
@@ -216,18 +213,6 @@ private:
 
   std::random_device rand_device;
 };
-
-/**
- * File manager strategy options.
- */
-struct FileManagerStrategyOptions {
-  std::string file_prefix;
-  std::string storage_directory;
-  std::string file_extension;
-  uint maximum_file_size_in_bytes;
-  uint storage_limit_in_bytes;
-};
-
 
 /**
  * Manages how files are split up, which files to write to and read when requested.

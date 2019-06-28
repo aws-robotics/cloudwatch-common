@@ -16,6 +16,7 @@
 #include <list>
 #include <string>
 
+#include <cloudwatch_logs_common/cloudwatch_options.h>
 #include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_service_factory.h>
 #include <cloudwatch_logs_common/log_publisher.h>
@@ -27,7 +28,6 @@
 #include <file_management/file_upload/file_upload_task.h>
 
 #include <dataflow_lite/dataflow/dataflow.h>
-#include <dataflow_lite/cloudwatch/cloudwatch_options.h>
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
@@ -38,7 +38,7 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   const std::string & log_stream,
   const Aws::Client::ClientConfiguration & client_config,
   const Aws::SDKOptions & sdk_options,
-  const CloudwatchOptions & cloudwatch_options)
+  const CloudWatchOptions & cloudwatch_options)
 {
   Aws::InitAPI(sdk_options); // per the SDK team this only ever needs to be called once
 
@@ -50,7 +50,10 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   auto queue_monitor =
       std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
 
-  FileUploadStreamerOptions file_upload_options{cloudwatch_options.file_upload_batch_size, cloudwatch_options.file_max_queue_size};
+  FileUploadStreamerOptions file_upload_options{
+    cloudwatch_options.uploader_options.file_upload_batch_size,
+    cloudwatch_options.uploader_options.file_max_queue_size
+  };
 
   auto log_file_upload_streamer =
       Aws::FileManagement::createFileUploadStreamer<LogType>(log_file_manager, file_upload_options);
@@ -64,7 +67,7 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
 
   // Create an observed queue to trigger a publish when data is available
   auto file_data_queue =
-      std::make_shared<TaskObservedBlockingQueue<LogType>>(cloudwatch_options.file_max_queue_size);
+      std::make_shared<TaskObservedBlockingQueue<LogType>>(cloudwatch_options.uploader_options.file_max_queue_size);
 
   auto stream_data_queue = std::make_shared<TaskObservedQueue<LogType>>();
 
