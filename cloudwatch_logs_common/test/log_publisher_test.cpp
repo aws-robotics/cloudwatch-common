@@ -23,7 +23,7 @@
 using namespace Aws::CloudWatchLogs;
 
 constexpr int WAIT_TIME =
-  2000;  // the amount of time (ms) to wait for publisher thread to do its work
+  5000;  // the amount of time (ms) to wait for publisher thread to do its work
 
 class MockCloudWatchFacade : public Aws::CloudWatchLogs::Utils::CloudWatchFacade
 {
@@ -43,6 +43,19 @@ public:
     this->last_logs = nullptr;
     this->send_logs_ret_val = Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED;
     this->send_logs_call_count = 0;
+  }
+
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CheckLogGroupExists(
+    const std::string & log_group) override
+  {
+    return Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED;
+  }
+
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CheckLogStreamExists(
+    const std::string & log_group, const std::string & log_stream,
+    Aws::CloudWatchLogs::Model::LogStream * log_stream_object) override
+  {
+    return Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED;
   }
 
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CreateLogGroup(

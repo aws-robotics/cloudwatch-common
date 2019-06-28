@@ -34,7 +34,12 @@ using namespace Aws::CloudWatchLogs::Utils;
 constexpr uint16_t kMaxLogsPerRequest = 100;
 
 CloudWatchFacade::CloudWatchFacade(const Aws::Client::ClientConfiguration & client_config)
-: cw_client_(client_config)
+{
+  this->cw_client_ = std::make_unique<Aws::CloudWatchLogs::CloudWatchLogsClient>(client_config);
+}
+
+CloudWatchFacade::CloudWatchFacade(std::unique_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client)
+: cw_client_(std::move(cw_client))
 {
 }
 
@@ -42,7 +47,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsRequest(
   const Aws::CloudWatchLogs::Model::PutLogEventsRequest & request, Aws::String & next_token)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
-  auto response = this->cw_client_.PutLogEvents(request);
+  auto response = this->cw_client_->PutLogEvents(request);
   if (!response.IsSuccess()) {
     status = CW_LOGS_FAILED;
     AWS_LOGSTREAM_ERROR(__func__, "Send log request failed due to: "
@@ -101,7 +106,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsToCloudWa
                                       << ". Dropping this batch of logs.");
       return status;
     } else {
-      AWS_LOGSTREAM_INFO(__func__,
+      AWS_LOGSTREAM_DEBUG(__func__,
                          "A batch of log was successfully sent to CloudWatch in Log Group: "
                            << log_group << " Log Stream: " << log_stream << ".");
     }
@@ -116,7 +121,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsToCloudWa
                                       << " with error code: " << status
                                       << ". Dropping the last bit of this batch of logs.");
     } else {
-      AWS_LOGSTREAM_INFO(__func__, "All logs were successfully sent to CloudWatch in Log Group: "
+      AWS_LOGSTREAM_DEBUG(__func__, "All logs were successfully sent to CloudWatch in Log Group: "
                                      << log_group << " Log Stream: " << log_stream << ".");
     }
   }
@@ -132,7 +137,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogGroup(
   Aws::CloudWatchLogs::Model::CreateLogGroupRequest log_group_request;
   log_group_request.SetLogGroupName(log_group.c_str());
 
-  const auto & response = this->cw_client_.CreateLogGroup(log_group_request);
+  const auto & response = this->cw_client_->CreateLogGroup(log_group_request);
   if (!response.IsSuccess()) {
     AWS_LOGSTREAM_ERROR(
       __func__, "Failed to create Log Group :"
@@ -163,7 +168,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CheckLogGroupExis
       describe_log_group_request.SetNextToken(next_token);
     }
 
-    const auto & response = this->cw_client_.DescribeLogGroups(describe_log_group_request);
+    const auto & response = this->cw_client_->DescribeLogGroups(describe_log_group_request);
     if (!response.IsSuccess()) {
       status = CW_LOGS_FAILED;
       AWS_LOGSTREAM_WARN(__func__, "Request to check if log group named "
@@ -202,7 +207,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogStream(
   log_stream_request.SetLogGroupName(log_group.c_str());
   log_stream_request.SetLogStreamName(log_stream.c_str());
 
-  const auto & response = this->cw_client_.CreateLogStream(log_stream_request);
+  const auto & response = this->cw_client_->CreateLogStream(log_stream_request);
   if (!response.IsSuccess()) {
     AWS_LOGSTREAM_ERROR(__func__, "Failed to create Log Stream :"
                                     << log_stream << " in Log Group :" << log_group << " due to: "
@@ -235,7 +240,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CheckLogStreamExi
       describe_log_stream_request.SetNextToken(next_token);
     }
 
-    const auto & response = this->cw_client_.DescribeLogStreams(describe_log_stream_request);
+    const auto & response = this->cw_client_->DescribeLogStreams(describe_log_stream_request);
     if (!response.IsSuccess()) {
       status = CW_LOGS_FAILED;
       AWS_LOGSTREAM_WARN(

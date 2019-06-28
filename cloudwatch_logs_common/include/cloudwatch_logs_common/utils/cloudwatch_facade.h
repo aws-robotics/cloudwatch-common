@@ -43,6 +43,14 @@ public:
    *  @param client_config The configuration for the cloudwatch client
    */
   CloudWatchFacade(const Aws::Client::ClientConfiguration & client_config);
+
+  /**
+   * @brief Creates a new CloudWatchFacade with an existing client
+   *
+   * @param cw_client The client for interacting with cloudwatch
+   */
+  CloudWatchFacade(const std::unique_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client);
+
   virtual ~CloudWatchFacade() = default;
 
   /**
@@ -115,12 +123,13 @@ public:
 
 protected:
   CloudWatchFacade() = default;
+  
+  std::unique_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client_;
 
 private:
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogsRequest(
     const Aws::CloudWatchLogs::Model::PutLogEventsRequest & request, Aws::String & next_token);
 
-  Aws::CloudWatchLogs::CloudWatchLogsClient cw_client_;
 };
 
 }  // namespace Utils

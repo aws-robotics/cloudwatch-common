@@ -26,6 +26,18 @@
 
 namespace Aws {
 namespace CloudWatchLogs {
+  
+/** 
+ * @enum Aws::CloudWatchLogs::LogPublisherRunState
+ * @brief Defines the different runtime states for the Publisher
+ * This enum is used by the LogPublisher to track the current runtime state of the Run function
+ */
+enum LogPublisherRunState {
+  LOG_PUBLISHER_RUN_CREATE_GROUP,
+  LOG_PUBLISHER_RUN_CREATE_STREAM,
+  LOG_PUBLISHER_RUN_INIT_TOKEN,
+  LOG_PUBLISHER_RUN_SEND_LOGS
+};
 
 /**
  *  @brief Class that handles sending logs data to CloudWatch
@@ -86,6 +98,10 @@ public:
   virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors StopPublisherThread();
 
 private:
+  void CreateGroup();
+  void CreateStream();
+  void InitToken(Aws::String & next_token);
+  void SendLogs(Aws::String & next_token);
   void Run();
 
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
@@ -98,8 +114,7 @@ private:
     shared_logs_;
   std::string log_group_;
   std::string log_stream_;
-  bool does_stream_exist_;
-  bool does_group_exist_;
+  LogPublisherRunState run_state_;
 };
 
 }  // namespace CloudWatchLogs
