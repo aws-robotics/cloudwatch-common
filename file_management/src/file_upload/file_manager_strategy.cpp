@@ -349,14 +349,16 @@ void FileManagerStrategy::rotateWriteFile() {
 
 void FileManagerStrategy::checkIfFileShouldRotate(const uintmax_t &new_data_size) {
   const uintmax_t new_file_size = active_write_file_size_ + new_data_size;
-  if (new_file_size > options_.maximum_file_size_in_bytes) {
+  const uintmax_t max_file_size_in_bytes = options_.maximum_file_size_in_kb * 1024;
+  if (new_file_size > max_file_size_in_bytes) {
     rotateWriteFile();
   }
 }
 
 void FileManagerStrategy::checkIfStorageLimitHasBeenReached(const uintmax_t &new_data_size) {
   const uintmax_t new_storage_size = stored_files_size_ + active_write_file_size_ + new_data_size;
-  if (new_storage_size > options_.storage_limit_in_bytes) {
+  const uintmax_t max_storage_size_in_bytes = options_.storage_limit_in_kb * 1024;
+  if (new_storage_size > max_storage_size_in_bytes) {
     deleteOldestFile();
   }
 }

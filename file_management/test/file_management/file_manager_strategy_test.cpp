@@ -141,8 +141,8 @@ TEST_F(FileManagerStrategyTest, discover_stored_files) {
 
 TEST_F(FileManagerStrategyTest, rotate_large_files) {
   namespace fs = std::experimental::filesystem;
-  const uint max_file_size_in_bytes = 10;
-  options.maximum_file_size_in_bytes = max_file_size_in_bytes;
+  const uint max_file_size_in_kb = 10;
+  options.maximum_file_size_in_kb = max_file_size_in_kb;
   {
     FileManagerStrategy file_manager_strategy(options);
     file_manager_strategy.start();
@@ -178,10 +178,10 @@ TEST_F(FileManagerStrategyTest, resolve_token_deletes_file) {
 
 TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
   namespace fs = std::experimental::filesystem;
-  const uint max_file_size_in_bytes = 50;
+  const uint max_file_size_in_kb = 50;
   const uint storage_limit = 150;
-  options.maximum_file_size_in_bytes = max_file_size_in_bytes;
-  options.storage_limit_in_bytes = storage_limit;
+  options.maximum_file_size_in_kb = max_file_size_in_kb;
+  options.storage_limit_in_kb = storage_limit;
   {
     FileManagerStrategy file_manager_strategy(options);
     file_manager_strategy.start();
