@@ -103,14 +103,22 @@ TEST_F(FileManagerStrategyTest, fail_token_restart_from_last_location) {
   DataToken token1 = file_manager_strategy.read(result1);
   EXPECT_EQ(data1, result1);
   file_manager_strategy.resolve(token1, true);
-  std::string result2, result3;
+  std::string result2, result3, result4;
   DataToken token2 = file_manager_strategy.read(result2);
   EXPECT_EQ(data2, result2);
 
   file_manager_strategy.resolve(token2, false);
   // Token was failed, should be re-read.
-  file_manager_strategy.read(result2);
-  EXPECT_EQ(data2, result2);
+  DataToken token3 = file_manager_strategy.read(result3);
+  EXPECT_EQ(data2, result3);
+  file_manager_strategy.resolve(token3, false);
+  // Token was failed, should be re-read.
+  EXPECT_TRUE(file_manager_strategy.isDataAvailable());
+  DataToken token4 = file_manager_strategy.read(result4);
+  EXPECT_EQ(data2, result4);
+  EXPECT_FALSE(file_manager_strategy.isDataAvailable());
+  file_manager_strategy.resolve(token4, true);
+  EXPECT_FALSE(file_manager_strategy.isDataAvailable());
 }
 
 /**

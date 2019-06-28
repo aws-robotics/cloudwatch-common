@@ -141,8 +141,8 @@ TEST_F(FileStreamerTest, fail_enqueue_retry) {
   EXPECT_CALL(*file_manager, readBatch(testing::Eq(50)))
       .WillOnce(testing::Return(test_file_object));
   // Expect a batch call and enqueue from the file upload streamer
-  file_upload_streamer->run();
-  file_upload_streamer->run();
+  file_upload_streamer->forceWork();
+  file_upload_streamer->forceWork();
 }
 
 TEST_F(FileStreamerTest, fail_task_clears_queue) {
@@ -169,7 +169,7 @@ TEST_F(FileStreamerTest, fail_task_clears_queue) {
   EXPECT_CALL(*mock_sink, clear());
   EXPECT_CALL(*file_manager, fileUploadCompleteStatus(FAIL, testing::_));
   // Expect a batch call and enqueue from the file upload streamer
-  file_upload_streamer->run();
+  file_upload_streamer->forceWork();
   task->onComplete(FAIL);
 }
 
@@ -195,7 +195,7 @@ TEST_F(FileStreamerTest, success_task_does_not_clear_queue) {
           .WillOnce(testing::Return(test_file_object));
   EXPECT_CALL(*file_manager, fileUploadCompleteStatus(SUCCESS, testing::_));
   // Expect a batch call and enqueue from the file upload streamer
-  file_upload_streamer->run();
+  file_upload_streamer->forceWork();
   task->onComplete(SUCCESS);
 }
 
@@ -224,3 +224,4 @@ TEST_F(FileStreamerTest, test_no_sink_installed) {
   // The strict mocks will throw an error should the run function pass the status monitor check
   file_upload_streamer->forceWork();
 }
+
