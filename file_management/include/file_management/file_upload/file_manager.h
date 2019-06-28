@@ -118,12 +118,16 @@ public:
   virtual bool start() override {
     if(file_manager_strategy_) {
       file_manager_strategy_->start();
+      if (file_manager_strategy_->isDataAvailable()) {
+        FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
+      }
     }
     return true;
   }
 
   virtual bool shutdown() override {
     if(file_manager_strategy_) {
+      FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::UNAVAILABLE);
       file_manager_strategy_->shutdown();
     }
     return true;
@@ -139,10 +143,11 @@ public:
    */
   inline DataToken read(std::string &data) {
     DataToken token = file_manager_strategy_->read(data);
-    // todo @rddesmon handle appropriately
-//    if (file_info.file_status == END_OF_READ) {
-//      file_status_monitor_->setStatus(Aws::FileManagement::Status::UNAVAILABLE);
-//    }
+    if (!file_manager_strategy_->isDataAvailable()) {
+      AWS_LOG_INFO(__func__,
+                   "Data is no longer available to read.");
+      file_status_monitor_->setStatus(Aws::DataFlow::Status::UNAVAILABLE);
+    }
     return token;
   }
 
@@ -171,10 +176,7 @@ public:
     // Delete file if empty log_messages.file_location.
     for (const auto &token : log_messages.data_tokens) {
       // this may block, file IO can be expensive
-      std::thread t(
-        [&file_manager_strategy = this->file_manager_strategy_, &token, &upload_status]() {
-        file_manager_strategy->resolve(token, upload_status == SUCCESS);
-      });
+      file_manager_strategy_->resolve(token, upload_status == SUCCESS);
     }
   }
 

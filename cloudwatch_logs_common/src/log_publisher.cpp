@@ -219,6 +219,7 @@ void LogPublisher::markOffline()
 
 void LogPublisher::resetInitToken()
 {
+  AWS_LOG_DEBUG(__func__, "Reset init token");
   this->next_token = EMPTY_TOKEN;
 }
 
@@ -256,12 +257,12 @@ bool LogPublisher::configure()
   }
   AWS_LOG_DEBUG(__func__, "CreateGroup succeeded");
 
-  // init and check if we have a valid token
+//  // init and check if we have a valid token
   InitToken(next_token);
-  if(next_token == Aws::CloudWatchLogs::EMPTY_TOKEN) {
-    AWS_LOG_WARN(__func__, "INIT TOKEN FAILED");
-    return false;
-  }
+//  if(next_token == Aws::CloudWatchLogs::EMPTY_TOKEN) {
+//    AWS_LOG_WARN(__func__, "INIT TOKEN FAILED");
+//    return false;
+//  }
   AWS_LOG_DEBUG(__func__, "INIT TOKEN succeeded");
 
   return true;

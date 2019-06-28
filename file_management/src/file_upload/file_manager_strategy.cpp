@@ -56,30 +56,72 @@ FileTokenInfo TokenStore::popAvailableToken(const std::string &file_name) {
   return file_token_info;
 }
 
+void printCache(std::unordered_map<DataToken, FileTokenInfo> token_store,
+  std::unordered_map<std::string, std::list<DataToken>> file_tokens,
+  std::unordered_map<std::string, FileTokenInfo> staged_tokens_) {
+  {
+  std::stringstream ss;
+  for (auto& token_info : token_store) {
+    ss << token_info.first << ": " << token_info.second.file_path_ << ", " << token_info.second.position_ << std::endl;
+  }
+  AWS_LOG_DEBUG(__func__,
+               "Cache Info: token_store \n %s", ss.str().c_str());
+  }
+  {
+    std::stringstream ss;
+    for (auto &file_token : file_tokens) {
+      ss << file_token.first << ": ";
+      for (auto &tokens : file_token.second) {
+        ss << tokens;
+      }
+      ss << std::endl;
+    }
+    AWS_LOG_DEBUG(__func__,
+                 "Cache Info: file_tokens \n %s", ss.str().c_str());
+  }
+  std::stringstream ss;
+  for (auto& token_info : staged_tokens_) {
+    ss << token_info.first << ": " << token_info.second.file_path_ << ", " << token_info.second.position_ << std::endl;
+  }
+  AWS_LOG_DEBUG(__func__,
+               "Cache Info: staged_tokens \n %s", ss.str().c_str());
+}
+
 DataToken TokenStore::createToken(const std::string &file_name, const long & streampos, bool is_eof) {
+  AWS_LOG_DEBUG(__func__,
+               "Creating token");
   std::mt19937_64 rand( rand_device() );
   DataToken token = rand();
   token_store_.emplace(token, FileTokenInfo(file_name, streampos, is_eof));
+  if (file_tokens_.find(file_name) == file_tokens_.end()) {
+    file_tokens_[file_name] = std::list<DataToken>();
+  }
   file_tokens_[file_name].push_back(token);
+//  printCache(token_store_, file_tokens_, staged_tokens_);
   return token;
 }
 
 FileTokenInfo TokenStore::fail(const DataToken &token) {
+  AWS_LOG_DEBUG(__func__,
+               "Failing token %i", token);
+//  printCache(token_store_, file_tokens_, staged_tokens_);
   if (token_store_.find(token) == token_store_.end()) {
     throw std::runtime_error("DataToken not found");
   }
   FileTokenInfo token_info = token_store_[token];
-  if (file_tokens_.find(token_info.file_path_) == file_tokens_.end()) {
-    throw std::runtime_error("File not found in cache: " + token_info.file_path_);
-  }
-  const std::string &file_path = token_info.file_path_;
-  staged_tokens_[file_path] = token_info;
-  file_tokens_.erase(file_path);
   token_store_.erase(token);
+  if (file_tokens_.find(token_info.file_path_) != file_tokens_.end()) {
+    const std::string &file_path = token_info.file_path_;
+    staged_tokens_[file_path] = token_info;
+    file_tokens_.erase(file_path);
+  }
   return token_info;
 }
 
 FileTokenInfo TokenStore::resolve(const DataToken &token) {
+  AWS_LOG_DEBUG(__func__,
+               "Resolving token");
+
   if (token_store_.find(token) == token_store_.end()) {
     throw std::runtime_error("DataToken not found");
   }
@@ -97,6 +139,7 @@ FileTokenInfo TokenStore::resolve(const DataToken &token) {
     file_tokens_.erase(file_path);
   }
   token_store_.erase(token);
+//  printCache(token_store_, file_tokens_, staged_tokens_);
   return token_info;
 }
 
@@ -200,6 +243,11 @@ void FileManagerStrategy::initializeTokenStore() {
 }
 
 bool FileManagerStrategy::isDataAvailable() {
+  AWS_LOG_DEBUG(__func__,
+               "Is Data Available: %s, %s %s",
+               !active_read_file_.empty() ? "true" : "false",
+               !stored_files_.empty() ? "true" : "false",
+               active_write_file_size_ > 0 ? "true" : "false");
   return !active_read_file_.empty() || !stored_files_.empty() || active_write_file_size_ > 0;
 }
 
@@ -222,9 +270,13 @@ void FileManagerStrategy::write(const std::string &data) {
 DataToken FileManagerStrategy::read(std::string &data) {
   if (active_read_file_.empty()) {
     active_read_file_ = getFileToRead();
+    // if the file is still empty, return an empty token.
+    if (active_read_file_.empty()) {
+      return 0;
+    }
     active_read_file_stream_ = std::make_unique<std::ifstream>(active_read_file_);
   }
-  AWS_LOG_INFO(__func__,
+  AWS_LOG_DEBUG(__func__,
                "Reading from active log file: %s", active_read_file_.c_str());
   DataToken token;
   if (token_store_->isTokenAvailable(active_read_file_)) {
@@ -239,8 +291,13 @@ DataToken FileManagerStrategy::read(std::string &data) {
   token = token_store_->createToken(active_read_file_, position, next_position >= file_size);
 
   if (next_position >= file_size) {
+    auto file_loc = std::find(stored_files_.begin(), stored_files_.end(), active_read_file_);
+    if (file_loc != stored_files_.end()) {
+      stored_files_.erase(file_loc);
+    }
     active_read_file_.clear();
     active_read_file_stream_ = nullptr;
+
   }
   return token;
 }
@@ -254,6 +311,8 @@ void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
   } else {
     auto file_info = token_store_->fail(token);
     if (file_info.eof_) {
+      AWS_LOG_DEBUG(__func__,
+        "Failed last token, pushing file to stored: %s", file_info.file_path_.c_str());
       stored_files_.push_back(file_info.file_path_);
     }
   }
@@ -296,7 +355,6 @@ void FileManagerStrategy::deleteFile(const std::string &file_path) {
 }
 
 std::string FileManagerStrategy::getFileToRead() {
-  // @todo (rddesmond) return earliest file
   // if we have stored files, pop from the start of the list and return that filename
   // if we do not have stored files, and the active file has data, switch active file and return the existing active file.
   if (!stored_files_.empty()) {

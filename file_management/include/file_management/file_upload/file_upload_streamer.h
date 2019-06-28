@@ -36,7 +36,7 @@ namespace FileManagement {
 using Aws::DataFlow::MultiStatusConditionMonitor;
 using Aws::DataFlow::OutputStage;
 
-static constexpr std::chrono::milliseconds kTimeout = std::chrono::milliseconds(100);
+static constexpr std::chrono::milliseconds kTimeout = std::chrono::seconds(1);
 
 struct FileUploadStreamerOptions {
 
@@ -102,6 +102,9 @@ public:
   }
 
   void onPublisherStateChange(const Aws::DataFlow::Status &status) {
+    AWS_LOG_INFO(__func__,
+                 "Publisher state has changed to: %s",
+                 (status == Aws::DataFlow::Status::AVAILABLE) ? "available" : "unavailable");
     network_monitor_->setStatus(status);
   }
 
@@ -116,46 +119,6 @@ public:
     data_reader_->fileUploadCompleteStatus(upload_status, message);
   }
 
-  /**
-   * Attempt to start uploading.
-   *
-   * 1. First wait for work on all the status conditions. (i.e wait until files are available to upload)
-   * 2. Read a batch of data from the file_manager
-   * 3. Queue up the task to be worked on.
-   * 4. Wait for the task to be completed to continue.
-   */
-  inline void run() override {
-    AWS_LOG_INFO(__func__,
-                 "Waiting for files and work.");
-    auto wait_result = status_condition_monitor_.waitForWork(kTimeout);
-    if (wait_result == std::cv_status::timeout) {
-      AWS_LOG_DEBUG(__func__,
-                   "Timed out when waiting for work");
-      return;
-    }
-    if (!OutputStage<TaskPtr<T>>::getSink()) {
-      AWS_LOG_WARN(__func__,
-                   "No Sink Configured");
-      return;
-    }
-    AWS_LOG_INFO(__func__,
-                 "Found work! Batching");
-    if (!stored_task_) {
-      FileObject<T> file_object = data_reader_->readBatch(batch_size_);
-      total_logs_uploaded += file_object.batch_size;
-      stored_task_ = std::make_shared<FileUploadTask<T>>(
-          std::move(file_object),
-          std::bind(
-              &FileUploadStreamer<T>::onComplete,
-              this,
-              std::placeholders::_1,
-              std::placeholders::_2));
-    }
-    auto is_accepted = OutputStage<TaskPtr<T>>::getSink()->tryEnqueue(stored_task_, kTimeout);
-    if (is_accepted) {
-      stored_task_ = nullptr;
-    }
-  }
   /**
    * Start the upload thread.
    */
@@ -181,42 +144,48 @@ protected:
      * 3. Queue up the task to be worked on.
      * 4. Wait for the task to be completed to continue.
      */
-    inline void work() {
-      AWS_LOG_INFO(__func__,
-                   "Waiting for files and work.");
-      auto wait_result = status_condition_monitor_.waitForWork(kTimeout);
-      if (wait_result == std::cv_status::timeout) {
-        AWS_LOG_DEBUG(__func__,
-                      "Timed out when waiting for work");
-        return;
-      }
-      if (!OutputStage<TaskPtr<T>>::getSink()) {
-        AWS_LOG_WARN(__func__,
-                     "No Sink Configured");
-        return;
-      }
-      AWS_LOG_INFO(__func__,
-                   "Found work! Batching");
+    inline void work() override {
       if (!stored_task_) {
+        AWS_LOG_DEBUG(__func__,
+                     "Waiting for files and work.");
+        auto wait_result = status_condition_monitor_.waitForWork(kTimeout);
+        if (wait_result == std::cv_status::timeout) {
+          AWS_LOG_DEBUG(__func__,
+                        "Timed out when waiting for work");
+          return;
+        }
+        if (!OutputStage<TaskPtr<T>>::getSink()) {
+          AWS_LOG_WARN(__func__,
+                       "No Sink Configured");
+          return;
+        }
+        AWS_LOG_DEBUG(__func__,
+                     "Found work! Batching");
         FileObject<T> file_object = data_reader_->readBatch(batch_size_);
         total_logs_uploaded += file_object.batch_size;
         stored_task_ = std::make_shared<FileUploadTask<T>>(
-                std::move(file_object),
-                        std::bind(
-                                &DataReader<T>::fileUploadCompleteStatus,
-                                data_reader_,
-                                std::placeholders::_1,
-                                std::placeholders::_2));
+            std::move(file_object),
+            std::bind(
+                &FileUploadStreamer<T>::onComplete,
+                this,
+                std::placeholders::_1,
+                std::placeholders::_2));
+      } else {
+        AWS_LOG_DEBUG(__func__,
+                     "Previous task found, retrying upload.");
       }
       auto is_accepted = OutputStage<TaskPtr<T>>::getSink()->tryEnqueue(stored_task_, kTimeout);
       if (is_accepted) {
+        AWS_LOG_DEBUG(__func__,
+                     "Enqueue_accepted");
         stored_task_ = nullptr;
+      } else {
+        AWS_LOG_DEBUG(__func__,
+                     "Enqueue failed");
       }
     }
 
-
 private:
-
   /**
    * The status condition monitor to wait on before uploading.
    */
@@ -231,11 +200,6 @@ private:
    * Metric on number of logs queued in the TaskObservedQueue.
    */
   size_t total_logs_uploaded = 0;
-
-  /**
-   * Current thread working on file upload management.
-   */
-  std::thread thread;
 
   /**
    * The configured batch size to use when uploading.
