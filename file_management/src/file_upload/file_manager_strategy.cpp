@@ -28,10 +28,21 @@ namespace Aws {
 namespace FileManagement {
 
 static const std::string kConfigFile("file_management.info");
+static const std::string kTokenStoreFile("token_store.info");
 
-TokenStore::TokenStore(const std::vector<FileTokenInfo> &file_tokens) {
-  for (auto& file_token: file_tokens) {
-    staged_tokens_[file_token.file_path_] = file_token;
+TokenStore::TokenStore(const TokenStoreOptions &options) : options_{options}{
+  initializeBackupDirectory();
+}
+
+void TokenStore::initializeBackupDirectory() {
+  // todo this needs stricter checking: throw if unrecoverable
+
+  if (options_.backup_directory.back() != '/') {
+    options_.backup_directory += '/';
+  }
+  auto backup_directory = std::experimental::filesystem::path(options_.backup_directory);
+  if (!std::experimental::filesystem::exists(backup_directory)) {
+    std::experimental::filesystem::create_directory(backup_directory);
   }
 }
 
@@ -43,6 +54,14 @@ FileTokenInfo TokenStore::popAvailableToken(const std::string &file_name) {
   auto file_token_info = staged_tokens_[file_name];
   staged_tokens_.erase(file_name);
   return file_token_info;
+}
+
+DataToken TokenStore::createToken(const std::string &file_name, const long & streampos, bool is_eof) {
+  std::mt19937_64 rand( rand_device() );
+  DataToken token = rand();
+  token_store_.emplace(token, FileTokenInfo(file_name, streampos, is_eof));
+  file_tokens_[file_name].push_back(token);
+  return token;
 }
 
 FileTokenInfo TokenStore::fail(const DataToken &token) {
@@ -58,19 +77,6 @@ FileTokenInfo TokenStore::fail(const DataToken &token) {
   file_tokens_.erase(file_path);
   token_store_.erase(token);
   return token_info;
-}
-
-std::vector<FileTokenInfo> TokenStore::backup() {
-  auto vector_size = file_tokens_.size() + staged_tokens_.size();
-  std::vector<FileTokenInfo> token_backup(vector_size);
-  auto it = token_backup.begin();
-  for (auto& token : staged_tokens_) {
-    *it++ = token.second;
-  }
-  for (auto& token : file_tokens_) {
-    *it++ = token_store_[*token.second.begin()];
-  }
-  return token_backup;
 }
 
 FileTokenInfo TokenStore::resolve(const DataToken &token) {
@@ -94,31 +100,103 @@ FileTokenInfo TokenStore::resolve(const DataToken &token) {
   return token_info;
 }
 
+std::vector<FileTokenInfo> TokenStore::backup() {
+  auto vector_size = file_tokens_.size() + staged_tokens_.size();
+  std::vector<FileTokenInfo> token_backup(vector_size);
+  auto it = token_backup.begin();
+  for (auto& token : staged_tokens_) {
+    *it++ = token.second;
+  }
+  for (auto& token : file_tokens_) {
+    *it++ = token_store_[*token.second.begin()];
+  }
+  return token_backup;
+}
+
+void TokenStore::backupToDisk() {
+  auto file_path = std::experimental::filesystem::path(options_.backup_directory + kTokenStoreFile);
+  std::vector<FileTokenInfo> token_store_backup = backup();
+  if (std::experimental::filesystem::exists(file_path)) {
+    std::experimental::filesystem::remove(file_path);
+  }
+  std::ofstream token_store_file;
+  token_store_file.open(file_path);
+  if (token_store_file.bad()) {
+    AWS_LOG_WARN(__func__,
+                 "Unable to open file: %s", file_path.c_str());
+  }
+  for (const FileTokenInfo &token_info : token_store_backup) {
+    token_store_file << token_info.serialize() << std::endl;
+  }
+  token_store_file.close();
+}
+
+void TokenStore::restore(const std::vector<FileTokenInfo> &file_tokens) {
+  for (auto& file_token: file_tokens) {
+    staged_tokens_[file_token.file_path_] = file_token;
+  }
+}
+
+void TokenStore::restoreFromDisk() {
+  // read through each line.
+  // For each line the first 4 bytes are position, next byte is eof, the remainder are a string of file path
+  // Will this change depending on OS / platform? Will that matter? Should I use another serialization library.
+  auto file_path = std::experimental::filesystem::path(options_.backup_directory + kTokenStoreFile);
+  if (!std::experimental::filesystem::exists(file_path)) {
+    return;
+  }
+  std::ifstream token_store_read_stream = std::ifstream(file_path);
+  std::vector<FileTokenInfo> file_tokens;
+  std::string line;
+  while (!token_store_read_stream.eof()) {
+    std::getline(token_store_read_stream, line);
+    if (!line.empty()) {
+      FileTokenInfo token_info;
+      try {
+        token_info.deserialize(line);
+      } catch (std::runtime_error e) {
+        AWS_LOG_ERROR(__func__, "Unable to parse token backup line: %s. Skipping.", line.c_str());
+        continue;
+      }
+      file_tokens.push_back(token_info);
+    }
+  }
+  token_store_read_stream.close();
+  restore(file_tokens);
+  std::experimental::filesystem::remove(file_path);
+}
+
+
 FileManagerStrategy::FileManagerStrategy(const FileManagerStrategyOptions &options) {
   options_ = options;
-  storage_size_ = 0; // todo
+  stored_files_size_ = 0;
   active_write_file_size_ = 0;
-  // validate needs to happen here and throw
 }
 
 bool FileManagerStrategy::start() {
-  validateOptions();
+  initializeStorage();
+  initializeTokenStore();
   discoverStoredFiles();
   rotateWriteFile();
   return true;
 }
 
-void FileManagerStrategy::validateOptions() {
-
-  // todo this needs stricter checking: throw if unrecoverable
-
-  if (options_.storage_directory[options_.storage_directory.size()-1] != '/') {
+void FileManagerStrategy::initializeStorage() {
+  if (options_.storage_directory.back() != '/') {
     options_.storage_directory += '/';
   }
   auto storage = std::experimental::filesystem::path(options_.storage_directory);
   if (!std::experimental::filesystem::exists(storage)) {
     std::experimental::filesystem::create_directory(storage);
+    stored_files_size_ = 0;
   }
+}
+
+void FileManagerStrategy::initializeTokenStore() {
+
+  TokenStoreOptions options{options_.storage_directory};
+  token_store_ = std::make_unique<TokenStore>(options);
+  token_store_->restoreFromDisk();
 }
 
 bool FileManagerStrategy::isDataAvailable() {
@@ -126,6 +204,7 @@ bool FileManagerStrategy::isDataAvailable() {
 }
 
 // @todo (rddesmon) catch and wrap failure to open exceptions
+// @todo Deal with race conditions if there are multiple writers
 void FileManagerStrategy::write(const std::string &data) {
   checkIfFileShouldRotate(data.size());
   checkIfStorageLimitHasBeenReached(data.size());
@@ -148,8 +227,8 @@ DataToken FileManagerStrategy::read(std::string &data) {
   AWS_LOG_INFO(__func__,
                "Reading from active log file: %s", active_read_file_.c_str());
   DataToken token;
-  if (token_store_.isTokenAvailable(active_read_file_)) {
-    FileTokenInfo file_token = token_store_.popAvailableToken(active_read_file_);
+  if (token_store_->isTokenAvailable(active_read_file_)) {
+    FileTokenInfo file_token = token_store_->popAvailableToken(active_read_file_);
     active_read_file_stream_->seekg(file_token.position_);
   }
   long position = active_read_file_stream_->tellg();
@@ -157,7 +236,7 @@ DataToken FileManagerStrategy::read(std::string &data) {
   active_read_file_stream_->seekg(position, std::ifstream::beg);
   std::getline(*active_read_file_stream_, data);
   long next_position = active_read_file_stream_->tellg();
-  token = token_store_.createToken(active_read_file_, position, next_position >= file_size);
+  token = token_store_->createToken(active_read_file_, position, next_position >= file_size);
 
   if (next_position >= file_size) {
     active_read_file_.clear();
@@ -168,12 +247,12 @@ DataToken FileManagerStrategy::read(std::string &data) {
 
 void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
   if (is_success) {
-    auto file_info = token_store_.resolve(token);
+    auto file_info = token_store_->resolve(token);
     if (file_info.eof_) {
       deleteFile(file_info.file_path_);
     }
   } else {
-    auto file_info = token_store_.fail(token);
+    auto file_info = token_store_->fail(token);
     if (file_info.eof_) {
       stored_files_.push_back(file_info.file_path_);
     }
@@ -182,13 +261,17 @@ void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
 
 bool FileManagerStrategy::shutdown() {
   // todo can this stuff throw?
+  token_store_->backupToDisk();
   auto config_file_path = std::experimental::filesystem::path(options_.storage_directory + kConfigFile);
   if (std::experimental::filesystem::exists(config_file_path)) {
     std::experimental::filesystem::remove(config_file_path);
   }
   std::ofstream config_file(config_file_path);
+  // todo what is being written here?
+  config_file.close();
   return true;
 }
+
 
 void FileManagerStrategy::discoverStoredFiles() {
   for (const auto &entry : fs::directory_iterator(options_.storage_directory)) {
@@ -209,7 +292,7 @@ void FileManagerStrategy::deleteFile(const std::string &file_path) {
     "Deleting file: %s", file_path.c_str());
   const uintmax_t file_size = fs::file_size(file_path);
   fs::remove(file_path);
-  storage_size_ -= file_size;
+  stored_files_size_ -= file_size;
 }
 
 std::string FileManagerStrategy::getFileToRead() {
@@ -235,7 +318,7 @@ std::string FileManagerStrategy::getFileToRead() {
 
 void FileManagerStrategy::addFilePathToStorage(const fs::path &file_path) {
   stored_files_.push_back(file_path);
-  storage_size_ += fs::file_size(file_path);
+  stored_files_size_ += fs::file_size(file_path);
 }
 
 void FileManagerStrategy::rotateWriteFile() {
@@ -257,7 +340,7 @@ void FileManagerStrategy::rotateWriteFile() {
 
   if (!active_write_file_.empty()) {
     stored_files_.push_back(active_write_file_);
-    storage_size_ += active_write_file_size_;
+    stored_files_size_ += active_write_file_size_;
   }
 
   active_write_file_ = file_path;
@@ -272,7 +355,7 @@ void FileManagerStrategy::checkIfFileShouldRotate(const uintmax_t &new_data_size
 }
 
 void FileManagerStrategy::checkIfStorageLimitHasBeenReached(const uintmax_t &new_data_size) {
-  const uintmax_t new_storage_size = storage_size_ + active_write_file_size_ + new_data_size;
+  const uintmax_t new_storage_size = stored_files_size_ + active_write_file_size_ + new_data_size;
   if (new_storage_size > options_.storage_limit_in_bytes) {
     deleteOldestFile();
   }
@@ -285,17 +368,6 @@ void FileManagerStrategy::deleteOldestFile() {
     stored_files_.pop_front();
     deleteFile(oldest_file);
   }
-}
-
-DataToken TokenStore::createToken(const std::string &file_name, const long & streampos, bool is_eof) {
-  DataToken token = std::rand() % UINT64_MAX;
-  FileTokenInfo token_info = FileTokenInfo(file_name, streampos, is_eof);
-  token_store_[token] = token_info;
-  if (file_tokens_.find(file_name) == file_tokens_.end()) {
-    file_tokens_[file_name] = std::list<DataToken>();
-  }
-  file_tokens_[file_name].push_back(token);
-  return token;
 }
 
 }  // namespace FileManagement

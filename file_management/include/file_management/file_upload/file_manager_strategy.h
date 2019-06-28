@@ -25,6 +25,7 @@
 #include <experimental/filesystem>
 #include <dataflow_lite/utils/service.h>
 #include <file_management/file_upload/task_utils.h>
+#include <aws/core/utils/json/JsonSerializer.h>
 
 namespace Aws {
 namespace FileManagement {
@@ -35,6 +36,10 @@ enum TokenStatus {
 };
 
 using DataToken = uint64_t;
+
+static constexpr const char* kPositionKey = "position";
+static constexpr const char* kEofKey = "eof";
+static constexpr const char* kFilePathKey = "file_path";
 
 /**
  * Stores file token information for the purpose of tracking read locations.
@@ -68,6 +73,29 @@ public:
 
   };
 
+  std::string serialize() const {
+    Aws::Utils::Json::JsonValue json_value;
+    const Aws::String file_path(file_path_.c_str());
+    json_value
+        .WithInt64(kPositionKey, position_)
+        .WithBool(kEofKey, eof_)
+        .WithString(kFilePathKey, file_path);
+    return std::string(json_value.View().WriteCompact().c_str());
+  }
+
+  void deserialize(const std::string token_info_json) {
+    const Aws::String aws_str(token_info_json.c_str());
+    const Aws::Utils::Json::JsonValue json_value(aws_str);
+    if (!json_value.WasParseSuccessful()) {
+      throw std::runtime_error("Unable to parse JSON");
+    }
+    auto view = json_value.View();
+    position_ = view.GetInt64(kPositionKey);
+    eof_ = view.GetBool(kEofKey);
+    file_path_ = view.GetString(kFilePathKey).c_str();
+  }
+
+
   std::string file_path_;
   long position_ = 0;
   bool eof_;
@@ -99,15 +127,8 @@ public:
   virtual void resolve(const DataToken &token, bool is_success) = 0;
 };
 
-/**
- * File manager strategy options.
- */
-struct FileManagerStrategyOptions {
-  std::string file_prefix;
-  std::string storage_directory;
-  std::string file_extension;
-  uint maximum_file_size_in_bytes;
-  uint storage_limit_in_bytes;
+struct TokenStoreOptions {
+  std::string backup_directory;
 };
 
 /**
@@ -118,7 +139,8 @@ public:
 
   TokenStore() = default;
 
-  explicit TokenStore(const std::vector<FileTokenInfo> &file_tokens);
+  explicit TokenStore(const TokenStoreOptions &options);
+
   /**
    * @param file_name to lookup
    * @return true if a staged token is available to read for that file
@@ -164,11 +186,48 @@ public:
    */
   std::vector<FileTokenInfo> backup();
 
+  /**
+   * Backup the token store to a file on disk
+   * @param directory
+   */
+  void backupToDisk();
+
+  /**
+   * Restore tokens from a vector
+   * @param std::vector<FileTokenInfo>
+   */
+  void restore(const std::vector<FileTokenInfo> &file_tokens);
+
+  /**
+   * Restore the token store from a file saved to disk
+   */
+  void restoreFromDisk();
+
+
+
 private:
+  void initializeBackupDirectory();
+
   std::unordered_map<DataToken, FileTokenInfo> token_store_;
   std::unordered_map<std::string, std::list<DataToken>> file_tokens_;
   std::unordered_map<std::string, FileTokenInfo> staged_tokens_;
+
+  TokenStoreOptions options_;
+
+  std::random_device rand_device;
 };
+
+/**
+ * File manager strategy options.
+ */
+struct FileManagerStrategyOptions {
+  std::string file_prefix;
+  std::string storage_directory;
+  std::string file_extension;
+  uint maximum_file_size_in_bytes;
+  uint storage_limit_in_bytes;
+};
+
 
 /**
  * Manages how files are split up, which files to write to and read when requested.
@@ -178,8 +237,6 @@ public:
   explicit FileManagerStrategy(const FileManagerStrategyOptions &options);
 
   ~FileManagerStrategy() = default;
-
-  void validateOptions();
 
   bool start() override;
 
@@ -194,6 +251,10 @@ public:
   bool shutdown() override;
 
 private:
+  void initializeStorage();
+
+  void initializeTokenStore();
+
   void discoverStoredFiles();
 
   void deleteFile(const std::string &file_path);
@@ -215,13 +276,16 @@ private:
    */
   std::list<std::string> stored_files_;
 
-  uintmax_t  storage_size_; // size of all stored files, does not include active write file size.
+  /**
+   * Disk space used by all stored files. Does not include active_write_file_size_.
+   */
+  std::atomic<size_t> stored_files_size_;
 
   /**
    * Current file name to write to.
    */
   std::string active_write_file_;
-  size_t active_write_file_size_;
+  std::atomic<size_t> active_write_file_size_;
 
   std::string active_read_file_;
   std::unique_ptr<std::ifstream> active_read_file_stream_ = nullptr;
@@ -240,8 +304,7 @@ private:
   /**
    * Stores which tokens to read from.
    */
-  TokenStore token_store_;
-
+  std::unique_ptr<TokenStore> token_store_ = nullptr;
 };
 
 }  // namespace FileManagement
