@@ -21,6 +21,7 @@
 
 #include <aws/core/utils/logging/LogMacros.h>
 
+#include "file_management/file_manager_options.h"
 #include "file_management/file_upload/task_utils.h"
 #include "file_management/file_upload/file_manager_strategy.h"
 #include <dataflow_lite/dataflow/status_monitor.h>
@@ -79,14 +80,12 @@ class FileManager :
 {
 public:
 
-  const FileManagerStrategyOptions kDefaultOptions{"cloudwatchlogs", "/tmp/", ".log", 1024*1024, 1024*1024};
-
   /**
    * Default constructor.
    */
   FileManager() {
     // todo use customer data to VERIFY that the above kOptions is valid
-    file_manager_strategy_ = std::make_shared<FileManagerStrategy>(kDefaultOptions);
+    file_manager_strategy_ = std::make_shared<FileManagerStrategy>(kDefaultFileManagerStrategyOptions);
   }
 
   /**

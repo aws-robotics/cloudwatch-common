@@ -244,6 +244,6 @@ private:
 std::atomic<int> number_dequeued_;
 };
 
-}  // namespace CloudWatchlogs
+}  // namespace Cloudwatch
 }  // namespace AWS
 

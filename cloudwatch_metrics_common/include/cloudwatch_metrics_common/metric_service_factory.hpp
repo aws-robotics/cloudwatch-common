@@ -17,7 +17,7 @@
 
 #include <cloudwatch_metrics_common/metric_service.hpp>
 #include <cloudwatch_metrics_common/metric_publisher.hpp>
-#include <dataflow_lite/cloudwatch/cloudwatch_options.h>
+#include <cloudwatch_metrics_common/cloudwatch_options.h>
 
 namespace Aws {
 namespace CloudWatchMetrics {

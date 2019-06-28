@@ -25,7 +25,7 @@
 
 #include <dataflow_lite/dataflow/dataflow.h>
 #include <dataflow_lite/dataflow/dataflow.h>
-#include <dataflow_lite/cloudwatch/cloudwatch_options.h>
+#include <cloudwatch_metrics_common/cloudwatch_options.h>
 
 #include <cloudwatch_metrics_common/definitions/definitions.h>
 
@@ -61,7 +61,7 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
 
   // Create an observed queue to trigger a publish when data is available
   auto file_data_queue =
-          std::make_shared<TaskObservedBlockingQueue<MetricDatumCollection>>(cloudwatch_options.file_max_queue_size);
+          std::make_shared<TaskObservedBlockingQueue<MetricDatumCollection>>(cloudwatch_options.uploader_options.file_max_queue_size);
 
   auto stream_data_queue = std::make_shared<TaskObservedQueue<MetricDatumCollection>>(); //todo set size
 
