@@ -41,7 +41,7 @@ public:
           const std::string & metrics_namespace,
           const Aws::Client::ClientConfiguration & client_config,
           const Aws::SDKOptions & sdk_options,
-          const CloudwatchOptions & cloudwatch_options = kDefaultCloudwatchOptions);
+          const CloudWatchOptions & cloudwatch_options = kDefaultCloudWatchOptions);
 
 private:
   /**

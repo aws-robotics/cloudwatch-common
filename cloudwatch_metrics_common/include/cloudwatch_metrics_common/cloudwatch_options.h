@@ -24,7 +24,7 @@ namespace CloudWatchMetrics {
 /** Contains all options for the file uploader and file management
  * in one options object.
  */
-struct CloudwatchOptions {
+struct CloudWatchOptions {
   /**
    * All options for the FileUpload system
    */
@@ -35,7 +35,7 @@ struct CloudwatchOptions {
   Aws::FileManagement::FileManagerStrategyOptions file_manager_strategy_options;
 };
 
-static const CloudwatchOptions kDefaultCloudwatchOptions{
+static const CloudWatchOptions kDefaultCloudWatchOptions{
   Aws::DataFlow::kDefaultUploaderOptions,
   Aws::FileManagement::kDefaultFileManagerStrategyOptions
 };

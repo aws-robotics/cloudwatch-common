@@ -21,7 +21,6 @@
 
 #include <aws/core/utils/logging/LogMacros.h>
 
-#include "file_management/file_manager_options.h"
 #include "file_management/file_upload/task_utils.h"
 #include "file_management/file_upload/file_manager_strategy.h"
 #include <dataflow_lite/dataflow/status_monitor.h>
@@ -85,7 +84,7 @@ public:
    */
   FileManager() {
     // todo use customer data to VERIFY that the above kOptions is valid
-    file_manager_strategy_ = std::make_shared<FileManagerStrategy>(kDefaultFileManagerStrategyOptions);
+    file_manager_strategy_ = std::make_shared<FileManagerStrategy>(Aws::FileManagement::kDefaultFileManagerStrategyOptions);
   }
 
   /**
@@ -93,7 +92,7 @@ public:
    *
    * @param options for the FileManagerStrategy
    */
-  FileManager(FileManagerStrategyOptions &options) {
+  FileManager(const FileManagerStrategyOptions &options) {
     // todo all arguments should be configurable and should have input checking
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }
