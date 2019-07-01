@@ -35,9 +35,17 @@ struct CloudWatchOptions {
   Aws::FileManagement::FileManagerStrategyOptions file_manager_strategy_options;
 };
 
+static const Aws::FileManagement::FileManagerStrategyOptions kDefaultMetricFileManagerStrategyOptions{
+  "~/.ros/cwmetrics",
+  "cwmetric",
+  Aws::FileManagement::kDefaultFileManagerStrategyOptions.file_extension,
+  Aws::FileManagement::kDefaultFileManagerStrategyOptions.maximum_file_size_in_kb,
+  Aws::FileManagement::kDefaultFileManagerStrategyOptions.storage_limit_in_kb
+};
+
 static const CloudWatchOptions kDefaultCloudWatchOptions{
   Aws::DataFlow::kDefaultUploaderOptions,
-  Aws::FileManagement::kDefaultFileManagerStrategyOptions
+  kDefaultMetricFileManagerStrategyOptions
 };
 
 }  // namespace CloudWatchMetrics
