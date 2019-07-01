@@ -43,6 +43,10 @@ class LogFileManager :
    */
   LogFileManager()  = default;
 
+  LogFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
+    : FileManager(options) {
+  }
+
   explicit LogFileManager(
       const std::shared_ptr<FileManagerStrategy> &file_manager_strategy)
       : FileManager(file_manager_strategy)

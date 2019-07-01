@@ -42,8 +42,7 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
 {
   Aws::InitAPI(sdk_options); // per the SDK team this only ever needs to be called once
 
-  // todo options need to be set here!
-  auto log_file_manager = std::make_shared<LogFileManager>();
+  auto log_file_manager = std::make_shared<LogFileManager>(cloudwatch_options.file_manager_strategy_options);
 
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, client_config);
 
