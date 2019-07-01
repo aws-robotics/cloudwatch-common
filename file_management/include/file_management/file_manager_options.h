@@ -52,7 +52,7 @@ struct FileManagerStrategyOptions {
   size_t storage_limit_in_kb;
 };
 
-static const FileManagerStrategyOptions kDefaultFileManagerStrategyOptions{"~/.ros/cwlogs", "cloudwatchlogs", ".log", 1024, 1024*1024};
+static const FileManagerStrategyOptions kDefaultFileManagerStrategyOptions{"~/.ros/cwlogs", "cwlog", ".log", 1024, 1024*1024};
 
 }  // namespace FileManagement
 }  // namespace Aws
