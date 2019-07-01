@@ -35,7 +35,7 @@ struct CloudWatchOptions {
   Aws::FileManagement::FileManagerStrategyOptions file_manager_strategy_options;
 };
 
-static const CloudWatchOptions kDefaultCloudwatchOptions{
+static const CloudWatchOptions kDefaultCloudWatchOptions{
   Aws::DataFlow::kDefaultUploaderOptions,
   Aws::FileManagement::kDefaultFileManagerStrategyOptions
 };

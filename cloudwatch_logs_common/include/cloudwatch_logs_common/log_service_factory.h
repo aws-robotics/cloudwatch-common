@@ -48,7 +48,7 @@ public:
     const std::string & log_stream,
     const Aws::Client::ClientConfiguration & client_config,
     const Aws::SDKOptions & sdk_options,
-    const CloudWatchOptions & cloudwatch_options = kDefaultCloudwatchOptions);
+    const CloudWatchOptions & cloudwatch_options = kDefaultCloudWatchOptions);
 private:
   /**
    * Block copy constructor and assignment operator for Factory object.
