@@ -203,6 +203,7 @@ public:
 
 
 private:
+  void validateOptions();
   void initializeBackupDirectory();
 
   std::unordered_map<DataToken, FileTokenInfo> token_store_;
@@ -236,6 +237,8 @@ public:
   bool shutdown() override;
 
 private:
+  void validateOptions();
+
   void initializeStorage();
 
   void initializeTokenStore();
