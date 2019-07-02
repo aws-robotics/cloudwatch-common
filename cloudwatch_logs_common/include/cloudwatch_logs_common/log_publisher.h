@@ -41,14 +41,13 @@ using LogTaskSource = std::shared_ptr<Aws::DataFlow::Source<std::shared_ptr<LogT
  * This enum is used by the LogPublisher to track the current runtime state of the Run function
  */
 enum LogPublisherRunState {
-  LOG_PUBLISHER_INITIALIZED, // also not connected / offline, need to start from the beginning
   LOG_PUBLISHER_RUN_CREATE_GROUP,
   LOG_PUBLISHER_RUN_CREATE_STREAM,
   LOG_PUBLISHER_RUN_INIT_TOKEN,
   LOG_PUBLISHER_ATTEMPT_SEND_LOGS,
 };
 
-const static Aws::String EMPTY_TOKEN = "";
+const static Aws::String UNINITIALIZED_TOKEN = "_NOT_SET_";
 
 /**
  * Wrapping class around the CloudWatch Logs API.
@@ -67,33 +66,33 @@ public:
   LogPublisher(const std::string & log_group, const std::string & log_stream,
                const Aws::Client::ClientConfiguration & client_config);
 
-
-
   /**
    *  @brief Tears down the LogPublisher object
    */
   virtual ~LogPublisher();
 
-
   virtual bool shutdown() override;
+
   /**
-   * Initialize the AWS API and create the cloudwatch facade
+   * Create the cloudwatch facade
    * @return
    */
   virtual bool start() override;
 
 private:
 
+  /**
+   * Check if the input status is related to a network failure.
+   *
+   * @param error
+   * @return true if connected to the internet, false otherwise
+   */
   bool checkIfConnected(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors error);
 
   /**
-   * Reset the current init token to EMPTY_TOKEN
+   * Reset the current init token to UNINITIALIZED_TOKEN
    */
   void resetInitToken();
-  /**
-  * Handle internal state reset and cleanup when we receive a NOT_CONNECTED status
-  */
-  void markOffline();
 
   //overall config
   bool configure();
@@ -110,12 +109,12 @@ private:
   LogTaskSource queue_monitor_;
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
   Aws::SDKOptions aws_sdk_options_;
-  std::string log_group_; //todo const?
-  std::string log_stream_; //todo const?
-  Aws::SDKOptions options_; //todo const?
-  Aws::Client::ClientConfiguration client_config_; //todo const?
+  std::string log_group_;
+  std::string log_stream_;
+  Aws::SDKOptions options_;
+  Aws::Client::ClientConfiguration client_config_;
 
-  LogPublisherRunState run_state_; // todo atomic?
+  LogPublisherRunState run_state_;
   Aws::String next_token;
   mutable std::recursive_mutex mtx_;
 };

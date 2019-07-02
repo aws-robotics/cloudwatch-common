@@ -42,7 +42,7 @@ LogPublisher::LogPublisher(
   this->log_group_ = log_group;
   this->log_stream_ = log_stream;
   this->cloudwatch_facade_ = nullptr;
-  this->markOffline(); // reset token and set state to init
+  this->run_state_ = LOG_PUBLISHER_RUN_CREATE_GROUP;
 }
 
 LogPublisher::~LogPublisher()
@@ -51,7 +51,6 @@ LogPublisher::~LogPublisher()
 
 bool LogPublisher::checkIfConnected(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors error) {
   if (CW_LOGS_NOT_CONNECTED == error) {
-    this->markOffline();
     return false;
   }
   return true;
@@ -64,6 +63,7 @@ bool LogPublisher::CreateGroup()
 {
   auto status =
     this->cloudwatch_facade_->CheckLogGroupExists(this->log_group_);
+
   if (!checkIfConnected(status)) {
     return false;
   }
@@ -97,7 +97,7 @@ bool LogPublisher::CreateGroup()
   } else {
 
     AWS_LOGSTREAM_ERROR(__func__, "Failed to create log group, status: "
-                        << status << ". Retrying ...");
+                        << status);
     return false;
   }
 }
@@ -135,7 +135,7 @@ bool LogPublisher::CreateStream()
 
   } else {
     AWS_LOGSTREAM_ERROR(__func__, "Failed to create log stream, status: " 
-                        << status << ". Retrying ...");
+                        << status);
     return false;
   }
 }
@@ -149,6 +149,7 @@ bool LogPublisher::InitToken(Aws::String & next_token)
     this->cloudwatch_facade_->GetLogStreamToken(this->log_group_, this->log_stream_,
                                                 next_token);
   if (!checkIfConnected(status)) {
+    // don't reset token, could still be valid
     return false;
   }
 
@@ -158,8 +159,8 @@ bool LogPublisher::InitToken(Aws::String & next_token)
   } else {
 
     AWS_LOGSTREAM_ERROR(__func__, "Unable to obtain the sequence token to use, status: " 
-                        << status << ". Retrying ...");
-    resetInitToken();
+                        << status);
+    resetInitToken(); //  reset token given error
     return false;
   }
 }
@@ -210,70 +211,59 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String 
   return send_logs_status;
 }
 
-void LogPublisher::markOffline()
-{
-  resetInitToken();
-  this->run_state_ = LOG_PUBLISHER_INITIALIZED;
-}
 
 void LogPublisher::resetInitToken()
 {
-  AWS_LOG_DEBUG(__func__, "Reset init token");
-  this->next_token = EMPTY_TOKEN;
+  this->next_token = UNINITIALIZED_TOKEN;
 }
 
 bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data)
 {
-  // attempt to configure, this will fail if offline
-  bool b = this->configure();
-  if (!b) {
-    AWS_LOG_WARN(__func__, "configure FAILED");
-    return false;
-  }
-  AWS_LOG_DEBUG(__func__, "configure succeeded");
 
+  if (this->run_state_ ==  LOG_PUBLISHER_RUN_CREATE_GROUP) {
+    // attempt to create group
+    if (!CreateGroup()) {
+      AWS_LOG_WARN(__func__, "CreateGroup FAILED");
+      return false;
+    }
+    AWS_LOG_DEBUG(__func__, "CreateGroup succeeded");
+  }
+
+  if (this->run_state_ == LOG_PUBLISHER_RUN_CREATE_STREAM) {
+    // attempt to create stream
+    if (!CreateStream()) {
+      AWS_LOG_WARN(__func__, "CreateStream FAILED");
+      return false;
+    }
+    AWS_LOG_DEBUG(__func__, "CreateGroup succeeded");
+  }
+
+  if (this->run_state_ == LOG_PUBLISHER_RUN_INIT_TOKEN) {
+
+    // init and check if we have a valid token
+    bool token_success = InitToken(next_token);
+
+    if(!token_success || next_token == Aws::CloudWatchLogs::UNINITIALIZED_TOKEN) {
+      AWS_LOG_WARN(__func__, "INIT TOKEN FAILED");
+      return false;
+    }
+    AWS_LOG_DEBUG(__func__, "INIT TOKEN succeeded");
+  }
+
+  // all config succeeded: attempt to publish
   this->run_state_ = LOG_PUBLISHER_ATTEMPT_SEND_LOGS;
   bool success = SendLogFiles(next_token, data);
+
+  // if failed attempt to get the token next time
+  // otherwise everything succeeded to attempt to send logs again
+  this->run_state_ = success ? LOG_PUBLISHER_ATTEMPT_SEND_LOGS : LOG_PUBLISHER_RUN_INIT_TOKEN;
+
   AWS_LOG_DEBUG(__func__, "finished SendLogFiles");
 
   return success;
 }
 
-bool LogPublisher::configure()
-{
-  // attempt to fully configure
-  if(!CreateGroup()) {
-    AWS_LOG_WARN(__func__, "CreateGroup FAILED");
-    return false;
-  }
-
-  AWS_LOG_DEBUG(__func__, "CreateGroup succeeded");
-
-  // attempt to create stream
-  if(!CreateStream()) {
-    AWS_LOG_WARN(__func__,"CreateStream FAILED");
-    return false;
-  }
-  AWS_LOG_DEBUG(__func__, "CreateGroup succeeded");
-
-//  // init and check if we have a valid token
-  InitToken(next_token);
-//  if(next_token == Aws::CloudWatchLogs::EMPTY_TOKEN) {
-//    AWS_LOG_WARN(__func__, "INIT TOKEN FAILED");
-//    return false;
-//  }
-  AWS_LOG_DEBUG(__func__, "INIT TOKEN succeeded");
-
-  return true;
-}
-
 bool LogPublisher::start() {
-
-  // only call if init is needed
-  if (LOG_PUBLISHER_INITIALIZED != this->run_state_) {
-    AWS_LOG_DEBUG(__func__, "Not initialized, skipping");
-    return false;
-  }
 
   if (!this->cloudwatch_facade_) {
     this->cloudwatch_facade_ = std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchFacade>(this->client_config_);
@@ -283,6 +273,7 @@ bool LogPublisher::start() {
 }
 
 bool LogPublisher::shutdown() {
+  resetInitToken();
   Aws::ShutdownAPI(this->options_);
   return true;
 }

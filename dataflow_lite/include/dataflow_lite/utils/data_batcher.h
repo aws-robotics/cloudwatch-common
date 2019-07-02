@@ -37,6 +37,9 @@ template<typename T>
 class DataBatcher : public Service {
 public:
 
+  /**
+   * SIZE_MAX is used as the NOT set default.
+   */
   static const size_t kDefaultTriggerSize = SIZE_MAX;
   static const size_t kDefaultMaxBatchSize = 1024; // todo is this even reasonable? need data
 

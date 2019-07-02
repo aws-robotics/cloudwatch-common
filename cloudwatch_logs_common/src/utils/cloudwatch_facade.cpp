@@ -38,6 +38,11 @@ CloudWatchFacade::CloudWatchFacade(const Aws::Client::ClientConfiguration & clie
   this->cw_client_ = std::make_unique<Aws::CloudWatchLogs::CloudWatchLogsClient>(client_config);
 }
 
+CloudWatchFacade::CloudWatchFacade(std::unique_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client)
+  : cw_client_(std::move(cw_client))
+{
+}
+
 Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsRequest(
   const Aws::CloudWatchLogs::Model::PutLogEventsRequest & request, Aws::String & next_token)
 {

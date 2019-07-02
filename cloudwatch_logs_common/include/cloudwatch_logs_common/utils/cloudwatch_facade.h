@@ -44,6 +44,13 @@ public:
    */
   CloudWatchFacade(const Aws::Client::ClientConfiguration & client_config);
 
+  /**
+   * @brief Creates a new CloudWatchFacade with an existing client
+   *
+   * @param cw_client The client for interacting with cloudwatch
+   */
+  CloudWatchFacade(const std::unique_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client);
+
   virtual ~CloudWatchFacade() = default;
 
   /**
