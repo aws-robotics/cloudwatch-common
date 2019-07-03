@@ -66,10 +66,17 @@ public:
 
 protected:
 
-  bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent>&) override {
+  // override so we can notify when internal state changes, as attemptPublish sets state
+  virtual Aws::FileManagement::UploadStatus attemptPublish(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> &data) override {
+    auto s = Publisher::attemptPublish(data);
     {
       this->notify();
     }
+    return s;
+  }
+
+  bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent>&) override {
+
     return !force_failure;
   }
 
@@ -243,7 +250,7 @@ TEST_F(PipelineTest, TestSinglePublisherFailureToFileManager) {
 
   EXPECT_TRUE(b2);
   EXPECT_EQ(0, batcher->getCurrentBatchSize());
-  EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState());
+  EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState()); //todo race condition
   EXPECT_FALSE(cw_service->isConnected());
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());
   EXPECT_EQ(1, test_publisher->getPublishAttempts());

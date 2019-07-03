@@ -72,7 +72,7 @@ public:
      * @param data the data to publish
      * @return true if the data was successfully published, false otherwise
      */
-    Aws::FileManagement::UploadStatus attemptPublish(T &data) override
+    virtual Aws::FileManagement::UploadStatus attemptPublish(T &data) override
     {
 
       publish_attempts_++;

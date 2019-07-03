@@ -60,11 +60,21 @@ public:
    *  Constructs a LogPublisher object that will use the provided CloudWatchClient and SDKOptions
    * when it publishes logs.
    *
+   *  @param client_config The ClientConfiguration that this publisher will use to create the Client.
+   */
+  LogPublisher(const std::string & log_group, const std::string & log_stream,
+               const Aws::Client::ClientConfiguration & client_config);
+
+  /**
+   *  @brief Creates a LogPublisher object that uses the provided client and SDK configuration
+   *  Constructs a LogPublisher object that will use the provided CloudWatchClient and SDKOptions
+   * when it publishes logs.
+   *
    *  @param cw_client The CloudWatchClient that this publisher will use when pushing logs to
    * CloudWatch.
    */
   LogPublisher(const std::string & log_group, const std::string & log_stream,
-               const Aws::Client::ClientConfiguration & client_config);
+               std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cw_client);
 
   /**
    *  @brief Tears down the LogPublisher object
@@ -78,6 +88,8 @@ public:
    * @return
    */
   virtual bool start() override;
+
+  LogPublisherRunState getRunState();
 
 private:
 
@@ -96,13 +108,14 @@ private:
 
   //overall config
   bool configure();
+
   //main publish mechanism
   bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) override;
 
-  //config
   bool CreateGroup();
   bool CreateStream();
   bool InitToken(Aws::String & next_token);
+
   bool SendLogFiles(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs);
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data);
 
@@ -114,7 +127,7 @@ private:
   Aws::SDKOptions options_;
   Aws::Client::ClientConfiguration client_config_;
 
-  LogPublisherRunState run_state_;
+  ObservableObject<LogPublisherRunState> run_state_;
   Aws::String next_token;
   mutable std::recursive_mutex mtx_;
 };

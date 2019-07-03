@@ -123,6 +123,7 @@ public:
 
 protected:
 
+  CloudWatchFacade() = default;
   std::unique_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client_;
 
 private:

@@ -34,15 +34,27 @@ constexpr int kMaxRetries = 1; // todo this should probably be configurable, may
 using namespace Aws::CloudWatchLogs;
 
 LogPublisher::LogPublisher(
-  const std::string & log_group, const std::string & log_stream,
+  const std::string & log_group,
+  const std::string & log_stream,
   const Aws::Client::ClientConfiguration & client_config)
-  : Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>()
+  : Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>(),
+  run_state_(LOG_PUBLISHER_RUN_CREATE_GROUP)
 {
   this->client_config_ = client_config;
   this->log_group_ = log_group;
   this->log_stream_ = log_stream;
   this->cloudwatch_facade_ = nullptr;
-  this->run_state_ = LOG_PUBLISHER_RUN_CREATE_GROUP;
+}
+
+LogPublisher::LogPublisher(
+  const std::string & log_group,
+  const std::string & log_stream,
+  std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade)
+  : run_state_(LOG_PUBLISHER_RUN_CREATE_GROUP)
+{
+  this->cloudwatch_facade_ = cloudwatch_facade;
+  this->log_group_ = log_group;
+  this->log_stream_ = log_stream;
 }
 
 LogPublisher::~LogPublisher()
@@ -73,25 +85,26 @@ bool LogPublisher::CreateGroup()
 
   if (CW_LOGS_SUCCEEDED == status) {
 
-    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM;
+    this->run_state_.setValue(Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM);
     AWS_LOGSTREAM_DEBUG(__func__, "Found existing log group: " << log_group_);
     return true;
   }
 
   status = this->cloudwatch_facade_->CreateLogGroup(this->log_group_);
+
   if (!checkIfConnected(status)) {
     return false;
   }
 
   if (CW_LOGS_SUCCEEDED == status) {
 
-    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM;
+    this->run_state_.setValue(Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM);
     AWS_LOGSTREAM_DEBUG(__func__, "Successfully created log group.");
     return true;
 
   } else if (CW_LOGS_LOG_GROUP_ALREADY_EXISTS == status) {
 
-    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM;
+    this->run_state_.setValue(Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_CREATE_STREAM);
     AWS_LOGSTREAM_INFO(__func__, "Log group already exists.");
     return true;
 
@@ -115,7 +128,7 @@ bool LogPublisher::CreateStream()
   }
 
   if (CW_LOGS_SUCCEEDED == status) {
-    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
+    this->run_state_.setValue(Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN);
     AWS_LOGSTREAM_DEBUG(__func__, "Found existing log stream: " << this->log_stream_);
     return true;
   }
@@ -126,11 +139,11 @@ bool LogPublisher::CreateStream()
   }
 
   if (CW_LOGS_SUCCEEDED == status) {
-    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
+    this->run_state_.setValue(Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN);
     AWS_LOG_DEBUG(__func__, "Successfully created log stream.");
     return true;
   } else if (CW_LOGS_LOG_STREAM_ALREADY_EXISTS == status) {
-    this->run_state_ = Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN;
+    this->run_state_.setValue(Aws::CloudWatchLogs::LOG_PUBLISHER_RUN_INIT_TOKEN);
     AWS_LOG_DEBUG(__func__, "Log stream already exists");
     return true;
 
@@ -212,16 +225,17 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String 
   return send_logs_status;
 }
 
-
 void LogPublisher::resetInitToken()
 {
   this->next_token = UNINITIALIZED_TOKEN;
 }
+LogPublisherRunState LogPublisher::getRunState() {
+  return this->run_state_.getValue();
+}
 
-bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data)
-{
+bool LogPublisher::configure() {
 
-  if (this->run_state_ ==  LOG_PUBLISHER_RUN_CREATE_GROUP) {
+  if (getRunState() == LOG_PUBLISHER_RUN_CREATE_GROUP) {
     // attempt to create group
     if (!CreateGroup()) {
       AWS_LOG_WARN(__func__, "CreateGroup FAILED");
@@ -230,7 +244,7 @@ bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEve
     AWS_LOG_DEBUG(__func__, "CreateGroup succeeded");
   }
 
-  if (this->run_state_ == LOG_PUBLISHER_RUN_CREATE_STREAM) {
+  if (getRunState() == LOG_PUBLISHER_RUN_CREATE_STREAM) {
     // attempt to create stream
     if (!CreateStream()) {
       AWS_LOG_WARN(__func__, "CreateStream FAILED");
@@ -239,7 +253,7 @@ bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEve
     AWS_LOG_DEBUG(__func__, "CreateGroup succeeded");
   }
 
-  if (this->run_state_ == LOG_PUBLISHER_RUN_INIT_TOKEN) {
+  if (getRunState() == LOG_PUBLISHER_RUN_INIT_TOKEN) {
 
     // init and check if we have a valid token
     bool token_success = InitToken(next_token);
@@ -251,13 +265,32 @@ bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEve
     AWS_LOG_DEBUG(__func__, "INIT TOKEN succeeded");
   }
 
+  return true;
+}
+
+bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data)
+{
+
+  // if no data don't attempt to configure or publish
+  if (data.empty()) {
+    AWS_LOG_DEBUG(__func__, "no data to publish");
+    return false;
+  }
+
+  // attempt to configure (if needed, based on run_state_)
+  if (!configure()) {
+    return false;
+  }
+
+  AWS_LOG_DEBUG(__func__, "attempting to SendLogFiles");
+
   // all config succeeded: attempt to publish
-  this->run_state_ = LOG_PUBLISHER_ATTEMPT_SEND_LOGS;
+  this->run_state_.setValue(LOG_PUBLISHER_ATTEMPT_SEND_LOGS);
   bool success = SendLogFiles(next_token, data);
 
   // if failed attempt to get the token next time
   // otherwise everything succeeded to attempt to send logs again
-  this->run_state_ = success ? LOG_PUBLISHER_ATTEMPT_SEND_LOGS : LOG_PUBLISHER_RUN_INIT_TOKEN;
+  this->run_state_.setValue(success ? LOG_PUBLISHER_ATTEMPT_SEND_LOGS : LOG_PUBLISHER_RUN_INIT_TOKEN);
 
   AWS_LOG_DEBUG(__func__, "finished SendLogFiles");
 
