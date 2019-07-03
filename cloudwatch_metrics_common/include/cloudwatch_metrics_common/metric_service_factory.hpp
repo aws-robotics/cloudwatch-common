@@ -17,7 +17,7 @@
 
 #include <cloudwatch_metrics_common/metric_service.hpp>
 #include <cloudwatch_metrics_common/metric_publisher.hpp>
-#include <dataflow_lite/cloudwatch/cloudwatch_options.h>
+#include <cloudwatch_metrics_common/cloudwatch_options.h>
 
 namespace Aws {
 namespace CloudWatchMetrics {
@@ -41,7 +41,7 @@ public:
           const std::string & metrics_namespace,
           const Aws::Client::ClientConfiguration & client_config,
           const Aws::SDKOptions & sdk_options,
-          const CloudwatchOptions & cloudwatch_options = kDefaultCloudwatchOptions);
+          const CloudWatchOptions & cloudwatch_options = kDefaultCloudWatchOptions);
 
 private:
   /**

@@ -42,12 +42,12 @@ public:
   }
 
 protected:
-  std::string prefix = "test";
   std::string folder = "log_tests/";
+  std::string prefix = "test";
   std::string extension = ".log";
-  uint max_file_size = 1024 * 1024;
+  uint max_file_size = 1024;
   uint storage_limit = max_file_size * 10;
-  FileManagerStrategyOptions options{prefix, folder, extension, max_file_size, storage_limit};
+  FileManagerStrategyOptions options{folder, prefix, extension, max_file_size, storage_limit};
 };
 
 TEST_F(FileManagerStrategyTest, restart_without_token) {
@@ -149,16 +149,24 @@ TEST_F(FileManagerStrategyTest, discover_stored_files) {
 
 TEST_F(FileManagerStrategyTest, rotate_large_files) {
   namespace fs = std::experimental::filesystem;
-  const uint max_file_size_in_bytes = 10;
-  options.maximum_file_size_in_bytes = max_file_size_in_bytes;
+  const uint max_file_size_in_kb = 10;
+  options.maximum_file_size_in_kb = max_file_size_in_kb;
   {
     FileManagerStrategy file_manager_strategy(options);
     file_manager_strategy.start();
-    std::string data1 = "This is some long data that is longer than 10 bytes";
+    std::ostringstream data1ss;
+    for (int i = 0; i < 1024; i++) {
+      data1ss << "This is some long data that is longer than 10 bytes";
+    }
+    std::string data1 = data1ss.str();
     file_manager_strategy.write(data1);
     long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
     EXPECT_EQ(1, file_count);
-    std::string data2 = "This is some additional data that is also longer than 10 bytes";
+    std::ostringstream data2ss;
+    for (int i = 0; i < 1024; i++) {
+      data2ss << "This is some additional data that is also longer than 10 bytes";
+    }
+    std::string data2 = data2ss.str();
     file_manager_strategy.write(data2);
     file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
     EXPECT_EQ(2, file_count);
@@ -186,23 +194,24 @@ TEST_F(FileManagerStrategyTest, resolve_token_deletes_file) {
 
 TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
   namespace fs = std::experimental::filesystem;
-  const uint max_file_size_in_bytes = 50;
+  const uint max_file_size_in_kb = 50;
   const uint storage_limit = 150;
-  options.maximum_file_size_in_bytes = max_file_size_in_bytes;
-  options.storage_limit_in_bytes = storage_limit;
+  options.maximum_file_size_in_kb = max_file_size_in_kb;
+  options.storage_limit_in_kb = storage_limit;
   {
     FileManagerStrategy file_manager_strategy(options);
     file_manager_strategy.start();
-    const std::string string_25_bytes = "This is 25 bytes of data.";
-    file_manager_strategy.write(string_25_bytes);
+    std::ostringstream ss_25_kb;
+    for (int i = 0; i < 1024; i++) {
+      ss_25_kb << "This is 25 bytes of data.";
+    }
+    std::string string_25_kb = ss_25_kb.str();
+    file_manager_strategy.write(string_25_kb);
     long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
     EXPECT_EQ(1, file_count);
-//    for (const auto &entry : fs::directory_iterator(folder)) {
-//      const fs::path &path = entry.path();
-//    }
 
     for (int i = 0; i < 5; i++) {
-      file_manager_strategy.write(string_25_bytes);
+      file_manager_strategy.write(string_25_kb);
     }
 
     file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
@@ -217,7 +226,7 @@ TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
     std::sort(file_paths.begin(), file_paths.end());
     const std::string file_to_be_deleted = file_paths[0];
 
-    file_manager_strategy.write(string_25_bytes);
+    file_manager_strategy.write(string_25_kb);
     file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
     EXPECT_EQ(3, file_count);
 

@@ -19,7 +19,7 @@
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/log_service.h>
 
-#include <dataflow_lite/cloudwatch/cloudwatch_options.h>
+#include <cloudwatch_logs_common/cloudwatch_options.h>
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -48,7 +48,7 @@ public:
     const std::string & log_stream,
     const Aws::Client::ClientConfiguration & client_config,
     const Aws::SDKOptions & sdk_options,
-    const CloudwatchOptions & cloudwatch_options = kDefaultCloudwatchOptions);
+    const CloudWatchOptions & cloudwatch_options = kDefaultCloudWatchOptions);
 private:
   /**
    * Block copy constructor and assignment operator for Factory object.

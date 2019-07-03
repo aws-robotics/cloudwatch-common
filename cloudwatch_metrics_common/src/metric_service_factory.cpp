@@ -25,7 +25,7 @@
 
 #include <dataflow_lite/dataflow/dataflow.h>
 #include <dataflow_lite/dataflow/dataflow.h>
-#include <dataflow_lite/cloudwatch/cloudwatch_options.h>
+#include <cloudwatch_metrics_common/cloudwatch_options.h>
 
 #include <cloudwatch_metrics_common/definitions/definitions.h>
 
@@ -35,19 +35,21 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
         const std::string & metrics_namespace,
         const Aws::Client::ClientConfiguration & client_config,
         const Aws::SDKOptions & sdk_options,
-        const CloudwatchOptions & cloudwatch_options)
+        const CloudWatchOptions & cloudwatch_options)
 {
   Aws::InitAPI(sdk_options); // per the SDK team this only ever needs to be called once
 
-  // todo options need to be set here!
-  auto metric_file_manager = std::make_shared<MetricFileManager>();
+  auto metric_file_manager = std::make_shared<MetricFileManager>(cloudwatch_options.file_manager_strategy_options);
 
   auto metric_publisher = std::make_shared<MetricPublisher>(metrics_namespace, client_config);
 
   auto queue_monitor =
           std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<MetricDatumCollection>>>();
 
-  FileUploadStreamerOptions file_upload_options{cloudwatch_options.file_upload_batch_size, cloudwatch_options.file_max_queue_size};
+  FileUploadStreamerOptions file_upload_options{
+    cloudwatch_options.uploader_options.file_upload_batch_size,
+    cloudwatch_options.uploader_options.file_max_queue_size
+  };
 
   auto metric_file_upload_streamer =
           Aws::FileManagement::createFileUploadStreamer<MetricDatumCollection>(metric_file_manager, file_upload_options);
@@ -61,7 +63,7 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
 
   // Create an observed queue to trigger a publish when data is available
   auto file_data_queue =
-          std::make_shared<TaskObservedBlockingQueue<MetricDatumCollection>>(cloudwatch_options.file_max_queue_size);
+          std::make_shared<TaskObservedBlockingQueue<MetricDatumCollection>>(cloudwatch_options.uploader_options.file_max_queue_size);
 
   auto stream_data_queue = std::make_shared<TaskObservedQueue<MetricDatumCollection>>(); //todo set size
 

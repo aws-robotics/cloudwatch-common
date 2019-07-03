@@ -40,6 +40,10 @@ public:
    */
   MetricFileManager() = default;
 
+  MetricFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
+    : FileManager(options) {
+  }
+
   explicit MetricFileManager(
       const std::shared_ptr<FileManagerStrategy> &file_manager_strategy)
       : FileManager(file_manager_strategy) {

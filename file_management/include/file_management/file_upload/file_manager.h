@@ -79,14 +79,12 @@ class FileManager :
 {
 public:
 
-  const FileManagerStrategyOptions kDefaultOptions{"cloudwatchlogs", "/tmp/", ".log", 1024*1024, 1024*1024};
-
   /**
    * Default constructor.
    */
   FileManager() {
     // todo use customer data to VERIFY that the above kOptions is valid
-    file_manager_strategy_ = std::make_shared<FileManagerStrategy>(kDefaultOptions);
+    file_manager_strategy_ = std::make_shared<FileManagerStrategy>(Aws::FileManagement::kDefaultFileManagerStrategyOptions);
   }
 
   /**
@@ -94,7 +92,7 @@ public:
    *
    * @param options for the FileManagerStrategy
    */
-  FileManager(FileManagerStrategyOptions &options) {
+  FileManager(const FileManagerStrategyOptions &options) {
     // todo all arguments should be configurable and should have input checking
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }

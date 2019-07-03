@@ -22,6 +22,8 @@
 #include <iomanip>
 #include "file_management/file_upload/file_manager_strategy.h"
 
+#define KB_TO_BYTES(x) ((size_t) (x) << 10)
+
 namespace fs = std::experimental::filesystem;
 
 namespace Aws {
@@ -30,18 +32,28 @@ namespace FileManagement {
 static const std::string kConfigFile("file_management.info");
 static const std::string kTokenStoreFile("token_store.info");
 
+void sanitizePath(std::string & path) {
+  if (path.back() != '/') {
+    path += '/';
+  }
+  if (path.front() == '~') {
+    path.replace(0, 1, getenv("HOME"));
+  }
+}
+
 TokenStore::TokenStore(const TokenStoreOptions &options) : options_{options}{
+  validateOptions();
   initializeBackupDirectory();
 }
 
-void TokenStore::initializeBackupDirectory() {
-  // todo this needs stricter checking: throw if unrecoverable
+void TokenStore::validateOptions() {
+  sanitizePath(options_.backup_directory);
+}
 
-  if (options_.backup_directory.back() != '/') {
-    options_.backup_directory += '/';
-  }
+void TokenStore::initializeBackupDirectory() {
   auto backup_directory = std::experimental::filesystem::path(options_.backup_directory);
   if (!std::experimental::filesystem::exists(backup_directory)) {
+    AWS_LOG_INFO(__func__, "TokenStore backup directory %s does not exist, creating.", backup_directory.c_str());
     std::experimental::filesystem::create_directory(backup_directory);
   }
 }
@@ -211,9 +223,10 @@ void TokenStore::restoreFromDisk() {
 
 
 FileManagerStrategy::FileManagerStrategy(const FileManagerStrategyOptions &options) {
-  options_ = options;
   stored_files_size_ = 0;
   active_write_file_size_ = 0;
+  options_ = options;
+  validateOptions();
 }
 
 bool FileManagerStrategy::start() {
@@ -224,12 +237,14 @@ bool FileManagerStrategy::start() {
   return true;
 }
 
+void FileManagerStrategy::validateOptions() {
+  sanitizePath(options_.storage_directory);
+}
+
 void FileManagerStrategy::initializeStorage() {
-  if (options_.storage_directory.back() != '/') {
-    options_.storage_directory += '/';
-  }
   auto storage = std::experimental::filesystem::path(options_.storage_directory);
   if (!std::experimental::filesystem::exists(storage)) {
+    AWS_LOG_INFO(__func__, "File storage directory %s does not exist, creating.", storage.c_str());
     std::experimental::filesystem::create_directory(storage);
     stored_files_size_ = 0;
   }
@@ -407,14 +422,16 @@ void FileManagerStrategy::rotateWriteFile() {
 
 void FileManagerStrategy::checkIfFileShouldRotate(const uintmax_t &new_data_size) {
   const uintmax_t new_file_size = active_write_file_size_ + new_data_size;
-  if (new_file_size > options_.maximum_file_size_in_bytes) {
+  const uintmax_t max_file_size_in_bytes = KB_TO_BYTES(options_.maximum_file_size_in_kb);
+  if (new_file_size > max_file_size_in_bytes) {
     rotateWriteFile();
   }
 }
 
 void FileManagerStrategy::checkIfStorageLimitHasBeenReached(const uintmax_t &new_data_size) {
   const uintmax_t new_storage_size = stored_files_size_ + active_write_file_size_ + new_data_size;
-  if (new_storage_size > options_.storage_limit_in_bytes) {
+  const uintmax_t max_storage_size_in_bytes = KB_TO_BYTES(options_.storage_limit_in_kb);
+  if (new_storage_size > max_storage_size_in_bytes) {
     deleteOldestFile();
   }
 }
