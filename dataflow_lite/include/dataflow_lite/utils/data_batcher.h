@@ -178,8 +178,8 @@ public:
       throw std::invalid_argument("0 is not a valid size");
     }
 
-    if(SIZE_MAX != batch_trigger_publish_size && batch_trigger_publish_size > batch_max_queue_size) {
-      throw std::invalid_argument("batch_trigger_publish_size cannot be larger than batch_max_queue_size");
+    if(SIZE_MAX != batch_trigger_publish_size && batch_trigger_publish_size >= batch_max_queue_size) {
+      throw std::invalid_argument("batch_trigger_publish_size must be less than batch_max_queue_size");
     }
   }
 
