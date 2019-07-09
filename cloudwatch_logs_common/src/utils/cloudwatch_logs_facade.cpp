@@ -27,23 +27,23 @@
 #include <aws/logs/model/LogStream.h>
 #include <aws/logs/model/PutLogEventsRequest.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
+#include <cloudwatch_logs_common/utils/cloudwatch_logs_facade.h>
 
 using namespace Aws::CloudWatchLogs::Utils;
 
 constexpr uint16_t kMaxLogsPerRequest = 100;
 
-CloudWatchFacade::CloudWatchFacade(const Aws::Client::ClientConfiguration & client_config)
+CloudWatchLogsFacade::CloudWatchLogsFacade(const Aws::Client::ClientConfiguration & client_config)
 {
-  this->cw_client_ = std::make_unique<Aws::CloudWatchLogs::CloudWatchLogsClient>(client_config);
+  this->cw_client_ = std::make_shared<Aws::CloudWatchLogs::CloudWatchLogsClient>(client_config);
 }
 
-CloudWatchFacade::CloudWatchFacade(std::unique_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client)
-  : cw_client_(std::move(cw_client))
+CloudWatchLogsFacade::CloudWatchLogsFacade(const std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client)
 {
+  this->cw_client_ = cw_client;
 }
 
-Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsRequest(
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::SendLogsRequest(
   const Aws::CloudWatchLogs::Model::PutLogEventsRequest & request, Aws::String & next_token)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
@@ -61,7 +61,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsRequest(
   return status;
 }
 
-Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsToCloudWatch(
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::SendLogsToCloudWatch(
   Aws::String & next_token, const std::string & log_group, const std::string & log_stream,
   std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs)
 {
@@ -120,7 +120,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::SendLogsToCloudWa
   return status;
 }
 
-Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogGroup(
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CreateLogGroup(
   const std::string & log_group)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
@@ -150,7 +150,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogGroup(
   return status;
 }
 
-Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CheckLogGroupExists(
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CheckLogGroupExists(
   const std::string & log_group)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_LOG_GROUP_NOT_FOUND;
@@ -201,7 +201,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CheckLogGroupExis
   return status;
 }
 
-Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogStream(
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CreateLogStream(
   const std::string & log_group, const std::string & log_stream)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
@@ -230,7 +230,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CreateLogStream(
   return status;
 }
 
-Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CheckLogStreamExists(
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CheckLogStreamExists(
   const std::string & log_group, const std::string & log_stream,
   Aws::CloudWatchLogs::Model::LogStream * log_stream_object)
 {
@@ -289,7 +289,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::CheckLogStreamExi
   return status;
 }
 
-Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchFacade::GetLogStreamToken(
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::GetLogStreamToken(
   const std::string & log_group, const std::string & log_stream, Aws::String & next_token)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;

@@ -34,24 +34,24 @@ namespace Utils {
  *  This class expects Aws::InitAPI() to have already been called before an instance is constructed
  *
  */
-class CloudWatchFacade
+class CloudWatchLogsFacade
 {
 public:
   /**
-   *  @brief Creates a new CloudWatchFacade
+   *  @brief Creates a new CloudWatchLogsFacade
    *
    *  @param client_config The configuration for the cloudwatch client
    */
-  CloudWatchFacade(const Aws::Client::ClientConfiguration & client_config);
+  CloudWatchLogsFacade(const Aws::Client::ClientConfiguration & client_config);
 
   /**
-   * @brief Creates a new CloudWatchFacade with an existing client
+   * @brief Creates a new CloudWatchLogsFacade with an existing client
    *
    * @param cw_client The client for interacting with cloudwatch
    */
-  CloudWatchFacade(const std::unique_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client);
+  CloudWatchLogsFacade(const std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client);
 
-  virtual ~CloudWatchFacade() = default;
+  virtual ~CloudWatchLogsFacade() = default;
 
   /**
    *  @brief Sends a list of logs to CloudWatch
@@ -123,8 +123,8 @@ public:
 
 protected:
 
-  CloudWatchFacade() = default;
-  std::unique_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client_;
+  CloudWatchLogsFacade() = default;
+  std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client_;
 
 private:
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogsRequest(
