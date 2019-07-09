@@ -25,6 +25,7 @@
 #include <dataflow_lite/utils/service.h>
 
 #include <file_management/file_upload/file_upload_task.h>
+#include <dataflow_lite/task/task.h>
 
 /**
  * State of the publisher representing the last publisher attempt status.
@@ -43,7 +44,7 @@ enum PublisherState {
  * @tparam T the type to publish
  */
 template <typename T>
-class Publisher : public Aws::FileManagement::IPublisher<T>, public Service
+class Publisher : public Aws::DataFlow::IPublisher<T>, public Service
 {
 
 public:
@@ -72,7 +73,7 @@ public:
      * @param data the data to publish
      * @return true if the data was successfully published, false otherwise
      */
-    virtual Aws::FileManagement::UploadStatus attemptPublish(T &data) override
+    virtual Aws::DataFlow::UploadStatus attemptPublish(T &data) override
     {
 
       publish_attempts_++;
@@ -84,10 +85,10 @@ public:
       publisher_state_.setValue(b ? CONNECTED : NOT_CONNECTED);
       if (b) {
         publish_successes_++;
-        return Aws::FileManagement::UploadStatus::SUCCESS;
+        return Aws::DataFlow::UploadStatus::SUCCESS;
       }
 
-      return Aws::FileManagement::UploadStatus::FAIL;
+      return Aws::DataFlow::UploadStatus::FAIL;
     }
 
     /**

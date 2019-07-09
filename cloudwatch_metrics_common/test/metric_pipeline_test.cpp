@@ -36,6 +36,7 @@
 #include <file_management/file_upload/file_manager.h>
 
 #include <dataflow_lite/dataflow/dataflow.h>
+#include <dataflow_lite/task/task.h>
 #include <dataflow_lite/utils/waiter.h>
 
 using namespace Aws::CloudWatchMetrics;
@@ -71,7 +72,7 @@ public:
 protected:
 
   // override so we can notify when internal state changes, as attemptPublish sets state
-  virtual Aws::FileManagement::UploadStatus attemptPublish(MetricDatumCollection &data) override {
+  virtual Aws::DataFlow::UploadStatus attemptPublish(MetricDatumCollection &data) override {
     auto s = Publisher::attemptPublish(data);
     {
       this->notify();

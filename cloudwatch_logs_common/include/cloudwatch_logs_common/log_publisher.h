@@ -23,6 +23,7 @@
 #include <dataflow_lite/dataflow/source.h>
 
 #include <file_management/file_upload/file_upload_task.h>
+#include <dataflow_lite/task/task.h>
 
 #include <cloudwatch_logs_common/definitions/definitions.h>
 

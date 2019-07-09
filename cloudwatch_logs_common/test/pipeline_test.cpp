@@ -68,7 +68,7 @@ public:
 protected:
 
   // override so we can notify when internal state changes, as attemptPublish sets state
-  virtual Aws::FileManagement::UploadStatus attemptPublish(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> &data) override {
+  virtual Aws::DataFlow::UploadStatus attemptPublish(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> &data) override {
     auto s = Publisher::attemptPublish(data);
     {
       this->notify();

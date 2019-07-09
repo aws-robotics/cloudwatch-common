@@ -22,6 +22,8 @@
 
 #include <dataflow_lite/utils/data_batcher.h>
 
+#include <dataflow_lite/task/task.h>
+
 #include <chrono>
 #include <iostream>
 #include <list>
@@ -52,16 +54,16 @@ bool MetricBatcher::publishBatchedData() {
   if (getSink()) {
 
     auto metrics_to_publish = this->batched_data_;
-    std::shared_ptr<BasicTask<MetricDatumCollection>> metric_task = std::make_shared<BasicTask<MetricDatumCollection>>(metrics_to_publish);
+    std::shared_ptr<Aws::DataFlow::BasicTask<MetricDatumCollection>> metric_task = std::make_shared<Aws::DataFlow::BasicTask<MetricDatumCollection>>(metrics_to_publish);
 
     if (metric_file_manager_ ) {
 
       // register the task failure function
-      auto function = [&metric_file_manager = this->metric_file_manager_](const FileManagement::UploadStatus &upload_status,
+      auto function = [&metric_file_manager = this->metric_file_manager_](const DataFlow::UploadStatus &upload_status,
                                                                     const MetricDatumCollection &metrics_to_publish)
       {
           if (!metrics_to_publish.empty()) {
-            if (FileManagement::SUCCESS != upload_status) {
+            if (DataFlow::SUCCESS != upload_status) {
               AWS_LOG_INFO(__func__, "Task failed: writing metrics to file");
               metric_file_manager->write(metrics_to_publish);
             }
@@ -75,7 +77,7 @@ bool MetricBatcher::publishBatchedData() {
 
     if (!enqueue_success) {
       AWS_LOG_WARN(__func__, "Unable to enqueue data, marking as failed");
-      metric_task->onComplete(FileManagement::UploadStatus::FAIL);
+      metric_task->onComplete(DataFlow::UploadStatus::FAIL);
     }
 
     this->resetBatchedData();
