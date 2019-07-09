@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <set>
 #include <memory>
+#include <random>
 #include <experimental/filesystem>
 #include <dataflow_lite/utils/service.h>
 #include <file_management/file_manager_options.h>
