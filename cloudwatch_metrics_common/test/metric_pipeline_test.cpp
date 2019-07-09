@@ -70,6 +70,15 @@ public:
 
 protected:
 
+  // override so we can notify when internal state changes, as attemptPublish sets state
+  virtual Aws::FileManagement::UploadStatus attemptPublish(MetricDatumCollection &data) override {
+    auto s = Publisher::attemptPublish(data);
+    {
+      this->notify();
+    }
+    return s;
+  }
+
   bool publishData(MetricDatumCollection&) override {
   {
     this->notify();

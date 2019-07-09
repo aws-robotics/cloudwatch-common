@@ -14,6 +14,7 @@
  * permissions and limitations under the License.
  */
 
+#pragma once
 
 #include <atomic>
 #include <functional>

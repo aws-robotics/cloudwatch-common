@@ -40,7 +40,7 @@ endif()
 set(ALL_SRC_FILES
     src/log_batcher.cpp
     src/log_service_factory.cpp
-    src/utils/cloudwatch_facade.cpp
+    src/utils/cloudwatch_logs_facade.cpp
     src/utils/log_file_manager.cpp
     src/log_service_factory.cpp
     src/log_publisher.cpp)
@@ -91,8 +91,8 @@ if(GMOCK_LIBRARY)
   message("Building tests")
   add_common_gtest(test_cloudwatch_logs_common
         test/main_test.cpp
-    #    test/log_publisher_test.cpp
-    #    test/cloudwatch_facade_test.cpp
+        test/log_publisher_test.cpp
+        test/cloudwatch_facade_test.cpp
         )
 
   target_include_directories(test_cloudwatch_logs_common
@@ -107,17 +107,17 @@ if(GMOCK_LIBRARY)
         ${PROJECT_NAME})
 
   add_common_gtest(test_pipelines
-          test/pipeline_test.cpp
-          )
+        test/pipeline_test.cpp
+        )
 
   target_include_directories(test_pipelines
-          PRIVATE include
-          PRIVATE ${aws_common_INCLUDE_DIRS}
-          PUBLIC ${PROJECT_SOURCE_DIR}/test/include
-          )
+        PRIVATE include
+        PRIVATE ${aws_common_INCLUDE_DIRS}
+        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+        )
   target_link_libraries(test_pipelines
-          ${GTEST_LIBRARIES}
-          pthread
-          ${GMOCK_LIBRARY}
-          ${PROJECT_NAME})
+        ${GTEST_LIBRARIES}
+        pthread
+        ${GMOCK_LIBRARY}
+        ${PROJECT_NAME})
 endif()
