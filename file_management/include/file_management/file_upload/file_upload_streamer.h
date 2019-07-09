@@ -24,11 +24,11 @@
 #include <dataflow_lite/dataflow/status_monitor.h>
 #include <dataflow_lite/dataflow/observed_queue.h>
 #include <dataflow_lite/dataflow/queue_monitor.h>
-#include <cloudwatch_logs_common/file_upload/task_utils.h>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
-#include <cloudwatch_logs_common/file_upload/file_upload_task.h>
-#include <cloudwatch_logs_common/utils/service.h>
-#include <cloudwatch_logs_common/utils/publisher.h>
+#include <dataflow_lite/utils/service.h>
+#include <dataflow_lite/task/task.h>
+
+#include <file_management/file_upload/file_manager.h>
+#include <file_management/file_upload/file_upload_task.h>
 
 namespace Aws {
 namespace FileManagement {
@@ -112,8 +112,8 @@ public:
     return true;
   }
 
-  void onComplete(const UploadStatus & upload_status, const FileObject<T> &message) {
-    if (upload_status == UploadStatus::FAIL) {
+  void onComplete(const Aws::DataFlow::UploadStatus & upload_status, const FileObject<T> &message) {
+    if (upload_status == Aws::DataFlow::UploadStatus::FAIL) {
       OutputStage<TaskPtr<T>>::getSink()->clear();
     }
     data_reader_->fileUploadCompleteStatus(upload_status, message);

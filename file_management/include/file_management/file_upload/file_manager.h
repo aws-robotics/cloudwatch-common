@@ -21,11 +21,11 @@
 
 #include <aws/core/utils/logging/LogMacros.h>
 
-#include "file_management/file_upload/task_utils.h"
-#include "file_management/file_upload/file_manager_strategy.h"
-#include <dataflow_lite/dataflow/status_monitor.h>
+#include <file_management/file_upload/file_manager_strategy.h>
 
+#include <dataflow_lite/dataflow/status_monitor.h>
 #include <dataflow_lite/utils/service.h>
+#include <dataflow_lite/task/task.h>
 
 namespace Aws {
 namespace FileManagement {
@@ -40,11 +40,7 @@ public:
   std::list<DataToken> data_tokens;
 }; //todo this should be immutable
 
-//todo move to a different file, e.g. statuses?
-enum UploadStatus {
-  FAIL,
-  SUCCESS
-};
+
 
 template <typename T>
 class DataReader : public Service {
@@ -63,7 +59,7 @@ public:
    * @param log_messages the data which was attempted to be uploaded
    */
   virtual void fileUploadCompleteStatus(
-    const UploadStatus &upload_status,
+    const Aws::DataFlow::UploadStatus &upload_status,
     const FileObject<T> &log_messages) = 0;
 
   virtual void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
@@ -164,9 +160,9 @@ public:
  * @param log_messages the data which was attempted to be uploaded
  */
   virtual void fileUploadCompleteStatus(
-      const UploadStatus& upload_status,
+      const Aws::DataFlow::UploadStatus& upload_status,
       const FileObject<T> &log_messages) override {
-    if (UploadStatus::SUCCESS == upload_status) {
+    if (Aws::DataFlow::UploadStatus::SUCCESS == upload_status) {
       total_logs_uploaded_ += log_messages.batch_size;
       AWS_LOG_INFO(__func__,
                    "Total items uploaded: %i",
@@ -176,7 +172,7 @@ public:
     // Delete file if empty log_messages.file_location.
     for (const auto &token : log_messages.data_tokens) {
       // this may block, file IO can be expensive
-      file_manager_strategy_->resolve(token, upload_status == SUCCESS);
+      file_manager_strategy_->resolve(token, upload_status == Aws::DataFlow::UploadStatus::SUCCESS);
     }
   }
 

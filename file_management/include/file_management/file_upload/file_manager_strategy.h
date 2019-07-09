@@ -26,7 +26,6 @@
 #include <experimental/filesystem>
 #include <dataflow_lite/utils/service.h>
 #include <file_management/file_manager_options.h>
-#include <file_management/file_upload/task_utils.h>
 #include <aws/core/utils/json/JsonSerializer.h>
 
 namespace Aws {

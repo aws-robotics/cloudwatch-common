@@ -21,6 +21,7 @@
 
 #include <dataflow_lite/utils/data_batcher.h>
 #include <cloudwatch_logs_common/definitions/definitions.h>
+#include <dataflow_lite/task/task.h>
 
 #include <chrono>
 #include <iostream>
@@ -55,16 +56,16 @@ bool LogBatcher::publishBatchedData() {
     auto data_to_queue = std::make_shared<BasicTask<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>>(this->batched_data_);
 
     std::shared_ptr<LogCollection> log_type = this->batched_data_;
-    std::shared_ptr<BasicTask<LogCollection>> log_task = std::make_shared<BasicTask<LogCollection>>(log_type);
+    std::shared_ptr<Aws::DataFlow::BasicTask<LogCollection>> log_task = std::make_shared<Aws::DataFlow::BasicTask<LogCollection>>(log_type);
 
     if (log_file_manager_ ) {
 
       // register the task failure function
-      auto function = [&log_file_manager = this->log_file_manager_](const FileManagement::UploadStatus &upload_status,
+      auto function = [&log_file_manager = this->log_file_manager_](const DataFlow::UploadStatus &upload_status,
               const LogCollection &log_messages)
       {
           if (!log_messages.empty()) {
-            if (FileManagement::SUCCESS != upload_status) {
+            if (DataFlow::SUCCESS != upload_status) {
               AWS_LOG_INFO(__func__, "Task failed: writing logs to file");
               log_file_manager->write(log_messages);
             }
@@ -78,7 +79,7 @@ bool LogBatcher::publishBatchedData() {
 
     if (!enqueue_success) {
       AWS_LOG_WARN(__func__, "Unable to enqueue log data, marking as failed");
-      log_task->onComplete(FileManagement::UploadStatus::FAIL);
+      log_task->onComplete(DataFlow::UploadStatus::FAIL);
     }
 
     this->resetBatchedData();
