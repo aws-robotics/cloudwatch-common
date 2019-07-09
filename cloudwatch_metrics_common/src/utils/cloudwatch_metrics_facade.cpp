@@ -30,8 +30,13 @@ using namespace Aws::CloudWatchMetrics::Utils;
 #define MAX_METRIC_DATUMS_PER_REQUEST 20
 
 CloudWatchMetricsFacade::CloudWatchMetricsFacade(const Aws::Client::ClientConfiguration & client_config)
-: cw_client_(client_config)
 {
+  this->cw_client_ = std::make_shared<Aws::CloudWatch::CloudWatchClient>(client_config);
+}
+
+CloudWatchMetricsFacade::CloudWatchMetricsFacade(const std::shared_ptr<Aws::CloudWatch::CloudWatchClient> cw_client)
+{
+  this->cw_client_ = cw_client;
 }
 
 CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsRequest(
@@ -39,7 +44,7 @@ CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsRequest(
 {
 
   auto status = SUCCESS;
-  auto response = this->cw_client_.PutMetricData(request);
+  auto response = this->cw_client_->PutMetricData(request);
 
   if (!response.IsSuccess()) {
 

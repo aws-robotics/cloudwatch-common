@@ -18,7 +18,7 @@
 #include <aws/core/NoResult.h>
 #include <cloudwatch_logs_common/cloudwatch_logs_client_mock.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
+#include <cloudwatch_logs_common/utils/cloudwatch_logs_facade.h>
 #include <gtest/gtest.h>
 
 using namespace Aws::CloudWatchLogs::Utils;
@@ -33,8 +33,8 @@ class TestCloudWatchFacade : public ::testing::Test
 protected:
   std::list<Aws::CloudWatchLogs::Model::InputLogEvent> logs_list_;
   Aws::SDKOptions options_;
-  std::shared_ptr<CloudWatchFacade> facade_;
-  std::unique_ptr<CloudWatchLogsClientMock> mock_client;
+  std::shared_ptr<CloudWatchLogsFacade> facade_;
+  std::shared_ptr<CloudWatchLogsClientMock> mock_client;
   CloudWatchLogsClientMock* mock_client_p;
 
   void SetUp() override
@@ -44,9 +44,9 @@ protected:
     logs_list_.emplace_back();
 
     Aws::InitAPI(options_);
-    mock_client = std::make_unique<CloudWatchLogsClientMock>();
+    mock_client = std::make_shared<CloudWatchLogsClientMock>();
     mock_client_p = mock_client.get();
-    facade_ = std::make_shared<CloudWatchFacade>(std::move(mock_client));
+    facade_ = std::make_shared<CloudWatchLogsFacade>(mock_client);
   }
 
   void TearDown() override
@@ -59,8 +59,6 @@ protected:
 /*
  * SendLogsToCloudWatch Tests
  */
-
-
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_EmptyLogs)
 {
     std::list<Aws::CloudWatchLogs::Model::InputLogEvent> empty_logs_list;

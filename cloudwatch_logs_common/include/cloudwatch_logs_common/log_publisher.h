@@ -17,7 +17,7 @@
 
 #include <aws/core/Aws.h>
 #include <aws/logs/CloudWatchLogsClient.h>
-#include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
+#include <cloudwatch_logs_common/utils/cloudwatch_logs_facade.h>
 
 #include <dataflow_lite/utils/publisher.h>
 #include <dataflow_lite/dataflow/source.h>
@@ -74,7 +74,7 @@ public:
    * CloudWatch.
    */
   LogPublisher(const std::string & log_group, const std::string & log_stream,
-               std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cw_client);
+               std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cw_client);
 
   /**
    *  @brief Tears down the LogPublisher object
@@ -120,7 +120,7 @@ private:
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data);
 
   LogTaskSource queue_monitor_;
-  std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
+  std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cloudwatch_facade_;
   Aws::SDKOptions aws_sdk_options_;
   std::string log_group_;
   std::string log_stream_;

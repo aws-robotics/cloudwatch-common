@@ -26,7 +26,7 @@ using namespace Aws::CloudWatchLogs;
 constexpr int WAIT_TIME =
   2000;  // the amount of time (ms) to wait for publisher thread to do its work
 
-class MockCloudWatchFacade : public Aws::CloudWatchLogs::Utils::CloudWatchFacade
+class MockCloudWatchFacade : public Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade
 {
 public:
   uint32_t send_logs_call_count;
@@ -147,7 +147,7 @@ protected:
     logs_list_.emplace_back();
 
     mock_cw_ = std::make_shared<MockCloudWatchFacade>();
-    std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cw = mock_cw_;
+    std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cw = mock_cw_;
     publisher_ = std::make_shared<LogPublisher>("test_log_group", "test_log_stream", cw);
     EXPECT_EQ(LOG_PUBLISHER_RUN_CREATE_GROUP, publisher_->getRunState());
   }

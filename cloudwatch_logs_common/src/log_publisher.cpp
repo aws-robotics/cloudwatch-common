@@ -20,7 +20,7 @@
 #include <aws/logs/model/PutLogEventsRequest.h>
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
+#include <cloudwatch_logs_common/utils/cloudwatch_logs_facade.h>
 
 #include <dataflow_lite/utils/publisher.h>
 #include <dataflow_lite/dataflow/source.h>
@@ -49,7 +49,7 @@ LogPublisher::LogPublisher(
 LogPublisher::LogPublisher(
   const std::string & log_group,
   const std::string & log_stream,
-  std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade)
+  std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cloudwatch_facade)
   : run_state_(LOG_PUBLISHER_RUN_CREATE_GROUP)
 {
   this->cloudwatch_facade_ = cloudwatch_facade;
@@ -300,7 +300,7 @@ bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEve
 bool LogPublisher::start() {
 
   if (!this->cloudwatch_facade_) {
-    this->cloudwatch_facade_ = std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchFacade>(this->client_config_);
+    this->cloudwatch_facade_ = std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade>(this->client_config_);
   }
 
   return true;
