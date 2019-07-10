@@ -65,14 +65,14 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
   auto file_data_queue =
           std::make_shared<TaskObservedBlockingQueue<MetricDatumCollection>>(cloudwatch_options.uploader_options.file_max_queue_size);
 
-  auto stream_data_queue = std::make_shared<TaskObservedQueue<MetricDatumCollection>>(); //todo set size
+  auto stream_data_queue = std::make_shared<TaskObservedBlockingQueue<MetricDatumCollection>>(cloudwatch_options.uploader_options.stream_max_queue_size);
 
   metric_file_upload_streamer->setSink(file_data_queue);
   queue_monitor->addSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
 
   auto metric_batcher = std::make_shared<MetricBatcher>(
-    cloudwatch_options.uploader_options.batch_max_queue_size,
-    cloudwatch_options.uploader_options.batch_trigger_publish_size
+          cloudwatch_options.uploader_options.batch_max_queue_size,
+          cloudwatch_options.uploader_options.batch_trigger_publish_size
   );
   metric_batcher->setMetricFileManager(metric_file_manager);
 

@@ -39,9 +39,13 @@ struct UploaderOptions {
    * has been reached.
    */
   size_t batch_trigger_publish_size;
+  /**
+   * Maximum number of items, each of size batch_max_queue_size, to store in memory to attempt to stream.
+   */
+  size_t stream_max_queue_size;
 };
 
-static constexpr UploaderOptions kDefaultUploaderOptions{50, 5, 1024, SIZE_MAX};
+static constexpr UploaderOptions kDefaultUploaderOptions{50, 5, 1024, SIZE_MAX, 3};
 
 }  // namespace DataFlow
 }  // namespace AWS
