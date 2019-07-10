@@ -88,6 +88,7 @@ bool MetricBatcher::publishBatchedData() {
 }
 
 void MetricBatcher::handleSizeExceeded() {
+  std::lock_guard<std::recursive_mutex> lk(mtx);
 
   if (this->metric_file_manager_) {
     AWS_LOG_INFO(__func__, "Writing data to file");
@@ -107,8 +108,11 @@ bool MetricBatcher::start() {
 }
 
 bool MetricBatcher::shutdown() {
-  this->resetBatchedData();
-  return true;
+  if (mtx.try_lock()) {
+    this->handleSizeExceeded(); // attempt to write to disk before discarding
+    return true;
+  }
+  return false;
 }
 
 void MetricBatcher::setMetricFileManager(std::shared_ptr<Aws::FileManagement::FileManager<MetricDatumCollection>> metric_file_manager)

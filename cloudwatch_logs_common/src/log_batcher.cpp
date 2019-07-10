@@ -90,6 +90,7 @@ bool LogBatcher::publishBatchedData() {
 }
 
 void LogBatcher::handleSizeExceeded() {
+  std::lock_guard<std::recursive_mutex> lk(mtx);
 
   if (this->log_file_manager_) {
     AWS_LOG_INFO(__func__, "Writing data to file");
@@ -109,8 +110,11 @@ bool LogBatcher::start() {
 }
 
 bool LogBatcher::shutdown() {
-  this->resetBatchedData();
-  return true;
+  if (mtx.try_lock()) {
+    this->handleSizeExceeded();  // attempt to write to disk before discarding
+    return true;
+  }
+  return false;
 }
 
 void LogBatcher::setLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogType>> log_file_manager)

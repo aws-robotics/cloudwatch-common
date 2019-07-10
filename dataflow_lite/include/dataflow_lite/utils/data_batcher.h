@@ -41,8 +41,15 @@ public:
    * SIZE_MAX is used as the NOT set default.
    */
   static const size_t kDefaultTriggerSize = SIZE_MAX;
-  static const size_t kDefaultMaxBatchSize = 1024; // todo is this even reasonable? need data
+  static const size_t kDefaultMaxBatchSize = 1024;
 
+  /**
+   * Create a DataBatcher instance
+   *
+   * @param max_allowable_batch_size if this limit is reached then the queue is emptied via the handleSizeExceeded method
+   * @param trigger_size if this limit is reached then the queue is emptied via the publish method
+   * @param try_enqueue_duration maximum amount of time to attempt to empty queue during the publish method
+   */
   DataBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
               size_t trigger_size = DataBatcher::kDefaultTriggerSize,
               std::chrono::microseconds try_enqueue_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(2))) {
@@ -56,6 +63,9 @@ public:
     resetBatchedData();
   }
 
+  /**
+   * Destruct a DataBatcher instance
+   */
   ~DataBatcher() = default;
 
   /**
@@ -105,7 +115,8 @@ public:
   }
 
   /**
-   *
+   * Set the trigger value, which will call the publish method when the number of batched items is greater than this
+   * limit. Note: this value must be strictly less than the max_allowable_batch_size_.
    * @param new_value
    */
   void setTriggerBatchSize(size_t new_value) {
@@ -116,6 +127,8 @@ public:
   }
 
   /**
+   * Return the trigger value. Note: this is set to kDefaultTriggerSize = SIZE_MAX by default, which means the
+   * trigger is not used and publish must be called manually.
    *
    * @return
    */
@@ -125,6 +138,8 @@ public:
   }
 
   /**
+   * Return the maximum allowable batch size. When this limit is reached the queue is emptied via the handleSizeExceeded
+   * method.
    *
    * @return
    */
@@ -133,6 +148,8 @@ public:
   }
 
   /**
+   * Set the maximum allowable batch size. When this limit is reached the queue is emptied via the handleSizeExceeded
+   * method.
    *
    * @param max_allowable_batch_size
    */
@@ -151,10 +168,20 @@ public:
     this->trigger_batch_size_.store(kDefaultTriggerSize);
   }
 
+  /**
+   * Set the maximum amount of time publish can attempt to empty the queue.
+   *
+   * @param duration
+   */
   void setTryEnqueueDuration(std::chrono::microseconds duration) {
     this->try_enqueue_duration_.store(duration);
   }
 
+  /**
+   * Get the current try_enqueue_duration_.
+   *
+   * @return
+   */
   std::chrono::microseconds getTryEnqueueDuration() {
     return this->try_enqueue_duration_.load();
   }
@@ -164,7 +191,7 @@ public:
    *
    * @return
    */
-  virtual bool publishBatchedData() = 0; //todo this name is awfully specific, maybe handle trigger size?
+  virtual bool publishBatchedData() = 0;
 
   /**
    *
