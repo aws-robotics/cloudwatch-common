@@ -168,18 +168,18 @@ public:
 
   /**
    *
-   * @throws invalid argument if the publish_trigger_size is strictly greater than max_allowable_batch_size
-   * @param publish_trigger_size
-   * @param max_allowable_batch_size
+   * @throws invalid argument if the batch_trigger_publish_size is strictly greater than max_allowable_batch_size
+   * @param batch_max_queue_size
+   * @param batch_trigger_publish_size
    */
-  static void validateConfigurableSizes(size_t max_allowable_batch_size, size_t trigger_batch_size) {
+  static void validateConfigurableSizes(size_t batch_max_queue_size, size_t batch_trigger_publish_size) {
 
-    if (0 == max_allowable_batch_size || 0 == trigger_batch_size) {
+    if (0 == batch_max_queue_size || 0 == batch_trigger_publish_size) {
       throw std::invalid_argument("0 is not a valid size");
     }
 
-    if(SIZE_MAX != trigger_batch_size && trigger_batch_size >= max_allowable_batch_size) {
-      throw std::invalid_argument("trigger size cannot be larger than max allowed size");
+    if(kDefaultTriggerSize != batch_trigger_publish_size && batch_trigger_publish_size >= batch_max_queue_size) {
+      throw std::invalid_argument("batch_trigger_publish_size must be less than batch_max_queue_size");
     }
   }
 
