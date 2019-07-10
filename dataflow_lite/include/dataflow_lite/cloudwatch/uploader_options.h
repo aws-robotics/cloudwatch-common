@@ -30,8 +30,6 @@ struct UploaderOptions {
    * Max number of elements in the queue for streaming / reading files on disk.
    */
   size_t file_max_queue_size;
-
-  size_t stream_max_queue_size;
   /**
    * Max queue size for data streamed into the service.
    */
@@ -43,7 +41,7 @@ struct UploaderOptions {
   size_t batch_trigger_publish_size;
 };
 
-static constexpr UploaderOptions kDefaultUploaderOptions{50, 2, 20, 1024, SIZE_MAX};
+static constexpr UploaderOptions kDefaultUploaderOptions{50, 5, 1024, SIZE_MAX};
 
 }  // namespace DataFlow
 }  // namespace AWS
