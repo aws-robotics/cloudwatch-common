@@ -24,8 +24,6 @@
 namespace Aws {
 namespace FileManagement {
 
-static const FileUploadStreamerOptions kDefaultFileManagerOptions{50, 5};
-
 /**
  * Create a file upload manager complete with a file status monitor attached to the file_manager,
  * and a task based queue.
@@ -41,7 +39,7 @@ template<
   class = typename std::enable_if<std::is_base_of<DataReader<T>, O>::value, O>::type>
 std::shared_ptr<FileUploadStreamer<T>> createFileUploadStreamer(
   std::shared_ptr<O> file_manager,
-  FileUploadStreamerOptions file_manager_options = kDefaultFileManagerOptions)
+  FileUploadStreamerOptions file_manager_options)
   {
   if (!file_manager) {
     throw "Invalid file_manager";

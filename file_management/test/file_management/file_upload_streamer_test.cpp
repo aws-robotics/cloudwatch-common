@@ -76,12 +76,14 @@ public:
   MOCK_METHOD0(clear, void (void));
 };
 
+static const FileUploadStreamerOptions kFileManagerOptions{50, 5};
+
 class FileStreamerTest : public ::testing::Test {
 public:
   void SetUp() override
   {
     file_manager = std::make_shared<::testing::StrictMock<MockDataReader>>();
-    file_upload_streamer = createFileUploadStreamer<std::string>(file_manager);
+    file_upload_streamer = createFileUploadStreamer<std::string>(file_manager, kFileManagerOptions);
     mock_sink = std::make_shared<::testing::StrictMock<MockSink>>();
   }
 

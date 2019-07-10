@@ -70,7 +70,10 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
 
   auto stream_data_queue = std::make_shared<TaskObservedQueue<LogType>>();
 
-  auto log_batcher = std::make_shared<LogBatcher>(); // todo pass in options
+  auto log_batcher = std::make_shared<LogBatcher>(
+    cloudwatch_options.uploader_options.batch_max_queue_size,
+    cloudwatch_options.uploader_options.batch_trigger_publish_size
+  ); // todo pass in options
   log_batcher->setLogFileManager(log_file_manager);
 
   log_file_upload_streamer->setSink(file_data_queue);

@@ -70,7 +70,10 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
   metric_file_upload_streamer->setSink(file_data_queue);
   queue_monitor->addSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
 
-  auto metric_batcher = std::make_shared<MetricBatcher>(); // todo pass in options
+  auto metric_batcher = std::make_shared<MetricBatcher>(
+    cloudwatch_options.uploader_options.batch_max_queue_size,
+    cloudwatch_options.uploader_options.batch_trigger_publish_size
+  );
   metric_batcher->setMetricFileManager(metric_file_manager);
 
   metric_batcher->setSink(stream_data_queue);
