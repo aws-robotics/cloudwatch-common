@@ -70,7 +70,7 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   auto file_data_queue =
       std::make_shared<TaskObservedBlockingQueue<LogCollection>>(cloudwatch_options.uploader_options.file_max_queue_size);
 
-  auto stream_data_queue = std::make_shared<TaskObservedBlockingQueue<LogType>>(cloudwatch_options.uploader_options.stream_max_queue_size);
+  auto stream_data_queue = std::make_shared<TaskObservedBlockingQueue<LogCollection>>(cloudwatch_options.uploader_options.stream_max_queue_size);
 
   auto log_batcher = std::make_shared<LogBatcher>(
     cloudwatch_options.uploader_options.batch_max_queue_size,
