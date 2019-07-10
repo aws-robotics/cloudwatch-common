@@ -87,7 +87,7 @@ bool MetricBatcher::publishBatchedData() {
   }
 }
 
-void MetricBatcher::handleSizeExceeded() {
+void MetricBatcher::emptyCollection() {
   std::lock_guard<std::recursive_mutex> lk(mtx);
 
   if (this->metric_file_manager_) {
@@ -108,8 +108,10 @@ bool MetricBatcher::start() {
 }
 
 bool MetricBatcher::shutdown() {
+  // try to acquire the lock, but don't block shutting down
   if (mtx.try_lock()) {
-    this->handleSizeExceeded(); // attempt to write to disk before discarding
+    this->emptyCollection(); // attempt to write to disk before discarding
+    mtx.unlock();
     return true;
   }
   return false;

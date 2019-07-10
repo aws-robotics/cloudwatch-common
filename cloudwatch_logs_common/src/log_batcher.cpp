@@ -88,8 +88,8 @@ bool LogBatcher::publishBatchedData() {
   }
 }
 
-void LogBatcher::handleSizeExceeded() {
-  std::lock_guard<std::recursive_mutex> lk(mtx);
+void LogBatcher::emptyCollection() {
+  std::lock_guard<std::recursive_mutex> lck(mtx);
 
   if (this->log_file_manager_) {
     AWS_LOG_INFO(__func__, "Writing data to file");
@@ -109,8 +109,10 @@ bool LogBatcher::start() {
 }
 
 bool LogBatcher::shutdown() {
+  // try to acquire the lock, but don't block shutting down
   if (mtx.try_lock()) {
-    this->handleSizeExceeded();  // attempt to write to disk before discarding
+    this->emptyCollection();  // attempt to write to disk before discarding
+    mtx.unlock();
     return true;
   }
   return false;

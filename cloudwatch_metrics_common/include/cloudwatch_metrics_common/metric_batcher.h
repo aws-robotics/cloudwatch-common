@@ -55,7 +55,10 @@ public:
     virtual ~MetricBatcher();
 
     virtual bool publishBatchedData() override;
-    virtual void handleSizeExceeded() override;
+    /**
+     * Override default behavior to attempt to write to file to disk when emptying the collection.
+     */
+    virtual void emptyCollection() override;
     virtual bool start() override;
     virtual bool shutdown() override;
 
