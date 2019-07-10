@@ -46,7 +46,7 @@ public:
   /**
    * Create a DataBatcher instance
    *
-   * @param max_allowable_batch_size if this limit is reached then the queue is emptied via the handleSizeExceeded method
+   * @param max_allowable_batch_size if this limit is reached then the queue is emptied via the emptyCollection method
    * @param trigger_size if this limit is reached then the queue is emptied via the publish method
    * @param try_enqueue_duration maximum amount of time to attempt to empty queue during the publish method
    */
@@ -82,7 +82,7 @@ public:
     // check if we have exceeded the allowed bounds
     auto allowed_max = getMaxAllowableBatchSize();
     if (getCurrentBatchSize() > allowed_max) {
-      handleSizeExceeded();
+      emptyCollection();
       return false;
     }
 
@@ -120,7 +120,6 @@ public:
    * @param new_value
    */
   void setTriggerBatchSize(size_t new_value) {
-
     validateConfigurableSizes(this->max_allowable_batch_size_, new_value);
 
     this->trigger_batch_size_.store(new_value);
@@ -138,7 +137,7 @@ public:
   }
 
   /**
-   * Return the maximum allowable batch size. When this limit is reached the queue is emptied via the handleSizeExceeded
+   * Return the maximum allowable batch size. When this limit is reached the queue is emptied via the emptyCollection
    * method.
    *
    * @return
@@ -148,7 +147,7 @@ public:
   }
 
   /**
-   * Set the maximum allowable batch size. When this limit is reached the queue is emptied via the handleSizeExceeded
+   * Set the maximum allowable batch size. When this limit is reached the queue is emptied via the emptyCollection
    * method.
    *
    * @param max_allowable_batch_size
@@ -213,13 +212,12 @@ public:
 protected:
 
   /**
-   * Safeguard in case the handleTriggerSize method does not properly drain the collection.
+   * Safeguard in case the handleTriggerSize method does not properly drain the collection. This will clear the
+   * currently batched data. If other behavior is desired to empty the collection implementing classes should override.
    *
-   * @return
    */
-  virtual void handleSizeExceeded() {
+  virtual void emptyCollection() {
     std::lock_guard<std::recursive_mutex> lk(mtx);
-
     this->batched_data_->clear();
   }
 
