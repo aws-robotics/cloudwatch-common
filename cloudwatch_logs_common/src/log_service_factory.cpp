@@ -29,6 +29,8 @@
 
 #include <dataflow_lite/dataflow/dataflow.h>
 
+#include <cloudwatch_logs_common/definitions/definitions.h>
+
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
@@ -47,7 +49,7 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, client_config);
 
   auto queue_monitor =
-      std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
+      std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogCollection>>>();
 
   FileUploadStreamerOptions file_upload_options{
     cloudwatch_options.uploader_options.file_upload_batch_size,
@@ -55,7 +57,7 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   };
 
   auto log_file_upload_streamer =
-      Aws::FileManagement::createFileUploadStreamer<LogType>(log_file_manager, file_upload_options);
+      Aws::FileManagement::createFileUploadStreamer<LogCollection>(log_file_manager, file_upload_options);
 
   // connect publisher state changes to the File Streamer
   publisher->addPublisherStateListener([upload_streamer = log_file_upload_streamer](const PublisherState& state) {
@@ -66,14 +68,14 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
 
   // Create an observed queue to trigger a publish when data is available
   auto file_data_queue =
-      std::make_shared<TaskObservedBlockingQueue<LogType>>(cloudwatch_options.uploader_options.file_max_queue_size);
+      std::make_shared<TaskObservedBlockingQueue<LogCollection>>(cloudwatch_options.uploader_options.file_max_queue_size);
 
   auto stream_data_queue = std::make_shared<TaskObservedBlockingQueue<LogType>>(cloudwatch_options.uploader_options.stream_max_queue_size);
 
   auto log_batcher = std::make_shared<LogBatcher>(
     cloudwatch_options.uploader_options.batch_max_queue_size,
     cloudwatch_options.uploader_options.batch_trigger_publish_size
-  ); // todo pass in options
+  );
   log_batcher->setLogFileManager(log_file_manager);
 
   log_file_upload_streamer->setSink(file_data_queue);

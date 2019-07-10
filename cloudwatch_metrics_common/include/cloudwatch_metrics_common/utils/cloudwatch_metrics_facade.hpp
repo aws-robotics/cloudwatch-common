@@ -70,11 +70,13 @@ public:
    * successfully.
    */
   virtual CloudWatchMetricsStatus SendMetricsToCloudWatch(
-    const std::string & metric_namespace, MetricDatumCollection &metrics);
+    const std::string & metric_namespace, MetricDatumCollection & metrics);
 
 protected:
+  CloudWatchMetricsFacade() = default;
 
 private:
+
   std::shared_ptr<Aws::CloudWatch::CloudWatchClient> cw_client_;
   CloudWatchMetricsStatus SendMetricsRequest(const Aws::CloudWatch::Model::PutMetricDataRequest & request);
 };

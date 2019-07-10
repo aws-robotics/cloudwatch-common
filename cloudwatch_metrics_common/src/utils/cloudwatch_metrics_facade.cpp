@@ -54,9 +54,10 @@ CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsRequest(
     switch(response.GetError().GetErrorType()) {
       //case Aws::CloudWatch::CloudWatchErrors::REQUEST_TIMEOUT:
       case Aws::CloudWatch::CloudWatchErrors::NETWORK_CONNECTION:
-        status =  NETWORK_FAILURE;
+        status = NETWORK_FAILURE;
+        break;
       default:
-        status =  FAILURE;
+        status = FAILURE;
     }
   }
   return status;

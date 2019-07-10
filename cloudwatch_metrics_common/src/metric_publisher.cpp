@@ -35,6 +35,13 @@ MetricPublisher::MetricPublisher(
   this->client_config_ = client_config;
 }
 
+MetricPublisher::MetricPublisher(const std::string & metrics_namespace,
+                const std::shared_ptr<Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade> cloudwatch_metrics_facade)
+{
+  this->metrics_namespace_ = metrics_namespace;
+  this->cloudwatch_metrics_facade_ = cloudwatch_metrics_facade;
+}
+
 bool MetricPublisher::start() {
 
   if (!this->cloudwatch_metrics_facade_) {
@@ -44,12 +51,16 @@ bool MetricPublisher::start() {
 }
 
 bool MetricPublisher::shutdown() {
-
   return true;
 }
 
 bool MetricPublisher::publishData(MetricDatumCollection &data)
 {
+
+  if (data.empty()) {
+    return false;
+  }
+
   auto status = this->cloudwatch_metrics_facade_->SendMetricsToCloudWatch(this->metrics_namespace_, data);
   return status == CloudWatchMetricsStatus::SUCCESS ? true : false;
 }

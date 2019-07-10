@@ -27,6 +27,8 @@
 #include <dataflow_lite/utils/service.h>
 #include <dataflow_lite/cloudwatch/cloudwatch_service.h>
 
+#include <cloudwatch_logs_common/definitions/definitions.h>
+
 #include <chrono>
 #include <stdexcept>
 #include <string>
@@ -43,7 +45,7 @@ using namespace Aws::FileManagement;
  * is not. If the file streamer is not provided then log data is dropped if any failure is observed during the
  * attempt to publish.
  */
-class LogService : public Aws::CloudWatch::CloudWatchService<std::string, Aws::CloudWatchLogs::Model::InputLogEvent> {
+class LogService : public Aws::CloudWatch::CloudWatchService<std::string, LogType> {
 public:
 
     /**
@@ -53,9 +55,9 @@ public:
      * @param batcher used to batch / queue logs before publishing
      * @param file_upload_streamer used to save logs data and upload later in the event of network connectivity changes
      */
-  LogService(std::shared_ptr<Publisher<LogType>> log_publisher,
-             std::shared_ptr<DataBatcher<Aws::CloudWatchLogs::Model::InputLogEvent>> log_batcher,
-             std::shared_ptr<FileUploadStreamer<LogType>> log_file_upload_streamer = nullptr)
+  LogService(std::shared_ptr<Publisher<LogCollection>> log_publisher,
+             std::shared_ptr<DataBatcher<LogType>> log_batcher,
+             std::shared_ptr<FileUploadStreamer<LogCollection>> log_file_upload_streamer = nullptr)
           : CloudWatchService(log_publisher, log_batcher) {
 
     this->file_upload_streamer_ = log_file_upload_streamer; // allow null, all this means is failures aren't written to file

@@ -26,8 +26,9 @@
 #include <aws/logs/model/InputLogEvent.h>
 #include <aws/logs/model/LogStream.h>
 #include <aws/logs/model/PutLogEventsRequest.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
+#include <cloudwatch_logs_common/definitions/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_logs_facade.h>
+#include <cloudwatch_logs_common/definitions/definitions.h>
 
 using namespace Aws::CloudWatchLogs::Utils;
 
@@ -63,7 +64,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::SendLogsReque
 
 Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::SendLogsToCloudWatch(
   Aws::String & next_token, const std::string & log_group, const std::string & log_stream,
-  std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs)
+  LogCollection & logs)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
   Aws::Vector<Aws::CloudWatchLogs::Model::InputLogEvent> events;

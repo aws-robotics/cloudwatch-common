@@ -19,7 +19,8 @@
 #include <aws/logs/CloudWatchLogsClient.h>
 #include <aws/logs/model/InputLogEvent.h>
 #include <aws/logs/model/PutLogEventsRequest.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
+#include <cloudwatch_logs_common/definitions/ros_cloudwatch_logs_errors.h>
+#include <cloudwatch_logs_common/definitions/definitions.h>
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -65,7 +66,7 @@ public:
    */
   virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogsToCloudWatch(
     Aws::String & next_token, const std::string & log_group, const std::string & log_stream,
-    std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs);
+    LogCollection & logs);
 
   /**
    * @brief Creates a log group

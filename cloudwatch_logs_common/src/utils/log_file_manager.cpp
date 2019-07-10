@@ -22,15 +22,16 @@
 #include "file_management/file_upload/file_manager_strategy.h"
 #include <aws/core/utils/json/JsonSerializer.h>
 #include <aws/core/utils/logging/LogMacros.h>
+#include <cloudwatch_logs_common/definitions/definitions.h>
 
 namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
-FileObject<LogType> LogFileManager::readBatch(
+FileObject<LogCollection> LogFileManager::readBatch(
   size_t batch_size)
 {
-  LogType log_data;
+  LogCollection log_data;
   FileManagement::DataToken data_token;
   std::list<FileManagement::DataToken> data_tokens;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
@@ -48,14 +49,14 @@ FileObject<LogType> LogFileManager::readBatch(
     log_data.push_back(input_event);
     data_tokens.push_back(data_token);
   }
-  FileObject<LogType> file_object;
+  FileObject<LogCollection> file_object;
   file_object.batch_data = log_data;
   file_object.batch_size = actual_batch_size;
   file_object.data_tokens = data_tokens;
   return file_object;
 }
 
-void LogFileManager::write(const LogType & data) {
+void LogFileManager::write(const LogCollection & data) {
   for (const Model::InputLogEvent &log: data) {
     auto aws_str = log.Jsonize().View().WriteCompact();
     std::string str(aws_str.c_str());

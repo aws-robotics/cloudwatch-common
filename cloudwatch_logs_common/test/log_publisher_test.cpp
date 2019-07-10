@@ -16,7 +16,7 @@
 #include <aws/core/Aws.h>
 #include <aws/logs/model/InputLogEvent.h>
 #include <cloudwatch_logs_common/log_publisher.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
+#include <cloudwatch_logs_common/definitions/ros_cloudwatch_logs_errors.h>
 #include <gtest/gtest.h>
 
 using namespace Aws::CloudWatchLogs;
@@ -145,6 +145,7 @@ protected:
     // the tests require non-empty logs_list_
     logs_list_.emplace_back();
     logs_list_.emplace_back();
+    EXPECT_FALSE(logs_list_.empty());
 
     mock_cw_ = std::make_shared<MockCloudWatchFacade>();
     std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cw = mock_cw_;
@@ -157,6 +158,10 @@ protected:
     publisher_->shutdown();
   }
 };
+
+TEST_F(TestLogPublisherFixture, Sanity) {
+  ASSERT_TRUE(true);
+}
 
 TEST_F(TestLogPublisherFixture, TestLogPublisher_PublishLogs_ReturnsFalseWhenEmpty)
 {

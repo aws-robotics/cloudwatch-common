@@ -24,16 +24,14 @@
 
 #include <file_management/file_upload/file_upload_task.h>
 
+#include <cloudwatch_logs_common/definitions/definitions.h>
+
 #include <list>
 #include <memory>
 #include <thread>
 
 namespace Aws {
 namespace CloudWatchLogs {
-
-using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
-using LogTask = Aws::FileManagement::Task<LogType>;
-using LogTaskSource = std::shared_ptr<Aws::DataFlow::Source<std::shared_ptr<LogTask>>>;
 
 /** 
  * @enum Aws::CloudWatchLogs::LogPublisherRunState
@@ -52,7 +50,7 @@ const static Aws::String UNINITIALIZED_TOKEN = "_NOT_SET_";
 /**
  * Wrapping class around the CloudWatch Logs API.
  */
-class LogPublisher : public Publisher<LogType>
+class LogPublisher : public Publisher<LogCollection>
 {
 public:
   /**
@@ -119,7 +117,6 @@ private:
   bool SendLogFiles(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs);
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data);
 
-  LogTaskSource queue_monitor_;
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cloudwatch_facade_;
   Aws::SDKOptions aws_sdk_options_;
   std::string log_group_;
