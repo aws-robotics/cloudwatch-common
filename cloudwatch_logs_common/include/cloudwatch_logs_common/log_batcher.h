@@ -17,12 +17,14 @@
 
 #include <aws/core/Aws.h>
 #include <aws/logs/model/InputLogEvent.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
+#include <cloudwatch_logs_common/definitions/ros_cloudwatch_logs_errors.h>
 
 #include <file_management/file_upload/file_upload_streamer.h>
 #include <file_management/file_upload/file_manager.h>
 
 #include <dataflow_lite/utils/data_batcher.h>
+
+#include <cloudwatch_logs_common/definitions/definitions.h>
 
 #include <chrono>
 #include <list>
@@ -31,11 +33,9 @@
 namespace Aws {
 namespace CloudWatchLogs {
 
-using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
-
 class LogBatcher :
-  public Aws::DataFlow::OutputStage<Aws::FileManagement::TaskPtr<LogType>>,
-  public DataBatcher<Aws::CloudWatchLogs::Model::InputLogEvent>
+  public Aws::DataFlow::OutputStage<Aws::FileManagement::TaskPtr<LogCollection>>,
+  public DataBatcher<LogType>
 {
 public:
 
@@ -77,10 +77,10 @@ public:
    * @throws invalid argument if the input is null
    * @param log_file_manager
    */
-  virtual void setLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogType>> log_file_manager);
+  virtual void setLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogCollection>> log_file_manager);
 
 private:
-  std::shared_ptr<Aws::FileManagement::FileManager<LogType>> log_file_manager_; // todo consider moving to base class
+  std::shared_ptr<Aws::FileManagement::FileManager<LogCollection>> log_file_manager_;
 };
 
 }  // namespace CloudWatchLogs

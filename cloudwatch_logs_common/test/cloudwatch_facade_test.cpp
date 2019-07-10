@@ -17,7 +17,7 @@
 #include <aws/core/client/AWSClient.h>
 #include <aws/core/NoResult.h>
 #include <cloudwatch_logs_common/cloudwatch_logs_client_mock.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
+#include <cloudwatch_logs_common/definitions/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_logs_facade.h>
 #include <gtest/gtest.h>
 

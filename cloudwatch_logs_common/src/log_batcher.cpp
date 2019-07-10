@@ -20,6 +20,7 @@
 #include <file_management/file_upload/file_upload_task.h>
 
 #include <dataflow_lite/utils/data_batcher.h>
+#include <cloudwatch_logs_common/definitions/definitions.h>
 
 #include <chrono>
 #include <iostream>
@@ -52,14 +53,14 @@ bool LogBatcher::publishBatchedData() {
   // getSink is kind of race-y: filed as ROS-2169
   if (getSink()) {
 
-    std::shared_ptr<LogType> log_type = this->batched_data_;
-    std::shared_ptr<BasicTask<LogType>> log_task = std::make_shared<BasicTask<LogType>>(log_type);
+    std::shared_ptr<LogCollection> log_type = this->batched_data_;
+    std::shared_ptr<BasicTask<LogCollection>> log_task = std::make_shared<BasicTask<LogCollection>>(log_type);
 
     if (log_file_manager_ ) {
 
       // register the task failure function
       auto function = [&log_file_manager = this->log_file_manager_](const FileManagement::UploadStatus &upload_status,
-              const LogType &log_messages)
+              const LogCollection &log_messages)
       {
           if (!log_messages.empty()) {
             if (FileManagement::SUCCESS != upload_status) {
@@ -118,7 +119,7 @@ bool LogBatcher::shutdown() {
   return false;
 }
 
-void LogBatcher::setLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogType>> log_file_manager)
+void LogBatcher::setLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogCollection>> log_file_manager)
 {
   if (nullptr == log_file_manager) {
     throw std::invalid_argument("input FileManager cannot be null");

@@ -16,17 +16,13 @@
 #pragma once
 #include <aws/logs/model/InputLogEvent.h>
 
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
+#include <cloudwatch_logs_common/definitions/ros_cloudwatch_logs_errors.h>
 #include <file_management/file_upload/file_manager.h>
+#include <cloudwatch_logs_common/definitions/definitions.h>
 
 namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
-
-//------------- Definitions --------------//
-using LogType = std::list<Aws::CloudWatchLogs::Model::InputLogEvent>;
-using LogTypePtr = LogType *;
-//----------------------------------------//
 
 using FileManagement::FileManager;
 using FileManagement::FileManagerStrategy;
@@ -36,7 +32,7 @@ using FileManagement::FileObject;
  * The log specific file manager. Handles the specific writes of log data.
  */
 class LogFileManager :
-    public FileManager<LogType> {
+    public FileManager<LogCollection> {
  public:
   /**
    * Default Constructor.
@@ -55,9 +51,9 @@ class LogFileManager :
 
   ~LogFileManager() override = default;
 
-  void write(const LogType & data) override;
+  void write(const LogCollection & data) override;
 
-  FileObject<LogType> readBatch(size_t batch_size) override;
+  FileObject<LogCollection> readBatch(size_t batch_size) override;
 };
 
 }  // namespace Utils

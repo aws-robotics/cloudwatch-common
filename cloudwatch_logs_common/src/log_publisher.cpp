@@ -19,11 +19,13 @@
 #include <aws/logs/CloudWatchLogsClient.h>
 #include <aws/logs/model/PutLogEventsRequest.h>
 #include <cloudwatch_logs_common/log_publisher.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
 #include <cloudwatch_logs_common/utils/cloudwatch_logs_facade.h>
 
 #include <dataflow_lite/utils/publisher.h>
 #include <dataflow_lite/dataflow/source.h>
+
+#include <cloudwatch_logs_common/definitions/definitions.h>
+#include <cloudwatch_logs_common/definitions/ros_cloudwatch_logs_errors.h>
 
 #include <list>
 #include <memory>
@@ -37,7 +39,7 @@ LogPublisher::LogPublisher(
   const std::string & log_group,
   const std::string & log_stream,
   const Aws::Client::ClientConfiguration & client_config)
-  : Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>(),
+  : Publisher<LogCollection>(),
   run_state_(LOG_PUBLISHER_RUN_CREATE_GROUP)
 {
   this->client_config_ = client_config;
@@ -178,14 +180,14 @@ bool LogPublisher::InitToken(Aws::String & next_token)
   }
 }
 
-bool LogPublisher::SendLogFiles(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs) {
+bool LogPublisher::SendLogFiles(Aws::String & next_token, LogCollection & logs) {
   auto status = SendLogs(next_token, logs);
   bool b = status == CW_LOGS_SUCCEEDED;
   AWS_LOG_DEBUG(__func__, "SendLogFiles status=%d", b);
   return b;
 }
 
-Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) {
+Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String & next_token, LogCollection & data) {
   AWS_LOG_DEBUG(__func__,
                 "Attempting to use logs of size %i", data.size());
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors send_logs_status = CW_LOGS_FAILED;
@@ -267,7 +269,7 @@ bool LogPublisher::configure() {
   return true;
 }
 
-bool LogPublisher::publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data)
+bool LogPublisher::publishData(LogCollection & data)
 {
 
   // if no data don't attempt to configure or publish

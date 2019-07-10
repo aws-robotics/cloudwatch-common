@@ -87,7 +87,7 @@ protected:
 /**
  * Test File Manager
  */
-class TestLogFileManager : public FileManager<LogType>, public Waiter
+class TestLogFileManager : public FileManager<LogCollection>, public Waiter
 {
 public:
 
@@ -95,23 +95,23 @@ public:
       written_count.store(0);
     }
 
-    void write(const LogType & data) override {
+    void write(const LogCollection & data) override {
       last_data_size = data.size();
       written_count++;
       this->notify();
     };
 
-    FileObject<LogType> readBatch(size_t batch_size) {
+    FileObject<LogCollection> readBatch(size_t batch_size) {
       // do nothing
-      FileObject<LogType> testFile;
+      FileObject<LogCollection> testFile;
       testFile.batch_size = batch_size;
       return testFile;
     }
 
     std::atomic<int> written_count;
     std::atomic<size_t> last_data_size;
-    std::condition_variable cv; // todo think about adding this into the interface
-    mutable std::mutex mtx; // todo think about adding this  into  the interface
+    std::condition_variable cv;
+    mutable std::mutex mtx;
 };
 
 
@@ -125,8 +125,8 @@ public:
       //  log service owns the streamer, batcher, and publisher
       cw_service = std::make_shared<LogService>(test_publisher, batcher);
 
-      stream_data_queue = std::make_shared<TaskObservedQueue<LogType>>();
-      queue_monitor = std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>();
+      stream_data_queue = std::make_shared<TaskObservedQueue<LogCollection>>();
+      queue_monitor = std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogCollection>>>();
 
       // create pipeline
       batcher->setSink(stream_data_queue);
@@ -140,7 +140,7 @@ public:
     {
       if (cw_service) {
         cw_service->shutdown();
-        cw_service->join(); // todo wait for shutdown is broken
+        cw_service->join();
       }
     }
 
@@ -149,8 +149,8 @@ protected:
     std::shared_ptr<LogBatcher> batcher;
     std::shared_ptr<LogService> cw_service;
 
-    std::shared_ptr<TaskObservedQueue<LogType>> stream_data_queue;
-    std::shared_ptr<Aws::DataFlow::QueueMonitor<TaskPtr<LogType>>>queue_monitor;
+    std::shared_ptr<TaskObservedQueue<LogCollection>> stream_data_queue;
+    std::shared_ptr<Aws::DataFlow::QueueMonitor<TaskPtr<LogCollection>>>queue_monitor;
 };
 
 TEST_F(PipelineTest, Sanity) {
@@ -280,7 +280,7 @@ TEST_F(PipelineTest, TestSinglePublisherFailureToFileManager) {
 
   EXPECT_TRUE(b2);
   EXPECT_EQ(0, batcher->getCurrentBatchSize());
-  EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState()); //todo race condition
+  EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState());
   EXPECT_FALSE(cw_service->isConnected());
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());
   EXPECT_EQ(1, test_publisher->getPublishAttempts());
