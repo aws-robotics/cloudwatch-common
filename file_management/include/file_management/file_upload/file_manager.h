@@ -169,7 +169,7 @@ public:
     if (UploadStatus::SUCCESS == upload_status) {
       total_logs_uploaded_ += log_messages.batch_size;
       AWS_LOG_INFO(__func__,
-                   "Total logs uploaded: %i",
+                   "Total items uploaded: %i",
                    total_logs_uploaded_);
     }
 
