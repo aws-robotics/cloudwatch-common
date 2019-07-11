@@ -35,11 +35,11 @@ static constexpr const char* kCountKey = "count";
 static constexpr const char* kDimensionsKey = "dimensions";
 static constexpr const char* kDimensionsNameKey = "name";
 static constexpr const char* kDimensionsValueKey = "value";
-static constexpr const char* kStatisticValuesKey = "statisticvalues";
-static constexpr const char* kStatisticValuesMinimumKey = "minimum";
-static constexpr const char* kStatisticValuesMaximumKey = "maximum";
-static constexpr const char* kStatisticValuesSampleCountKey = "sample_count";
-static constexpr const char* kStatisticValuesSumKey = "sum";
+//static constexpr const char* kStatisticValuesKey = "statisticvalues";
+//static constexpr const char* kStatisticValuesMinimumKey = "minimum";
+//static constexpr const char* kStatisticValuesMaximumKey = "maximum";
+//static constexpr const char* kStatisticValuesSampleCountKey = "sample_count";
+//static constexpr const char* kStatisticValuesSumKey = "sum";
 static constexpr const char* kValueKey = "value";
 static constexpr const char* kValuesKey = "values";
 static constexpr const char* kStorageResolutionKey = "storage_resolution";
@@ -95,15 +95,15 @@ MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
     datum.SetDimensions(dimensions);
   }
 
-  if (view.KeyExists(kStatisticValuesKey)) {
-    auto sv_view = view.GetObject(kStatisticValuesKey);
-    auto statistic_values = Aws::CloudWatch::Model::StatisticSet();
-    statistic_values.SetMinimum(sv_view.GetDouble(kStatisticValuesMinimumKey));
-    statistic_values.SetMaximum(sv_view.GetDouble(kStatisticValuesMaximumKey));
-    statistic_values.SetSampleCount(sv_view.GetDouble(kStatisticValuesSampleCountKey));
-    statistic_values.SetSum(sv_view.GetDouble(kStatisticValuesSumKey));
-    datum.SetStatisticValues(statistic_values);
-  }
+//  if (view.KeyExists(kStatisticValuesKey)) {
+//    auto sv_view = view.GetObject(kStatisticValuesKey);
+//    auto statistic_values = Aws::CloudWatch::Model::StatisticSet();
+//    statistic_values.SetMinimum(sv_view.GetDouble(kStatisticValuesMinimumKey));
+//    statistic_values.SetMaximum(sv_view.GetDouble(kStatisticValuesMaximumKey));
+//    statistic_values.SetSampleCount(sv_view.GetDouble(kStatisticValuesSampleCountKey));
+//    statistic_values.SetSum(sv_view.GetDouble(kStatisticValuesSumKey));
+//    datum.SetStatisticValues(statistic_values);
+//  }
 
   if (view.KeyExists(kStorageResolutionKey)) {
     datum.SetStorageResolution(view.GetInteger(kStorageResolutionKey));
@@ -151,13 +151,13 @@ Aws::String serializeMetricDatum(const MetricDatum &datum) {
         .WithString(kDimensionsValueKey, dimensions[i].GetValue());
   }
 
-  const Aws::CloudWatch::Model::StatisticSet statistic_values = datum.GetStatisticValues();
-  JsonValue statistic_values_json;
-  statistic_values_json
-    .WithDouble(kStatisticValuesMinimumKey, statistic_values.GetMinimum())
-    .WithDouble(kStatisticValuesMaximumKey, statistic_values.GetMaximum())
-    .WithDouble(kStatisticValuesSampleCountKey, statistic_values.GetSampleCount())
-    .WithDouble(kStatisticValuesSumKey, statistic_values.GetSum());
+//  const Aws::CloudWatch::Model::StatisticSet statistic_values = datum.GetStatisticValues();
+//  JsonValue statistic_values_json;
+//  statistic_values_json
+//    .WithDouble(kStatisticValuesMinimumKey, statistic_values.GetMinimum())
+//    .WithDouble(kStatisticValuesMaximumKey, statistic_values.GetMaximum())
+//    .WithDouble(kStatisticValuesSampleCountKey, statistic_values.GetSampleCount())
+//    .WithDouble(kStatisticValuesSumKey, statistic_values.GetSum());
 
   const Aws::Vector<double> values = datum.GetValues();
   Aws::Utils::Array<JsonValue> values_array = Aws::Utils::Array<JsonValue>(values.size());
@@ -173,7 +173,7 @@ Aws::String serializeMetricDatum(const MetricDatum &datum) {
     .WithInteger(kUnitKey, static_cast<int>(datum.GetUnit()))
     .WithArray(kCountsKey, counts_array)
     .WithArray(kDimensionsKey, dimensions_array)
-    .WithObject(kStatisticValuesKey, statistic_values_json)
+    //.WithObject(kStatisticValuesKey, statistic_values_json)
     .WithDouble(kValueKey, datum.GetValue())
     .WithArray(kValuesKey, values_array);
   return json_value.View().WriteCompact();
