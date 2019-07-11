@@ -32,7 +32,12 @@ namespace Utils {
 
 FileObject<MetricDatumCollection> MetricFileManager::readBatch(
     size_t batch_size) {
-  MetricDatumCollection log_data;
+  /* We must sort the metric data chronologically because it is not guaranteed
+     to be ordered chronologically in the file, but CloudWatch requires all
+     puts in a single batch to be sorted chronologically */
+  auto metric_comparison = [](const MetricDatum & metric1, const MetricDatum & metric2)
+    { return metric1.GetTimestamp() < metric2.GetTimestamp(); };
+  std::set<MetricDatum, decltype(metric_comparison)> metrics_set(metric_comparison);
   FileManagement::DataToken data_token;
   std::list<FileManagement::DataToken> data_tokens;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
@@ -53,11 +58,12 @@ FileObject<MetricDatumCollection> MetricFileManager::readBatch(
       continue;
     }
     actual_batch_size++;
-    log_data.push_back(metric_datum);
+    metrics_set.insert(metric_datum);
     data_tokens.push_back(data_token);
   }
+  MetricDatumCollection metrics_data(metrics_set.begin(), metrics_set.end());
   FileObject<MetricDatumCollection> file_object;
-  file_object.batch_data = log_data;
+  file_object.batch_data = metrics_data;
   file_object.batch_size = actual_batch_size;
   file_object.data_tokens = data_tokens;
   return file_object;
