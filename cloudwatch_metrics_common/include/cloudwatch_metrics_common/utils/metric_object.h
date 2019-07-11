@@ -24,7 +24,7 @@
 namespace Aws {
 namespace CloudWatchMetrics {
 namespace Utils {
-    
+
 static std::unordered_map<std::string, Aws::CloudWatch::Model ::StandardUnit> units_mapper = {
   {"sec", Aws::CloudWatch::Model::StandardUnit::Seconds},
   {"msec", Aws::CloudWatch::Model::StandardUnit::Milliseconds},
