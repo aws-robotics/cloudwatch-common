@@ -25,7 +25,6 @@ namespace Aws {
 namespace CloudWatchMetrics {
 namespace Utils {
 
-
 static std::unordered_map<std::string, Aws::CloudWatch::Model ::StandardUnit> units_mapper = {
   {"sec", Aws::CloudWatch::Model::StandardUnit::Seconds},
   {"msec", Aws::CloudWatch::Model::StandardUnit::Milliseconds},
@@ -61,7 +60,9 @@ struct MetricObject {
 };
 
 /**
- * helper method to constructor an Aws::CloudWatch::Model::MetricDatum from a MetricObject.
+ * Helper method to constructor an Aws::CloudWatch::Model::MetricDatum from a MetricObject.
+ *
+ * Note: currently this does not support statistics data
  *
  * @param metrics input MetricObject
  * @param timestamp
