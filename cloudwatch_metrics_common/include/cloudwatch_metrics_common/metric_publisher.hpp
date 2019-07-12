@@ -61,9 +61,9 @@ public:
    * Attempt to publish the input data.
    *
    * @param data input to publish to CloudWatch
-   * @return true if successful, false otherwise.
+   * @return the resulting Aws::DataFlow::UploadStatus from the publish attempt
    */
-  bool publishData(MetricDatumCollection &data) override;
+  Aws::DataFlow::UploadStatus publishData(MetricDatumCollection &data) override;
 
 private:
 

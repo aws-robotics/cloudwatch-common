@@ -94,7 +94,7 @@ TEST_F(TestMetricPublisherFixture, TestLogPublisher_PublishLogs_ReturnsFalseWhen
 {
   //empty list
   MetricDatumCollection test_list;
-  EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, publisher_->attemptPublish(test_list));
+  EXPECT_EQ(Aws::DataFlow::UploadStatus::INVALID_DATA, publisher_->attemptPublish(test_list));
   EXPECT_EQ(PublisherState::NOT_CONNECTED, publisher_->getPublisherState());
   EXPECT_EQ(0, mock_cw_->send_metrics_call_count);
 }

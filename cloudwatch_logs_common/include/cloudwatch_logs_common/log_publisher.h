@@ -109,13 +109,12 @@ private:
   bool configure();
 
   //main publish mechanism
-  bool publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) override;
+  Aws::DataFlow::UploadStatus publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) override;
 
   bool CreateGroup();
   bool CreateStream();
   bool InitToken(Aws::String & next_token);
 
-  bool SendLogFiles(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & logs);
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data);
 
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cloudwatch_facade_;

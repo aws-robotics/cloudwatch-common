@@ -71,7 +71,7 @@ public:
      * Attempt to publish data to CloudWatch.
      *
      * @param data the data to publish
-     * @return true if the data was successfully published, false otherwise
+     * @return the resulting Aws::DataFlow::UploadStatus from the publish attempt
      */
     virtual Aws::DataFlow::UploadStatus attemptPublish(T &data) override
     {
@@ -79,16 +79,17 @@ public:
       publish_attempts_++;
 
       auto start = std::chrono::high_resolution_clock::now();
-      bool b = publishData(data); // always at least try
+      auto published_status = publishData(data); // always at least try
       last_publish_duration_.store(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start));
 
-      publisher_state_.setValue(b ? CONNECTED : NOT_CONNECTED);
-      if (b) {
+      if (Aws::DataFlow::UploadStatus::SUCCESS == published_status) {
         publish_successes_++;
-        return Aws::DataFlow::UploadStatus::SUCCESS;
+        publisher_state_.setValue(CONNECTED);
+      } else {
+        publisher_state_.setValue(NOT_CONNECTED);
       }
 
-      return Aws::DataFlow::UploadStatus::FAIL;
+      return published_status;
     }
 
     /**
@@ -128,6 +129,7 @@ public:
 
     /**
      * Calculate and return the success rate of this publisher.
+     *
      * @return the number of sucesses divided by the number of attempts
      */
     float getPublishSuccessPercentage() {
@@ -153,10 +155,11 @@ protected:
 
     /**
      * Actual publishing mechanism implemented by the agent.
+     *
      * @param data
-     * @return
+     * @return the Aws::DataFlow::UploadStatus resulting from the implemented attempt
      */
-    virtual bool publishData(T &data) = 0;
+    virtual Aws::DataFlow::UploadStatus publishData(T &data) = 0;
 
 private:
     ObservableObject<PublisherState> publisher_state_;

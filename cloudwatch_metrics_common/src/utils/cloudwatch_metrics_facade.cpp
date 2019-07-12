@@ -58,6 +58,11 @@ CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsRequest(
       case Aws::CloudWatch::CloudWatchErrors::NETWORK_CONNECTION:
         status = NETWORK_FAILURE;
         break;
+      case Aws::CloudWatch::CloudWatchErrors::INVALID_PARAMETER_VALUE:
+      case Aws::CloudWatch::CloudWatchErrors::INVALID_PARAMETER_COMBINATION:
+      case Aws::CloudWatch::CloudWatchErrors::MISSING_PARAMETER:
+        status = INVALID_DATA;
+        break;
       default:
         status = FAILURE;
     }

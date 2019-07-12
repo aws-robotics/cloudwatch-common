@@ -50,10 +50,25 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::SendLogsReque
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
   auto response = this->cw_client_->PutLogEvents(request);
   if (!response.IsSuccess()) {
-    status = CW_LOGS_FAILED;
+
     AWS_LOGSTREAM_ERROR(__func__, "Send log request failed due to: "
                                     << response.GetError().GetMessage() << ", with error code: "
                                     << static_cast<int>(response.GetError().GetErrorType()));
+
+    switch(response.GetError().GetErrorType()) {
+
+      case Aws::CloudWatchLogs::CloudWatchLogsErrors::NETWORK_CONNECTION:
+        status = CW_LOGS_NOT_CONNECTED;
+        break;
+      case Aws::CloudWatchLogs::CloudWatchLogsErrors::INVALID_PARAMETER_COMBINATION:
+      case Aws::CloudWatchLogs::CloudWatchLogsErrors::INVALID_PARAMETER_VALUE:
+      case Aws::CloudWatchLogs::CloudWatchLogsErrors::MISSING_PARAMETER:
+        status = CW_LOGS_INVALID_PARAMETER;
+        break;
+      default:
+        status = CW_LOGS_FAILED;
+    }
+
   } else {
     AWS_LOG_DEBUG(__func__, "Setting the sequence token to use for the next send log request.");
     next_token = response.GetResult().GetNextSequenceToken();
@@ -173,7 +188,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CheckLogGroup
       } else {
         status = CW_LOGS_FAILED;
       }
-      status = CW_LOGS_FAILED;
+
       AWS_LOGSTREAM_WARN(__func__, "Request to check if log group named "
               << log_group << " exists failed. Error message: "
               << response.GetError().GetMessage() << ", with error code: "
