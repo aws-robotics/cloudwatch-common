@@ -71,7 +71,7 @@ public:
      * Attempt to publish data to CloudWatch.
      *
      * @param data the data to publish
-     * @return true if the data was successfully published, false otherwise
+     * @return the resulting Aws::DataFlow::UploadStatus from the publish attempt
      */
     virtual Aws::DataFlow::UploadStatus attemptPublish(T &data) override
     {
@@ -129,6 +129,7 @@ public:
 
     /**
      * Calculate and return the success rate of this publisher.
+     *
      * @return the number of sucesses divided by the number of attempts
      */
     float getPublishSuccessPercentage() {
@@ -154,8 +155,9 @@ protected:
 
     /**
      * Actual publishing mechanism implemented by the agent.
+     *
      * @param data
-     * @return
+     * @return the Aws::DataFlow::UploadStatus resulting from the implemented attempt
      */
     virtual Aws::DataFlow::UploadStatus publishData(T &data) = 0;
 
