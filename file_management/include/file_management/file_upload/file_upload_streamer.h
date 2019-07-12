@@ -36,7 +36,7 @@ namespace FileManagement {
 using Aws::DataFlow::MultiStatusConditionMonitor;
 using Aws::DataFlow::OutputStage;
 
-static constexpr std::chrono::milliseconds kTimeout = std::chrono::seconds(1);
+static constexpr std::chrono::milliseconds kTimeout = std::chrono::minutes(1);
 
 struct FileUploadStreamerOptions {
 
@@ -149,11 +149,19 @@ protected:
         AWS_LOG_DEBUG(__func__,
                      "Waiting for files and work.");
         auto wait_result = status_condition_monitor_.waitForWork(kTimeout);
+
+        // is there data available?
+
         if (wait_result == std::cv_status::timeout) {
-          AWS_LOG_DEBUG(__func__,
-                        "Timed out when waiting for work");
-          return;
+
+          if (!data_reader_->isDataAvailableToRead()) {
+            AWS_LOG_DEBUG(__func__, "Timed out when waiting for work, no data available to read");
+            return;
+          }
+          AWS_LOG_DEBUG(__func__, "Timed out when waiting for work, but data available to read: attempting to publish");
+          // otherwise attempt to publish as only the network is down but we have data to send
         }
+
         if (!OutputStage<TaskPtr<T>>::getSink()) {
           AWS_LOG_WARN(__func__,
                        "No Sink Configured");
