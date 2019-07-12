@@ -30,18 +30,10 @@ using JsonValue = Aws::Utils::Json::JsonValue;
 
 static constexpr const char* kTimestampKey = "timestamp";
 static constexpr const char* kMetricNameKey = "metric_name";
-//static constexpr const char* kCountsKey = "counts";
-//static constexpr const char* kCountKey = "count";
 static constexpr const char* kDimensionsKey = "dimensions";
 static constexpr const char* kDimensionsNameKey = "name";
 static constexpr const char* kDimensionsValueKey = "value";
-//static constexpr const char* kStatisticValuesKey = "statisticvalues";
-//static constexpr const char* kStatisticValuesMinimumKey = "minimum";
-//static constexpr const char* kStatisticValuesMaximumKey = "maximum";
-//static constexpr const char* kStatisticValuesSampleCountKey = "sample_count";
-//static constexpr const char* kStatisticValuesSumKey = "sum";
 static constexpr const char* kValueKey = "value";
-//static constexpr const char* kValuesKey = "values";
 static constexpr const char* kStorageResolutionKey = "storage_resolution";
 static constexpr const char* kUnitKey = "unit";
 
@@ -74,15 +66,6 @@ MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
   datum.SetMetricName(view.GetString(kMetricNameKey));
   datum.SetTimestamp(view.GetInt64(kTimestampKey));
 
-//  if (view.KeyExists(kCountsKey)) {
-//    auto array = view.GetArray(kCountsKey);
-//    Aws::Vector<double> counts(array.GetLength());
-//    for (size_t i = 0; i < array.GetLength(); ++i) {
-//      counts[i] = array.GetItem(i).GetDouble(kCountKey);
-//    }
-//    datum.SetCounts(counts);
-//  }
-
   if (view.KeyExists(kDimensionsKey)) {
     auto array = view.GetArray(kDimensionsKey) ;
     Aws::Vector<Aws::CloudWatch::Model::Dimension> dimensions(array.GetLength());
@@ -95,16 +78,6 @@ MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
     datum.SetDimensions(dimensions);
   }
 
-//  if (view.KeyExists(kStatisticValuesKey)) {
-//    auto sv_view = view.GetObject(kStatisticValuesKey);
-//    auto statistic_values = Aws::CloudWatch::Model::StatisticSet();
-//    statistic_values.SetMinimum(sv_view.GetDouble(kStatisticValuesMinimumKey));
-//    statistic_values.SetMaximum(sv_view.GetDouble(kStatisticValuesMaximumKey));
-//    statistic_values.SetSampleCount(sv_view.GetDouble(kStatisticValuesSampleCountKey));
-//    statistic_values.SetSum(sv_view.GetDouble(kStatisticValuesSumKey));
-//    datum.SetStatisticValues(statistic_values);
-//  }
-
   if (view.KeyExists(kStorageResolutionKey)) {
     datum.SetStorageResolution(view.GetInteger(kStorageResolutionKey));
   }
@@ -114,15 +87,6 @@ MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
   if (view.KeyExists(kValueKey)) {
     datum.SetValue(view.GetDouble(kValueKey));
   }
-
-//  if (view.KeyExists(kValuesKey)) {
-//    auto array = view.GetArray(kValuesKey);
-//    Aws::Vector<double> values(array.GetLength());
-//    for (size_t i = 0; i < array.GetLength(); ++i) {
-//      values[i] = array.GetItem(i).AsDouble();
-//    }
-//    datum.SetValues(values);
-//  }
 
   return datum;
 }
@@ -135,13 +99,6 @@ MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
 Aws::String serializeMetricDatum(const MetricDatum &datum) {
   Aws::Utils::Json::JsonValue json_value;
 
-//  const Aws::Vector<double> counts = datum.GetCounts();
-//  Aws::Utils::Array<JsonValue> counts_array = Aws::Utils::Array<JsonValue>(counts.size());
-//  for (size_t i = 0; i < counts.size(); ++i) {
-//    JsonValue count_json;
-//    counts_array[i] = count_json.WithDouble(kCountKey, counts[i]);
-//  }
-
   const Aws::Vector<Aws::CloudWatch::Model::Dimension> dimensions = datum.GetDimensions();
   Aws::Utils::Array<JsonValue> dimensions_array = Aws::Utils::Array<JsonValue>(dimensions.size());
   for (size_t i = 0; i < dimensions.size(); ++i) {
@@ -150,14 +107,6 @@ Aws::String serializeMetricDatum(const MetricDatum &datum) {
         .WithString(kDimensionsNameKey, dimensions[i].GetName())
         .WithString(kDimensionsValueKey, dimensions[i].GetValue());
   }
-
-//  const Aws::CloudWatch::Model::StatisticSet statistic_values = datum.GetStatisticValues();
-//  JsonValue statistic_values_json;
-//  statistic_values_json
-//    .WithDouble(kStatisticValuesMinimumKey, statistic_values.GetMinimum())
-//    .WithDouble(kStatisticValuesMaximumKey, statistic_values.GetMaximum())
-//    .WithDouble(kStatisticValuesSampleCountKey, statistic_values.GetSampleCount())
-//    .WithDouble(kStatisticValuesSumKey, statistic_values.GetSum());
 
   const Aws::Vector<double> values = datum.GetValues();
   Aws::Utils::Array<JsonValue> values_array = Aws::Utils::Array<JsonValue>(values.size());
@@ -171,10 +120,7 @@ Aws::String serializeMetricDatum(const MetricDatum &datum) {
     .WithString(kMetricNameKey, datum.GetMetricName())
     .WithInteger(kStorageResolutionKey, datum.GetStorageResolution())
     .WithInteger(kUnitKey, static_cast<int>(datum.GetUnit()))
-    //.WithArray(kCountsKey, counts_array)
     .WithArray(kDimensionsKey, dimensions_array)
-    //.WithObject(kStatisticValuesKey, statistic_values_json)
-    //.WithArray(kValuesKey, values_array)
     .WithDouble(kValueKey, datum.GetValue());
   return json_value.View().WriteCompact();
 }
