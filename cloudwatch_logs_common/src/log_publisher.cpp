@@ -181,25 +181,24 @@ bool LogPublisher::InitToken(Aws::String & next_token)
   }
 }
 
-bool LogPublisher::SendLogFiles(Aws::String & next_token, LogCollection & logs) {
-  auto status = SendLogs(next_token, logs);
-  bool b = status == CW_LOGS_SUCCEEDED;
-  AWS_LOG_DEBUG(__func__, "SendLogFiles status=%d", b);
-  return b;
-}
-
 Aws::CloudWatchLogs::ROSCloudWatchLogsErrors LogPublisher::SendLogs(Aws::String & next_token, LogCollection & data) {
+
   AWS_LOG_DEBUG(__func__,
                 "Attempting to use logs of size %i", data.size());
+
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors send_logs_status = CW_LOGS_FAILED;
   if (!data.empty()) {
     int tries = kMaxRetries;
     while (CW_LOGS_SUCCEEDED != send_logs_status && tries > 0) {
+
       AWS_LOG_INFO(__func__, "Sending logs to CW");
+
       if (!std::ifstream("/tmp/internet").good()) {
         send_logs_status = this->cloudwatch_facade_->SendLogsToCloudWatch(
             next_token, this->log_group_, this->log_stream_, data);
+        AWS_LOG_DEBUG(__func__, "SendLogs status=%d", send_logs_status);
       }
+
       if (CW_LOGS_SUCCEEDED != send_logs_status) {
         AWS_LOG_WARN(__func__, "Unable to send logs to CloudWatch, retrying ...");
         Aws::CloudWatchLogs::ROSCloudWatchLogsErrors get_token_status =
@@ -270,33 +269,41 @@ bool LogPublisher::configure() {
   return true;
 }
 
-bool LogPublisher::publishData(LogCollection & data)
+Aws::DataFlow::UploadStatus LogPublisher::publishData(LogCollection & data)
 {
 
   // if no data don't attempt to configure or publish
   if (data.empty()) {
     AWS_LOG_DEBUG(__func__, "no data to publish");
-    return false;
+    return Aws::DataFlow::INVALID_DATA;
   }
 
   // attempt to configure (if needed, based on run_state_)
   if (!configure()) {
-    return false;
+    return Aws::DataFlow::FAIL;
   }
 
   AWS_LOG_DEBUG(__func__, "attempting to SendLogFiles");
 
   // all config succeeded: attempt to publish
   this->run_state_.setValue(LOG_PUBLISHER_ATTEMPT_SEND_LOGS);
-  bool success = SendLogFiles(next_token, data);
+  auto status = SendLogs(next_token, data);
 
   // if failed attempt to get the token next time
   // otherwise everything succeeded to attempt to send logs again
-  this->run_state_.setValue(success ? LOG_PUBLISHER_ATTEMPT_SEND_LOGS : LOG_PUBLISHER_RUN_INIT_TOKEN);
+  this->run_state_.setValue(status == CW_LOGS_SUCCEEDED ? LOG_PUBLISHER_ATTEMPT_SEND_LOGS : LOG_PUBLISHER_RUN_INIT_TOKEN);
+  AWS_LOG_DEBUG(__func__, "finished SendLogs");
 
-  AWS_LOG_DEBUG(__func__, "finished SendLogFiles");
+  switch(status) {
 
-  return success;
+    case CW_LOGS_SUCCEEDED:
+      return Aws::DataFlow::SUCCESS;
+    case CW_LOGS_INVALID_PARAMETER:
+      return Aws::DataFlow::INVALID_DATA;
+    default:
+      AWS_LOG_WARN(__func__, "error finishing SendLogs %d", status);
+      return Aws::DataFlow::FAIL;
+  }
 }
 
 bool LogPublisher::start() {

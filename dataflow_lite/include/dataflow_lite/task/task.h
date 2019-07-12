@@ -31,6 +31,7 @@ namespace DataFlow {
  * Upload status for some data that was attempted to be published
  */
 enum UploadStatus {
+  UNKNOWN,  // safe default
   FAIL,  // the upload failed
   SUCCESS,  // the upload succeeded
   INVALID_DATA  // the upload was attempted and failed because the input data is bad and will never succeed
