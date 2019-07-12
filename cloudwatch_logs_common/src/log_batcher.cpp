@@ -76,7 +76,7 @@ bool LogBatcher::publishBatchedData() {
               log_file_manager->write(log_messages);
 
             } else {
-              AWS_LOG_DEBUG(__func__, "Task upload successful");
+              AWS_LOG_DEBUG(__func__, "Task log upload successful");
             }
 
           }

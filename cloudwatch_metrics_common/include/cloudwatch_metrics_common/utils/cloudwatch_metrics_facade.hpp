@@ -27,12 +27,13 @@ namespace Utils {
 
 /**
  * Used to wrap the Aws::CloudWatch::CloudWatchErrors. The current interesting states, that are handled given
- * the AWS SDK returns, are success, failure, and not connected to the internet / CloudWatch service.
+ * the AWS SDK returns, are success, failure, invalid data, and not connected to the internet / CloudWatch service.
  */
 enum CloudWatchMetricsStatus {
     SUCCESS,  // the CloudWatch API call was successful
     FAILURE,  // the CloudWatch API call failed for some reason
-    NETWORK_FAILURE  // the CloudWatch API call returned a timeout / not connected error
+    NETWORK_FAILURE,  // the CloudWatch API call returned a timeout / not connected error
+    INVALID_DATA  // invalid data was attempted to be published
 };
 
 /**

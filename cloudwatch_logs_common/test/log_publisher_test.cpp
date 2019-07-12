@@ -167,7 +167,7 @@ TEST_F(TestLogPublisherFixture, TestLogPublisher_PublishLogs_ReturnsFalseWhenEmp
 {
   //empty list
   std::list<Aws::CloudWatchLogs::Model::InputLogEvent> empty_list;
-  EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, publisher_->attemptPublish(empty_list));
+  EXPECT_EQ(Aws::DataFlow::UploadStatus::INVALID_DATA, publisher_->attemptPublish(empty_list));
   EXPECT_EQ(PublisherState::NOT_CONNECTED, publisher_->getPublisherState());
 }
 

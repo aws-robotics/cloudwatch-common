@@ -85,7 +85,8 @@ TEST_F(TestMetricSerialization, serialize_returns_valid_string) {
   EXPECT_EQ(result.GetValue(), value);
 }
 
-TEST_F(TestMetricSerialization, statistic_values_work) {
+// disabled as statistics currently not supported
+TEST_F(TestMetricSerialization, DISABLED_statistic_values_work) {
   auto statistic_values = Aws::CloudWatch::Model::StatisticSet();
   statistic_values.SetMinimum(5);
   statistic_values.SetMaximum(15);
@@ -102,7 +103,8 @@ TEST_F(TestMetricSerialization, statistic_values_work) {
   EXPECT_EQ(result.GetStatisticValues().GetSum(), statistic_values.GetSum());
 }
 
-TEST_F(TestMetricSerialization, values_work) {
+// disabled as values currently not supported
+TEST_F(TestMetricSerialization, DISABLED_values_work) {
   const Aws::Vector<double> values = {44, 55, 66};
 
   metric_datum.SetValues(values);
