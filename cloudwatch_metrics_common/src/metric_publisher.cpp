@@ -54,13 +54,20 @@ bool MetricPublisher::shutdown() {
   return true;
 }
 
-bool MetricPublisher::publishData(MetricDatumCollection &data)
+Aws::DataFlow::UploadStatus MetricPublisher::publishData(MetricDatumCollection &data)
 {
 
   if (data.empty()) {
-    return false;
+    return Aws::DataFlow::INVALID_DATA;
   }
 
-  auto status = this->cloudwatch_metrics_facade_->SendMetricsToCloudWatch(this->metrics_namespace_, data);
-  return status == CloudWatchMetricsStatus::SUCCESS ? true : false;
+  CloudWatchMetricsStatus status = this->cloudwatch_metrics_facade_->SendMetricsToCloudWatch(this->metrics_namespace_, data);
+  switch(status) {
+    case CloudWatchMetricsStatus::SUCCESS:
+      return Aws::DataFlow::UploadStatus::SUCCESS;
+    case CloudWatchMetricsStatus::INVALID_DATA:
+      return Aws::DataFlow::UploadStatus::INVALID_DATA;
+    default:
+      return Aws::DataFlow::UploadStatus::FAIL;
+  }
 }

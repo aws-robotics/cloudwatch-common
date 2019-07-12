@@ -63,9 +63,19 @@ bool MetricBatcher::publishBatchedData() {
                                                                     const MetricDatumCollection &metrics_to_publish)
       {
           if (!metrics_to_publish.empty()) {
-            if (DataFlow::SUCCESS != upload_status) {
+
+            if (DataFlow::UploadStatus::INVALID_DATA == upload_status) {
+
+              // publish indicated the task data was bad, this task should be discarded
+              AWS_LOG_WARN(__func__, "Task failed due to invalid metric data, dropping");
+
+            } else if (DataFlow::UploadStatus::SUCCESS != upload_status) {
+
               AWS_LOG_INFO(__func__, "Task failed: writing metrics to file");
               metric_file_manager->write(metrics_to_publish);
+
+            } else {
+              AWS_LOG_DEBUG(__func__, "Task metric upload successful");
             }
           }
       };
