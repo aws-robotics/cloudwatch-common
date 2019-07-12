@@ -79,16 +79,17 @@ public:
       publish_attempts_++;
 
       auto start = std::chrono::high_resolution_clock::now();
-      bool b = publishData(data); // always at least try
+      auto published_status = publishData(data); // always at least try
       last_publish_duration_.store(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start));
 
-      publisher_state_.setValue(b ? CONNECTED : NOT_CONNECTED);
-      if (b) {
+      if (Aws::DataFlow::UploadStatus::SUCCESS == published_status) {
         publish_successes_++;
-        return Aws::DataFlow::UploadStatus::SUCCESS;
+        publisher_state_.setValue(CONNECTED);
+      } else {
+        publisher_state_.setValue(NOT_CONNECTED);
       }
 
-      return Aws::DataFlow::UploadStatus::FAIL;
+      return published_status;
     }
 
     /**
@@ -156,7 +157,7 @@ protected:
      * @param data
      * @return
      */
-    virtual bool publishData(T &data) = 0;
+    virtual Aws::DataFlow::UploadStatus publishData(T &data) = 0;
 
 private:
     ObservableObject<PublisherState> publisher_state_;
