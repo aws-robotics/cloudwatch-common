@@ -41,6 +41,7 @@ enum UploadStatus {
  * Generic publisher interface to attempt to upload generic data.
  *
  * @tparam T
+ * @return the UploadStatus resulting from the publish attempt
  */
 template<typename T>
 class IPublisher {

@@ -66,16 +66,20 @@ bool LogBatcher::publishBatchedData() {
       {
           if (!log_messages.empty()) {
 
-            if (DataFlow::UploadStatus::FAIL == upload_status) {
-
-              AWS_LOG_INFO(__func__, "Task failed to upload: writing logs to file");
-              log_file_manager->write(log_messages);
-
-            } else if (DataFlow::UploadStatus::INVALID_DATA == upload_status) {
+            if (DataFlow::UploadStatus::INVALID_DATA == upload_status) {
 
               // publish indicated the task data was bad, this task should be discarded
               AWS_LOG_WARN(__func__, "Task failed due to invalid log data, dropping");
+
+            } else if (DataFlow::UploadStatus::SUCCESS != upload_status) {
+
+              AWS_LOG_INFO(__func__, "Task failed to upload: writing logs to file. Status = %d", upload_status);
+              log_file_manager->write(log_messages);
+
+            } else {
+              AWS_LOG_DEBUG(__func__, "Task upload successful");
             }
+
           }
       };
 
