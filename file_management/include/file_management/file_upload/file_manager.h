@@ -38,7 +38,7 @@ public:
   T batch_data;
   size_t batch_size;
   std::list<DataToken> data_tokens;
-};
+}; //todo this should be immutable
 
 
 
@@ -51,12 +51,6 @@ public:
   * @return a FileObject containing the data read plus some metadata about the file read
   */
   virtual FileObject<T> readBatch(size_t batch_size) = 0;
-
-  /**
-   * Return if data is available to read.
-   * @return
-   */
-  virtual bool isDataAvailableToRead() = 0;
 
   /**
    * Handle an upload complete status.
@@ -85,6 +79,7 @@ public:
    * Default constructor.
    */
   FileManager() {
+    // todo use customer data to VERIFY that the above kOptions is valid
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(Aws::FileManagement::kDefaultFileManagerStrategyOptions);
   }
 
@@ -94,6 +89,7 @@ public:
    * @param options for the FileManagerStrategy
    */
   FileManager(const FileManagerStrategyOptions &options) {
+    // todo all arguments should be configurable and should have input checking
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }
 
@@ -105,6 +101,10 @@ public:
    */
   explicit FileManager(std::shared_ptr<DataManagerStrategy> file_manager_strategy) {
 
+    // todo how to allow null for testing?
+//    if (nullptr == file_manager_strategy) {
+//      throw std::invalid_argument("DataManagerStrategy cannot be null");
+//    }
     if(file_manager_strategy) {
       file_manager_strategy_ = file_manager_strategy;
     }
@@ -150,7 +150,7 @@ public:
    * Write data to the appropriate file.
    * @param data to write.
    */
-  virtual void write(const T & data) = 0;
+  virtual void write(const T & data) = 0; // todo shouldn't this be a DataWriter interface?
 
 /**
  * Handle an upload complete status.
@@ -181,19 +181,6 @@ public:
    */
   void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
     file_status_monitor_ = status_monitor;
-  }
-
-  /**
-   * Return if data is available to read.
-   *
-   * @return
-   */
-  bool isDataAvailableToRead() override {
-
-    if (file_status_monitor_) {
-      return file_status_monitor_->getStatus() == Aws::DataFlow::Status::AVAILABLE;
-    }
-    return false;
   }
 
 protected:
