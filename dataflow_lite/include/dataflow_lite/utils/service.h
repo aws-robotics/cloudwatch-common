@@ -68,6 +68,7 @@ public:
     RunnableService() {
       should_run_.store(false);
     }
+    virtual ~RunnableService() = default;
 
     //todo
 //    inline bool restart() {

@@ -98,7 +98,8 @@ virtual bool start() {
 }
 
 /**
- * Shut all services down.
+ * Shut all services down. Note: this method blocks and waits for the FileUploadStreamer's and its own RunnableService
+ * work threads to be complete.
  *
  * @return true if everything shutdown correctly
  */
@@ -110,9 +111,14 @@ virtual inline bool shutdown() {
 
   if (file_upload_streamer_) {
     shutdown &= file_upload_streamer_->shutdown();
+    // wait for shutdown to complete
+    file_upload_streamer_->join();
   }
 
   shutdown &= RunnableService::shutdown();
+  // wait for shutdown to complete
+  this->join();
+
   return shutdown;
 }
 
