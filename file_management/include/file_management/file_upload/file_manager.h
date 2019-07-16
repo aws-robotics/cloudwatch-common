@@ -173,6 +173,9 @@ public:
     for (const auto &token : log_messages.data_tokens) {
       // this may block, file IO can be expensive
       file_manager_strategy_->resolve(token, upload_status == Aws::DataFlow::UploadStatus::SUCCESS);
+      if (upload_status != Aws::DataFlow::UploadStatus::SUCCESS) {
+        file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
+      }
     }
   }
 
