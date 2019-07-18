@@ -18,7 +18,7 @@ The source code is released under an [Apache 2.0].
 ### Build status
 * Travis CI:
     * "master" branch [![Build Status](https://travis-ci.org/aws-robotics/cloudwatch-common.svg?branch=master)](https://travis-ci.org/aws-robotics/cloudwatch-common/branches)
-    * "release" branch [![Build Status](https://travis-ci.org/aws-robotics/cloudwatch-common.svg?branch=release-v1)](https://travis-ci.org/aws-robotics/cloudwatch-common/branches)
+    * "release-latest" branch [![Build Status](https://travis-ci.org/aws-robotics/cloudwatch-common.svg?branch=release-latest)](https://travis-ci.org/aws-robotics/cloudwatch-common/branches)
 * ROS build farm:
     * ROS Kinetic @ u16.04 Xenial
         * cloudwatch_metrics_common [![Build Status](http://build.ros.org/job/Kbin_uX64__cloudwatch_metrics_common__ubuntu_xenial_amd64__binary/badge/icon)](http://build.ros.org/job/Kbin_uX64__cloudwatch_metrics_common__ubuntu_xenial_amd64__binary)
