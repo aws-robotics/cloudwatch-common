@@ -267,11 +267,11 @@ bool FileManagerStrategy::isDataAvailable() {
   return !active_read_file_.empty() || !stored_files_.empty() || active_write_file_size_ > 0;
 }
 
-// @todo (rddesmon) catch and wrap failure to open exceptions
-// @todo Deal with race conditions if there are multiple writers
 void FileManagerStrategy::write(const std::string &data) {
   checkIfFileShouldRotate(data.size());
   checkIfStorageLimitHasBeenReached(data.size());
+
+  std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
   std::ofstream log_file;
   AWS_LOG_DEBUG(__func__, "Writing data to file: %s", active_write_file_.c_str())
   log_file.open(active_write_file_, std::ios_base::app);
@@ -378,7 +378,7 @@ std::string FileManagerStrategy::getFileToRead() {
     return newest_file;
   }
 
-  // TODO: Deal with threads writing to active file. Lock it?
+  std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
   if (active_write_file_size_ > 0) {
     const std::string file_path = active_write_file_;
     rotateWriteFile();
@@ -421,6 +421,7 @@ void FileManagerStrategy::rotateWriteFile() {
 }
 
 void FileManagerStrategy::checkIfFileShouldRotate(const uintmax_t &new_data_size) {
+  std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
   const uintmax_t new_file_size = active_write_file_size_ + new_data_size;
   const uintmax_t max_file_size_in_bytes = KB_TO_BYTES(options_.maximum_file_size_in_kb);
   if (new_file_size > max_file_size_in_bytes) {
@@ -448,6 +449,7 @@ void FileManagerStrategy::deleteOldestFile() {
       active_read_file_stream_ = nullptr;
     }
     stored_files_.pop_front();
+    AWS_LOG_INFO(__func__, "Deleting oldest file: %s", oldest_file.c_str());
     deleteFile(oldest_file);
   }
 }

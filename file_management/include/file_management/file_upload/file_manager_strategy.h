@@ -237,7 +237,14 @@ public:
 
   bool shutdown() override;
 
-protected:
+protected: // functions exposed for testing
+  std::string getFileToRead();
+
+  std::string getActiveWriteFile() {
+    return active_write_file_;
+  }
+
+private:
   void validateOptions();
 
   void initializeStorage();
@@ -248,7 +255,6 @@ protected:
 
   void deleteFile(const std::string &file_path);
 
-  std::string getFileToRead();
 
   void checkIfFileShouldRotate(const uintmax_t &new_data_size);
 
@@ -275,6 +281,7 @@ protected:
    */
   std::string active_write_file_;
   std::atomic<size_t> active_write_file_size_;
+  std::mutex active_write_file_mutex_;
 
   std::string active_read_file_;
   std::unique_ptr<std::ifstream> active_read_file_stream_ = nullptr;
