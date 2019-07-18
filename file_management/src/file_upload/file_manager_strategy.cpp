@@ -283,6 +283,7 @@ void FileManagerStrategy::write(const std::string &data) {
 }
 
 DataToken FileManagerStrategy::read(std::string &data) {
+  std::lock_guard<std::mutex> read_lock(active_read_file_mutex_);
   if (active_read_file_.empty()) {
     active_read_file_ = getFileToRead();
     // if the file is still empty, return an empty token.
@@ -370,13 +371,13 @@ void FileManagerStrategy::deleteFile(const std::string &file_path) {
 }
 
 std::string FileManagerStrategy::getFileToRead() {
-  // if we have stored files, pop from the start of the list and return that filename
+  // if we have stored files, pop from the end of the list and return that filename
   // if we do not have stored files, and the active file has data, switch active file and return the existing active file.
   if (!stored_files_.empty()) {
     stored_files_.sort();
-    const std::string oldest_file = stored_files_.front();
-    stored_files_.pop_front();
-    return oldest_file;
+    const std::string newest_file = stored_files_.back();
+    stored_files_.pop_back();
+    return newest_file;
   }
 
   // TODO: Deal with threads writing to active file. Lock it?
@@ -395,7 +396,7 @@ void FileManagerStrategy::addFilePathToStorage(const fs::path &file_path) {
 }
 
 void FileManagerStrategy::rotateWriteFile() {
-  // TODO create using UUID or something.
+  AWS_LOG_DEBUG(__func__, "Rotating offline storage file");
   using std::chrono::system_clock;
   time_t tt = system_clock::to_time_t (system_clock::now());
   std::ostringstream oss;
@@ -438,8 +439,13 @@ void FileManagerStrategy::checkIfStorageLimitHasBeenReached(const uintmax_t &new
 
 void FileManagerStrategy::deleteOldestFile() {
   if (!stored_files_.empty()) {
+    std::lock_guard<std::mutex> read_lock(active_read_file_mutex_);
     stored_files_.sort();
     const std::string oldest_file = stored_files_.front();
+    if (oldest_file == active_read_file_) {
+      active_read_file_.clear();
+      active_read_file_stream_ = nullptr;
+    }
     stored_files_.pop_front();
     deleteFile(oldest_file);
   }

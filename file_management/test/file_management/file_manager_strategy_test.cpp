@@ -29,6 +29,19 @@
 
 using namespace Aws::FileManagement;
 
+class MockFileManagerStrategy : public FileManagerStrategy {
+public:
+  MockFileManagerStrategy(const FileManagerStrategyOptions &options) : FileManagerStrategy(options) {}
+
+  std::string getFileToRead() {
+    return FileManagerStrategy::getFileToRead();
+  }
+
+  std::string getActiveWriteFile() {
+    return FileManagerStrategy::active_write_file_;
+  }
+};
+
 class FileManagerStrategyTest : public ::testing::Test {
 public:
   void SetUp() override
@@ -49,6 +62,7 @@ protected:
   uint storage_limit = max_file_size * 10;
   FileManagerStrategyOptions options{folder, prefix, extension, max_file_size, storage_limit};
 };
+
 
 TEST_F(FileManagerStrategyTest, restart_without_token) {
   const std::string data1 = "test_data_1";
@@ -146,6 +160,42 @@ TEST_F(FileManagerStrategyTest, discover_stored_files) {
     file_manager_strategy.resolve(token, true);
   }
 }
+
+TEST_F(FileManagerStrategyTest, get_file_to_read_gets_newest) {
+  namespace fs = std::experimental::filesystem;
+  const uint max_file_size_in_kb = 25;
+  options.maximum_file_size_in_kb = max_file_size_in_kb;
+  {
+    MockFileManagerStrategy file_manager_strategy(options);
+    file_manager_strategy.start();
+    std::ostringstream ss_25_kb;
+    for (int i = 0; i < 1024; i++) {
+      ss_25_kb << "This is 25 bytes of data.";
+    }
+    std::string string_25_kb = ss_25_kb.str();
+
+    for (int i = 0; i < 5; i++) {
+      file_manager_strategy.write(string_25_kb);
+    }
+
+    long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
+    EXPECT_EQ(5, file_count);
+
+    std::vector<std::string> file_paths;
+    for (const auto &entry : fs::directory_iterator(folder)) {
+      const fs::path &path = entry.path();
+      file_paths.push_back(path);
+    }
+
+    std::sort(file_paths.begin(), file_paths.end());
+    const std::string expected_active_write_file = file_paths.end()[-1];
+    const std::string expected_file_to_be_read = file_paths.end()[-2];
+
+    EXPECT_EQ(expected_active_write_file, file_manager_strategy.getActiveWriteFile());
+    EXPECT_EQ(expected_file_to_be_read, file_manager_strategy.getFileToRead());
+  }
+}
+
 
 TEST_F(FileManagerStrategyTest, rotate_large_files) {
   namespace fs = std::experimental::filesystem;

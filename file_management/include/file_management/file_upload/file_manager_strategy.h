@@ -23,6 +23,7 @@
 #include <set>
 #include <memory>
 #include <random>
+#include <mutex>
 #include <experimental/filesystem>
 #include <dataflow_lite/utils/service.h>
 #include <file_management/file_manager_options.h>
@@ -236,7 +237,7 @@ public:
 
   bool shutdown() override;
 
-private:
+protected:
   void validateOptions();
 
   void initializeStorage();
@@ -277,6 +278,7 @@ private:
 
   std::string active_read_file_;
   std::unique_ptr<std::ifstream> active_read_file_stream_ = nullptr;
+  std::mutex active_read_file_mutex_;
 
   /**
    * User configurable settings
