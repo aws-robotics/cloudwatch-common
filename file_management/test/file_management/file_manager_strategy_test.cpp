@@ -38,7 +38,7 @@ public:
   }
 
   std::string getActiveWriteFile() {
-    return FileManagerStrategy::active_write_file_;
+    return FileManagerStrategy::getActiveWriteFile();
   }
 };
 
