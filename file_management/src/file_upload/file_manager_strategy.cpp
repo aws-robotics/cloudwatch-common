@@ -29,7 +29,6 @@ namespace fs = std::experimental::filesystem;
 namespace Aws {
 namespace FileManagement {
 
-static const std::string kConfigFile("file_management.info");
 static const std::string kTokenStoreFile("token_store.info");
 
 void sanitizePath(std::string & path) {
@@ -354,7 +353,6 @@ void FileManagerStrategy::discoverStoredFiles() {
 }
 
 void FileManagerStrategy::deleteFile(const std::string &file_path) {
-  // @todo (rddesmon) consider new thread for file deletion
   AWS_LOG_DEBUG(__func__, "Deleting file: %s", file_path.c_str());
   const uintmax_t file_size = fs::file_size(file_path);
   fs::remove(file_path);
