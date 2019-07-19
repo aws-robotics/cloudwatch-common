@@ -51,54 +51,66 @@ bool LogBatcher::publishBatchedData() {
     return false;
   }
 
-  // getSink is kind of race-y: filed as ROS-2169
-  if (getSink()) {
+  std::shared_ptr<LogCollection> log_type = this->batched_data_;
+  std::shared_ptr<Aws::DataFlow::BasicTask<LogCollection>> log_task = std::make_shared<Aws::DataFlow::BasicTask<LogCollection>>(log_type);
 
-    std::shared_ptr<LogCollection> log_type = this->batched_data_;
-    std::shared_ptr<Aws::DataFlow::BasicTask<LogCollection>> log_task = std::make_shared<Aws::DataFlow::BasicTask<LogCollection>>(log_type);
+  // connect to the log_file_manager_ to write to disk on task failure
+  if (log_file_manager_) {
 
-    if (log_file_manager_ ) {
+    // register the task failure function
+    auto function = [&log_file_manager = this->log_file_manager_](const DataFlow::UploadStatus &upload_status,
+                                                                  const LogCollection &log_messages)
+    {
+        if (!log_messages.empty()) {
 
-      // register the task failure function
-      auto function = [&log_file_manager = this->log_file_manager_](const DataFlow::UploadStatus &upload_status,
-              const LogCollection &log_messages)
-      {
-          if (!log_messages.empty()) {
+          if (DataFlow::UploadStatus::INVALID_DATA == upload_status) {
 
-            if (DataFlow::UploadStatus::INVALID_DATA == upload_status) {
+            // publish indicated the task data was bad, this task should be discarded
+            AWS_LOG_WARN(__func__, "LogBatcher: Task failed due to invalid log data, dropping");
 
-              // publish indicated the task data was bad, this task should be discarded
-              AWS_LOG_WARN(__func__, "Task failed due to invalid log data, dropping");
+          } else if (DataFlow::UploadStatus::SUCCESS != upload_status) {
 
-            } else if (DataFlow::UploadStatus::SUCCESS != upload_status) {
+            AWS_LOG_INFO(__func__, "LogBatcher: Task failed to upload: writing logs to file. Status = %d", upload_status);
+            log_file_manager->write(log_messages);
 
-              AWS_LOG_INFO(__func__, "Task failed to upload: writing logs to file. Status = %d", upload_status);
-              log_file_manager->write(log_messages);
-
-            } else {
-              AWS_LOG_DEBUG(__func__, "Task log upload successful");
-            }
-
+          } else {
+            AWS_LOG_DEBUG(__func__, "LogBatcher: Task log upload successful");
           }
-      };
+        } else {
+          AWS_LOG_INFO(__func__, "LogBatcher: not publishing task as log_messages is empty");
+        }
+    };
 
-      log_task->setOnCompleteFunction(function);
-    }
+    log_task->setOnCompleteFunction(function);
+  }
 
-    bool enqueue_success = getSink()->tryEnqueue(log_task, this->getTryEnqueueDuration());
-
-    if (!enqueue_success) {
-      AWS_LOG_WARN(__func__, "Unable to enqueue log data, marking as failed");
-      log_task->onComplete(DataFlow::UploadStatus::FAIL);
-    }
-
-    this->resetBatchedData();
-    return enqueue_success;
-
-  } else {
-    AWS_LOGSTREAM_WARN(__func__, "Unable to obtain queue");
+  // dont attempt to queue if not started
+  if(ServiceState::STARTED != this->getState()) {
+    AWS_LOG_WARN(__func__, "current service state is not Started, canceling task: %s", Service::getStatusString().c_str());
+    log_task->cancel();
     return false;
   }
+
+  bool enqueue_success = false;
+
+  if (getSink()) {
+
+    enqueue_success = getSink()->tryEnqueue(log_task, this->getTryEnqueueDuration());
+
+    if (!enqueue_success) {
+      AWS_LOG_WARN(__func__, "Unable to enqueue log data, canceling task");
+    }
+
+  } else {
+    // if we can't queue, then cancel (write to disk)
+    AWS_LOGSTREAM_WARN(__func__, "Unable to obtain queue, canceling task");
+  }
+
+  if (!enqueue_success) {
+    log_task->cancel();
+  }
+  this->resetBatchedData();
+  return enqueue_success;
 }
 
 void LogBatcher::emptyCollection() {
@@ -118,17 +130,7 @@ bool LogBatcher::start() {
   if (log_file_manager_ == nullptr) {
     AWS_LOGSTREAM_WARN(__func__, "FileManager not found: data will be dropped on failure.");
   }
-  return true;
-}
-
-bool LogBatcher::shutdown() {
-  // try to acquire the lock, but don't block shutting down
-  if (mtx.try_lock()) {
-    this->emptyCollection();  // attempt to write to disk before discarding
-    mtx.unlock();
-    return true;
-  }
-  return false;
+  return Service::start();
 }
 
 void LogBatcher::setLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogCollection>> log_file_manager)

@@ -55,16 +55,17 @@ public:
     last_upload_status = Aws::DataFlow::UploadStatus::UNKNOWN;
   };
 
-  virtual ~TestPublisher() {
-    shutdown();
-  };
+  virtual ~TestPublisher() = default    ;
 
-  bool start() override {return true;}
+  bool start() override {
+    return Publisher::start();
+  }
 
   // notify just in case anyone is waiting
   bool shutdown() override {
+    bool b = Publisher::shutdown();
     this->notify(); //don't leave anyone blocking
-    return true;
+    return b;
   };
 
   void setForceFailure(bool nv) {

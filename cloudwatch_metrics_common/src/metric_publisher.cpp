@@ -47,7 +47,7 @@ bool MetricPublisher::start() {
   if (!this->cloudwatch_metrics_facade_) {
     this->cloudwatch_metrics_facade_ = std::make_shared<CloudWatchMetricsFacade>(this->client_config_);
   }
-  return true;
+  return Service::start();
 }
 
 bool MetricPublisher::shutdown() {

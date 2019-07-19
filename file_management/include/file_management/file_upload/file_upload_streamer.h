@@ -168,9 +168,9 @@ protected:
           return;
         }
         AWS_LOG_DEBUG(__func__,
-                     "Found work! Batching");
+                     "Found work, batching");
         FileObject<T> file_object = data_reader_->readBatch(batch_size_);
-        total_logs_uploaded += file_object.batch_size;
+        total_logs_uploaded += file_object.batch_size;  // todo this is attempted, not truly uploaded
         stored_task_ = std::make_shared<FileUploadTask<T>>(
             std::move(file_object),
             std::bind(

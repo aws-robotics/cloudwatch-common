@@ -21,6 +21,9 @@
 #include <thread>
 #include <dataflow_lite/utils/service.h>
 
+/**
+ * Simple extension of the RunnableService used for testing
+ */
 class HardWorker : public RunnableService
 {
 public:
@@ -53,17 +56,24 @@ private:
     mutable std::mutex test_mtx;
 };
 
+/**
+ * Test fixture used to execture the HardWorker RunnableService
+ */
 class RunnableServiceTest : public ::testing::Test {
 public:
     void SetUp() override
     {
       hard_worker = std::make_shared<HardWorker>();
+      EXPECT_EQ(ServiceState::CREATED, hard_worker->getState());
+      EXPECT_FALSE(hard_worker->isRunning());
     }
 
     void TearDown() override
     {
       hard_worker->shutdown();
-      hard_worker->waitForShutdown();
+      hard_worker->join();
+      EXPECT_EQ(ServiceState::SHUTDOWN, hard_worker->getState());
+      EXPECT_FALSE(hard_worker->isRunning());
       hard_worker.reset();
     }
 
@@ -75,27 +85,30 @@ TEST_F(RunnableServiceTest, Sanity) {
   ASSERT_TRUE(true);
 }
 
+/**
+ * Exercise the RunnableService start and shutdown. Verify that it ran.
+ */
 TEST_F(RunnableServiceTest, Test) {
   EXPECT_EQ(false, hard_worker->getHasWorked());
   EXPECT_EQ(false, hard_worker->isRunning());
 
-  // start the worker
+  //  start the worker
   EXPECT_EQ(true, hard_worker->start());
+  EXPECT_EQ(ServiceState::STARTED, hard_worker->getState());
   // expect false on subsequent start
   EXPECT_EQ(false, hard_worker->start());
 
-  // todo FIXME
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  //  wait to make sure the thread was started
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
   EXPECT_EQ(true, hard_worker->isRunning());
+  EXPECT_EQ(ServiceState::STARTED, hard_worker->getState());
 
   EXPECT_EQ(true, hard_worker->shutdown());
   EXPECT_EQ(false, hard_worker->shutdown());
 
-  hard_worker->waitForShutdown(std::chrono::milliseconds(500)); // wait with timeout so we don't block other tests
+  hard_worker->waitForShutdown(std::chrono::milliseconds(1000)); // wait with timeout so we don't block other tests
 
   // did we at least work?
   EXPECT_EQ(true, hard_worker->getHasWorked());
-
-  hard_worker->join();
 }

@@ -78,17 +78,14 @@ CloudWatchService(std::shared_ptr<Publisher<std::list<T>>> publisher,
  *
  * @return true if everything started correctly
  */
-virtual bool start() {
+virtual bool start() override {
   bool started = true;
-
-  //init the API
 
   started &= publisher_->start();
   started &= batcher_->start();
 
   if (file_upload_streamer_) {
     started &= file_upload_streamer_->start();
-
   }
 
   //start the thread to dequeue
@@ -104,19 +101,20 @@ virtual bool start() {
  * @return true if everything shutdown correctly
  */
 virtual inline bool shutdown() {
-  bool shutdown = true;
+
+  //  stop the work thread immediately, don't hand any more tasks to the publisher
+  bool shutdown = RunnableService::shutdown();
 
   shutdown &= publisher_->shutdown();
   shutdown &= batcher_->shutdown();
 
   if (file_upload_streamer_) {
     shutdown &= file_upload_streamer_->shutdown();
-    // wait for shutdown to complete
+    // wait for file_upload_streamer_ (RunnableService) shutdown to complete
     file_upload_streamer_->join();
   }
 
-  shutdown &= RunnableService::shutdown();
-  // wait for shutdown to complete
+  // wait for RunnableService shutdown to complete
   this->join();
 
   return shutdown;
@@ -133,7 +131,6 @@ virtual inline bool batchData(const D &data_to_batch) {
   T t = convertInputToBatched(data_to_batch);
   return batcher_->batchData(t);
 }
-
 
 /**
  * Entry point to batch data for publishing
@@ -227,9 +224,15 @@ void work() {
 
     if (task_to_publish) {
       this->number_dequeued_++;
-      AWS_LOGSTREAM_DEBUG(__func__, "Dequeued " << this->number_dequeued_++);
+      AWS_LOGSTREAM_DEBUG(__func__, "Number of tasks dequeued = " << this->number_dequeued_++);
 
-      task_to_publish->run(publisher_); // publish mechanism via the TaskFactory
+      if (Service::getState() == ServiceState::STARTED) {
+        // publish mechanism via the TaskFactory
+        task_to_publish->run(publisher_);
+      } else {
+        // unable to publish, fast fail and cancel the current task
+        task_to_publish->cancel();
+      }
     }
   }
 }
