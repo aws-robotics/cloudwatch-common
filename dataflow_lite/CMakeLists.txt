@@ -29,13 +29,20 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_CXX_FLAGS}")
 
 find_package(aws_common REQUIRED)
 
+if(AWSSDK_FOUND)
+  set(SERVICE core)
+  AWSSDK_DETERMINE_LIBS_TO_LINK(SERVICE OUTPUT)
+  link_directories("${AWSSDK_LIB_DIR}")
+endif()
+
 set(ALL_SRC_FILES
     src/dataflow/status_monitor.cpp
     )
 
 add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})
 target_link_libraries(${PROJECT_NAME} stdc++fs)
-target_include_directories(${PROJECT_NAME} PRIVATE include ${dataflow_lite_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME}
+        PRIVATE ${AWSSDK_INCLUDE_DIRS} include ${aws_common_INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
@@ -90,12 +97,15 @@ if(GMOCK_LIBRARY)
           ${PROJECT_NAME})
 
   add_common_gtest(test_service_utilties
-          test/utils/observable_object_test.cpp
-          test/utils/runnable_service_test.cpp
           test/utils/data_batcher_test.cpp
+          test/utils/observable_object_test.cpp
+          test/utils/publisher_test.cpp
+          test/utils/runnable_service_test.cpp
+          test/utils/service_test.cpp
           )
   target_include_directories(test_service_utilties
           PRIVATE include
+          PRIVATE ${aws_common_INCLUDE_DIRS}
           PUBLIC ${PROJECT_SOURCE_DIR}/test/include
           )
   target_link_libraries(test_service_utilties

@@ -23,6 +23,9 @@
 #include <memory>
 #include <mutex>
 
+#include <aws/core/Aws.h>
+#include <aws/core/utils/logging/LogMacros.h>
+
 /**
  * Class used as an atomic container of type T. Provides a listener registration and
  * broadcast mechanism for this container's updates.
@@ -30,7 +33,7 @@
  * @tparam T
  */
 template<typename T>
-class ObservableObject { // todo think about extending std::atomic
+class ObservableObject { // think about extending std::atomic
 public:
     /**
      *
@@ -72,11 +75,22 @@ public:
     /**
      * Add a listener that will be called when the current value changes. Note: any listener
      * that throws an exception will be removed from the broadcast list.
+     *
      * @param listener
      */
-    virtual void addListener(const std::function<void(const T&)> & listener) {
+    virtual bool addListener(const std::function<void(const T&)> & listener) {
       std::lock_guard<std::recursive_mutex> lk(listener_mutex_);
+
+      try {
+        // provide the current value to the listener, don't wait for an event
+        listener(value_.load());
+      } catch(...) {
+        // something bad happened, remove the faulty listener
+        return false;
+      }
+      // the listener handled the new value without exception, add
       listeners_.push_back(listener);
+      return true;
     }
 
     /**
@@ -112,7 +126,7 @@ protected:
           callback(currentValue);
           ++i;
         } catch(...) {
-          //something bad happened, remove the faulty listener
+          // something bad happened, remove the faulty listener
           i = listeners_.erase(i);
         }
       }

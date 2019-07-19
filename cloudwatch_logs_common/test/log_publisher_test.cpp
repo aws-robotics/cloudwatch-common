@@ -137,7 +137,9 @@ protected:
 
   void StartPublisher()
   {
+    EXPECT_EQ(ServiceState::CREATED, publisher_->getState());
     EXPECT_EQ(true, publisher_->start());
+    EXPECT_EQ(ServiceState::STARTED, publisher_->getState());
   }
 
   void SetUp() override
@@ -165,6 +167,8 @@ TEST_F(TestLogPublisherFixture, Sanity) {
 
 TEST_F(TestLogPublisherFixture, TestLogPublisher_PublishLogs_ReturnsFalseWhenEmpty)
 {
+  StartPublisher();
+
   //empty list
   std::list<Aws::CloudWatchLogs::Model::InputLogEvent> empty_list;
   EXPECT_EQ(Aws::DataFlow::UploadStatus::INVALID_DATA, publisher_->attemptPublish(empty_list));
@@ -173,6 +177,8 @@ TEST_F(TestLogPublisherFixture, TestLogPublisher_PublishLogs_ReturnsFalseWhenEmp
 
 TEST_F(TestLogPublisherFixture, TestLogPublisher_PublishLogs_ReturnsSuccessWhenListIngested)
 {
+  StartPublisher();
+
   EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, publisher_->attemptPublish(logs_list_));
   EXPECT_EQ(PublisherState::CONNECTED, publisher_->getPublisherState());
   EXPECT_EQ(LOG_PUBLISHER_ATTEMPT_SEND_LOGS, publisher_->getRunState());
@@ -180,6 +186,8 @@ TEST_F(TestLogPublisherFixture, TestLogPublisher_PublishLogs_ReturnsSuccessWhenL
 
 TEST_F(TestLogPublisherFixture, TestLogPublisher_CallsSendLogsToCW)
 {
+  StartPublisher();
+
   EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, publisher_->attemptPublish(logs_list_));
   EXPECT_EQ(PublisherState::CONNECTED, publisher_->getPublisherState());
   EXPECT_EQ(1, mock_cw_->send_logs_call_count);
@@ -188,6 +196,7 @@ TEST_F(TestLogPublisherFixture, TestLogPublisher_CallsSendLogsToCW)
 
 TEST_F(TestLogPublisherFixture, TestLogPublisher_FailCreateGroup)
 {
+  StartPublisher();
 
   mock_cw_->fail_cw_log_group = true;
   mock_cw_->fail_cw_create_log_group = true;
@@ -198,6 +207,7 @@ TEST_F(TestLogPublisherFixture, TestLogPublisher_FailCreateGroup)
 
 TEST_F(TestLogPublisherFixture, TestLogPublisher_FailCreateStream)
 {
+  StartPublisher();
 
   mock_cw_->fail_cw_log_stream = true;
   mock_cw_->fail_cw_create_log_stream = true;
@@ -208,6 +218,8 @@ TEST_F(TestLogPublisherFixture, TestLogPublisher_FailCreateStream)
 
 TEST_F(TestLogPublisherFixture, TestLogPublisher_FailInitToken)
 {
+  StartPublisher();
+
   mock_cw_->fail_cw_init_token = true;
   EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, publisher_->attemptPublish(logs_list_));
 
@@ -216,8 +228,17 @@ TEST_F(TestLogPublisherFixture, TestLogPublisher_FailInitToken)
 
 TEST_F(TestLogPublisherFixture, TestLogPublisher_FailSendLogs)
 {
+  StartPublisher();
+
   mock_cw_->fail_cw_send_logs = true;
   EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, publisher_->attemptPublish(logs_list_));
 
   EXPECT_EQ(LOG_PUBLISHER_RUN_INIT_TOKEN, publisher_->getRunState());
+}
+
+TEST_F(TestLogPublisherFixture, TestLogPublisher_FailNotStarted)
+{
+  EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, publisher_->attemptPublish(logs_list_));
+  EXPECT_TRUE(publisher_->shutdown());
+  EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, publisher_->attemptPublish(logs_list_));
 }

@@ -231,7 +231,7 @@ bool FileManagerStrategy::start() {
   initializeTokenStore();
   discoverStoredFiles();
   rotateWriteFile();
-  return true;
+  return Service::start();
 }
 
 void FileManagerStrategy::validateOptions() {
@@ -332,8 +332,9 @@ void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
 }
 
 bool FileManagerStrategy::shutdown() {
+  bool b = Service::shutdown();
   token_store_->backupToDisk();
-  return true;
+  return b;
 }
 
 

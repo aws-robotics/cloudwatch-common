@@ -51,52 +51,66 @@ bool MetricBatcher::publishBatchedData() {
     return false;
   }
 
-  if (getSink()) {
+  auto metrics_to_publish = this->batched_data_;
+  std::shared_ptr<Aws::DataFlow::BasicTask<MetricDatumCollection>> metric_task = std::make_shared<Aws::DataFlow::BasicTask<MetricDatumCollection>>(metrics_to_publish);
 
-    auto metrics_to_publish = this->batched_data_;
-    std::shared_ptr<Aws::DataFlow::BasicTask<MetricDatumCollection>> metric_task = std::make_shared<Aws::DataFlow::BasicTask<MetricDatumCollection>>(metrics_to_publish);
+  // connect to the file manager to write to disk on fail / cancel
+  if (metric_file_manager_ ) {
 
-    if (metric_file_manager_ ) {
+    // register the task failure function
+    auto function = [&metric_file_manager = this->metric_file_manager_](const DataFlow::UploadStatus &upload_status,
+                                                                        const MetricDatumCollection &metrics_to_publish)
+    {
+        if (!metrics_to_publish.empty()) {
 
-      // register the task failure function
-      auto function = [&metric_file_manager = this->metric_file_manager_](const DataFlow::UploadStatus &upload_status,
-                                                                    const MetricDatumCollection &metrics_to_publish)
-      {
-          if (!metrics_to_publish.empty()) {
+          if (DataFlow::UploadStatus::INVALID_DATA == upload_status) {
 
-            if (DataFlow::UploadStatus::INVALID_DATA == upload_status) {
+            // publish indicated the task data was bad, this task should be discarded
+            AWS_LOG_WARN(__func__, "MetricBatcher: Task failed due to invalid metric data, dropping");
 
-              // publish indicated the task data was bad, this task should be discarded
-              AWS_LOG_WARN(__func__, "Task failed due to invalid metric data, dropping");
+          } else if (DataFlow::UploadStatus::SUCCESS != upload_status) {
 
-            } else if (DataFlow::UploadStatus::SUCCESS != upload_status) {
+            AWS_LOG_INFO(__func__, "MetricBatcher: Task failed: writing metrics to file");
+            metric_file_manager->write(metrics_to_publish);
 
-              AWS_LOG_INFO(__func__, "Task failed: writing metrics to file");
-              metric_file_manager->write(metrics_to_publish);
-
-            } else {
-              AWS_LOG_DEBUG(__func__, "Task metric upload successful");
-            }
+          } else {
+            AWS_LOG_DEBUG(__func__, "MetricBatcher: Task metric upload successful");
           }
-      };
+        } else {
+          AWS_LOG_INFO(__func__, "MetricBatcher: not publishing task as metrics_to_publish is empty");
+        }
+    };
 
-      metric_task->setOnCompleteFunction(function);
-    }
+    metric_task->setOnCompleteFunction(function);
+  }
 
-    bool enqueue_success = getSink()->tryEnqueue(metric_task, this->getTryEnqueueDuration());
-
-    if (!enqueue_success) {
-      AWS_LOG_WARN(__func__, "Unable to enqueue data, marking as failed");
-      metric_task->onComplete(DataFlow::UploadStatus::FAIL);
-    }
-
-    this->resetBatchedData();
-    return enqueue_success;
-
-  } else {
-    AWS_LOGSTREAM_WARN(__func__, "Unable to obtain queue");
+  // dont attempt to queue if not started
+  if(ServiceState::STARTED != this->getState()) {
+    AWS_LOG_WARN(__func__, "current service state is not Started, canceling task: %s", Service::getStatusString().c_str());
+    metric_task->cancel();
     return false;
   }
+
+  bool enqueue_success = false;
+
+  // try to enqueue
+  if (getSink()) {
+
+    enqueue_success = getSink()->tryEnqueue(metric_task, this->getTryEnqueueDuration());
+
+    if (!enqueue_success) {
+      AWS_LOG_WARN(__func__, "Unable to enqueue data, canceling task");
+    }
+
+  } else {
+    AWS_LOGSTREAM_WARN(__func__, "Unable to obtain queue, canceling task");
+  }
+
+  if (!enqueue_success) {
+    metric_task->cancel();
+  }
+  this->resetBatchedData();
+  return enqueue_success;
 }
 
 void MetricBatcher::emptyCollection() {
@@ -116,17 +130,7 @@ bool MetricBatcher::start() {
   if (metric_file_manager_ == nullptr) {
     AWS_LOGSTREAM_WARN(__func__, "FileManager not found: data will be dropped on failure.");
   }
-  return true;
-}
-
-bool MetricBatcher::shutdown() {
-  // try to acquire the lock, but don't block shutting down
-  if (mtx.try_lock()) {
-    this->emptyCollection(); // attempt to write to disk before discarding
-    mtx.unlock();
-    return true;
-  }
-  return false;
+  return Service::start();
 }
 
 void MetricBatcher::setMetricFileManager(std::shared_ptr<Aws::FileManagement::FileManager<MetricDatumCollection>> metric_file_manager)

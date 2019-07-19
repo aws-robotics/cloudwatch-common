@@ -312,11 +312,12 @@ bool LogPublisher::start() {
     this->cloudwatch_facade_ = std::make_shared<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade>(this->client_config_);
   }
 
-  return true;
+  return Service::start();
 }
 
 bool LogPublisher::shutdown() {
+  bool b = Publisher::shutdown();
   resetInitToken();
   Aws::ShutdownAPI(this->options_);
-  return true;
+  return b;
 }
