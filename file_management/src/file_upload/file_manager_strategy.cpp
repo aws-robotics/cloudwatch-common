@@ -176,8 +176,8 @@ void TokenStore::backupToDisk() {
   std::ofstream token_store_file;
   token_store_file.open(file_path);
   if (token_store_file.bad()) {
-    AWS_LOG_WARN(__func__,
-            "Unable to open file %s to backup the token store", file_path.c_str());
+    AWS_LOG_WARN(__func__, "Unable to open file %s to backup the token store", file_path.c_str());
+    return;
   }
   for (const FileTokenInfo &token_info : token_store_backup) {
     token_store_file << token_info.serialize() << std::endl;
@@ -268,7 +268,7 @@ bool FileManagerStrategy::isDataAvailable() {
 }
 
 void FileManagerStrategy::write(const std::string &data) {
-  checkIfFileShouldRotate(data.size());
+  checkIfWriteFileShouldRotate(data.size());
   checkIfStorageLimitHasBeenReached(data.size());
 
   std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
@@ -335,14 +335,7 @@ void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
 }
 
 bool FileManagerStrategy::shutdown() {
-  // todo can this stuff throw?
   token_store_->backupToDisk();
-  auto config_file_path = std::experimental::filesystem::path(options_.storage_directory + kConfigFile);
-  if (std::experimental::filesystem::exists(config_file_path)) {
-    std::experimental::filesystem::remove(config_file_path);
-  }
-  std::ofstream config_file(config_file_path);
-  config_file.close();
   return true;
 }
 
@@ -385,7 +378,7 @@ std::string FileManagerStrategy::getFileToRead() {
     return file_path;
   }
 
-  throw "No files available for reading";
+  throw std::runtime_error("No files available for reading");
 }
 
 void FileManagerStrategy::addFilePathToStorage(const fs::path &file_path) {
@@ -420,7 +413,7 @@ void FileManagerStrategy::rotateWriteFile() {
   active_write_file_size_ = 0;
 }
 
-void FileManagerStrategy::checkIfFileShouldRotate(const uintmax_t &new_data_size) {
+void FileManagerStrategy::checkIfWriteFileShouldRotate(const uintmax_t &new_data_size) {
   std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
   const uintmax_t new_file_size = active_write_file_size_ + new_data_size;
   const uintmax_t max_file_size_in_bytes = KB_TO_BYTES(options_.maximum_file_size_in_kb);
