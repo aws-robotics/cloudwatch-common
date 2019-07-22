@@ -441,7 +441,7 @@ private:
    * An IOStream for the active_read_file. Kept open so that it's easy to move to the next 
    * point in the file with each read instead of continually opening a new stream each time.
    */
-  std::unique_ptr<std::ifstream> active_read_file_stream_ = nullptr;
+  std::unique_ptr<std::ifstream> active_read_file_stream_;
 
   /**
    * A lock on the active read file, to ensure that it does not get deleted while it is being
@@ -463,7 +463,7 @@ private:
   /**
    * Stores which tokens to read from.
    */
-  std::unique_ptr<TokenStore> token_store_ = nullptr;
+  std::unique_ptr<TokenStore> token_store_;
 };
 
 }  // namespace FileManagement

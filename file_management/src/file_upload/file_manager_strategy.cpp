@@ -108,13 +108,11 @@ DataToken TokenStore::createToken(const std::string &file_name, const long & str
     file_tokens_[file_name] = std::list<DataToken>();
   }
   file_tokens_[file_name].push_back(token);
-//  printCache(token_store_, file_tokens_, staged_tokens_);
   return token;
 }
 
 FileTokenInfo TokenStore::fail(const DataToken &token) {
   AWS_LOG_DEBUG(__func__, "Marking token %i as failed (data did not upload successfully)", token);
-//  printCache(token_store_, file_tokens_, staged_tokens_);
   if (token_store_.find(token) == token_store_.end()) {
     throw std::runtime_error("DataToken not found");
   }
