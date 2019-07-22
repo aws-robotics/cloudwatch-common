@@ -29,7 +29,6 @@ namespace fs = std::experimental::filesystem;
 namespace Aws {
 namespace FileManagement {
 
-static const std::string kConfigFile("file_management.info");
 static const std::string kTokenStoreFile("token_store.info");
 
 void sanitizePath(std::string & path) {
@@ -109,13 +108,11 @@ DataToken TokenStore::createToken(const std::string &file_name, const long & str
     file_tokens_[file_name] = std::list<DataToken>();
   }
   file_tokens_[file_name].push_back(token);
-//  printCache(token_store_, file_tokens_, staged_tokens_);
   return token;
 }
 
 FileTokenInfo TokenStore::fail(const DataToken &token) {
   AWS_LOG_DEBUG(__func__, "Marking token %i as failed (data did not upload successfully)", token);
-//  printCache(token_store_, file_tokens_, staged_tokens_);
   if (token_store_.find(token) == token_store_.end()) {
     throw std::runtime_error("DataToken not found");
   }
@@ -176,8 +173,8 @@ void TokenStore::backupToDisk() {
   std::ofstream token_store_file;
   token_store_file.open(file_path);
   if (token_store_file.bad()) {
-    AWS_LOG_WARN(__func__,
-            "Unable to open file %s to backup the token store", file_path.c_str());
+    AWS_LOG_WARN(__func__, "Unable to open file %s to backup the token store", file_path.c_str());
+    return;
   }
   for (const FileTokenInfo &token_info : token_store_backup) {
     token_store_file << token_info.serialize() << std::endl;
@@ -267,11 +264,11 @@ bool FileManagerStrategy::isDataAvailable() {
   return !active_read_file_.empty() || !stored_files_.empty() || active_write_file_size_ > 0;
 }
 
-// @todo (rddesmon) catch and wrap failure to open exceptions
-// @todo Deal with race conditions if there are multiple writers
 void FileManagerStrategy::write(const std::string &data) {
-  checkIfFileShouldRotate(data.size());
+  checkIfWriteFileShouldRotate(data.size());
   checkIfStorageLimitHasBeenReached(data.size());
+
+  std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
   std::ofstream log_file;
   AWS_LOG_DEBUG(__func__, "Writing data to file: %s", active_write_file_.c_str())
   log_file.open(active_write_file_, std::ios_base::app);
@@ -284,6 +281,7 @@ void FileManagerStrategy::write(const std::string &data) {
 }
 
 DataToken FileManagerStrategy::read(std::string &data) {
+  std::lock_guard<std::mutex> read_lock(active_read_file_mutex_);
   if (active_read_file_.empty()) {
     active_read_file_ = getFileToRead();
     // if the file is still empty, return an empty token.
@@ -334,14 +332,7 @@ void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
 }
 
 bool FileManagerStrategy::shutdown() {
-  // todo can this stuff throw?
   token_store_->backupToDisk();
-  auto config_file_path = std::experimental::filesystem::path(options_.storage_directory + kConfigFile);
-  if (std::experimental::filesystem::exists(config_file_path)) {
-    std::experimental::filesystem::remove(config_file_path);
-  }
-  std::ofstream config_file(config_file_path);
-  config_file.close();
   return true;
 }
 
@@ -360,7 +351,6 @@ void FileManagerStrategy::discoverStoredFiles() {
 }
 
 void FileManagerStrategy::deleteFile(const std::string &file_path) {
-  // @todo (rddesmon) consider new thread for file deletion
   AWS_LOG_DEBUG(__func__, "Deleting file: %s", file_path.c_str());
   const uintmax_t file_size = fs::file_size(file_path);
   fs::remove(file_path);
@@ -368,23 +358,23 @@ void FileManagerStrategy::deleteFile(const std::string &file_path) {
 }
 
 std::string FileManagerStrategy::getFileToRead() {
-  // if we have stored files, pop from the start of the list and return that filename
+  // if we have stored files, pop from the end of the list and return that filename
   // if we do not have stored files, and the active file has data, switch active file and return the existing active file.
   if (!stored_files_.empty()) {
     stored_files_.sort();
-    const std::string oldest_file = stored_files_.front();
-    stored_files_.pop_front();
-    return oldest_file;
+    const std::string newest_file = stored_files_.back();
+    stored_files_.pop_back();
+    return newest_file;
   }
 
-  // TODO: Deal with threads writing to active file. Lock it?
+  std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
   if (active_write_file_size_ > 0) {
     const std::string file_path = active_write_file_;
     rotateWriteFile();
     return file_path;
   }
 
-  throw "No files available for reading";
+  throw std::runtime_error("No files available for reading");
 }
 
 void FileManagerStrategy::addFilePathToStorage(const fs::path &file_path) {
@@ -393,7 +383,6 @@ void FileManagerStrategy::addFilePathToStorage(const fs::path &file_path) {
 }
 
 void FileManagerStrategy::rotateWriteFile() {
-  // TODO create using UUID or something.
   AWS_LOG_DEBUG(__func__, "Rotating offline storage file");
   using std::chrono::system_clock;
   time_t tt = system_clock::to_time_t (system_clock::now());
@@ -420,7 +409,8 @@ void FileManagerStrategy::rotateWriteFile() {
   active_write_file_size_ = 0;
 }
 
-void FileManagerStrategy::checkIfFileShouldRotate(const uintmax_t &new_data_size) {
+void FileManagerStrategy::checkIfWriteFileShouldRotate(const uintmax_t &new_data_size) {
+  std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
   const uintmax_t new_file_size = active_write_file_size_ + new_data_size;
   const uintmax_t max_file_size_in_bytes = KB_TO_BYTES(options_.maximum_file_size_in_kb);
   if (new_file_size > max_file_size_in_bytes) {
@@ -440,9 +430,15 @@ void FileManagerStrategy::checkIfStorageLimitHasBeenReached(const uintmax_t &new
 
 void FileManagerStrategy::deleteOldestFile() {
   if (!stored_files_.empty()) {
+    std::lock_guard<std::mutex> read_lock(active_read_file_mutex_);
     stored_files_.sort();
     const std::string oldest_file = stored_files_.front();
+    if (oldest_file == active_read_file_) {
+      active_read_file_.clear();
+      active_read_file_stream_ = nullptr;
+    }
     stored_files_.pop_front();
+    AWS_LOG_INFO(__func__, "Deleting oldest file: %s", oldest_file.c_str());
     deleteFile(oldest_file);
   }
 }

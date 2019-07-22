@@ -37,6 +37,7 @@ public:
     void(const UploadStatus& upload_status, const FileObject<std::string> &log_messages));
   MOCK_METHOD1(addStatusMonitor,
     void(std::shared_ptr<StatusMonitor> monitor));
+  MOCK_METHOD0(isDataAvailableToRead, bool());
 
   /**
    * Set the observer for the queue.
