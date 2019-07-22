@@ -171,9 +171,16 @@ public:
     // Delete file if empty log_messages.file_location.
     for (const auto &token : log_messages.data_tokens) {
       // this may block, file IO can be expensive
-      file_manager_strategy_->resolve(token, upload_status == Aws::DataFlow::UploadStatus::SUCCESS);
-      if (upload_status != Aws::DataFlow::UploadStatus::SUCCESS) {
-        file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
+      try {
+
+        file_manager_strategy_->resolve(token, upload_status == Aws::DataFlow::UploadStatus::SUCCESS);
+        if (upload_status != Aws::DataFlow::UploadStatus::SUCCESS) {
+          file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
+        }
+      } catch(std::runtime_error& exception) {
+        AWS_LOG_WARN(__func__,
+                     "caught runtime_error attempting to resolve token %i",
+                     token);
       }
     }
   }

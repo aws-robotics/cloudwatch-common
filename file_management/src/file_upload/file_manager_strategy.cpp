@@ -128,7 +128,7 @@ FileTokenInfo TokenStore::fail(const DataToken &token) {
 
 FileTokenInfo TokenStore::resolve(const DataToken &token) {
   AWS_LOG_DEBUG(__func__,
-               "Resolving token");
+               "Resolving token %i", token);
 
   if (token_store_.find(token) == token_store_.end()) {
     throw std::runtime_error("DataToken not found");
@@ -265,19 +265,23 @@ bool FileManagerStrategy::isDataAvailable() {
 }
 
 void FileManagerStrategy::write(const std::string &data) {
-  checkIfWriteFileShouldRotate(data.size());
-  checkIfStorageLimitHasBeenReached(data.size());
+  try {
+    checkIfWriteFileShouldRotate(data.size());
+    checkIfStorageLimitHasBeenReached(data.size());
 
-  std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
-  std::ofstream log_file;
-  AWS_LOG_DEBUG(__func__, "Writing data to file: %s", active_write_file_.c_str())
-  log_file.open(active_write_file_, std::ios_base::app);
-  if (log_file.bad()) {
-    AWS_LOG_WARN(__func__, "Unable to open file: %s", active_write_file_.c_str());
+    std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
+    std::ofstream log_file;
+    AWS_LOG_DEBUG(__func__, "Writing data to file: %s", active_write_file_.c_str())
+    log_file.open(active_write_file_, std::ios_base::app);
+    if (log_file.bad()) {
+      AWS_LOG_WARN(__func__, "Unable to open file: %s", active_write_file_.c_str());
+    }
+    log_file << data << std::endl;
+    log_file.close();
+    active_write_file_size_ += data.size();
+  } catch(const std::ios_base::failure& e) {
+    AWS_LOG_WARN(__func__, "FileManagerStrategy::write caught std::ios_base::failure");
   }
-  log_file << data << std::endl;
-  log_file.close();
-  active_write_file_size_ += data.size();
 }
 
 DataToken FileManagerStrategy::read(std::string &data) {
@@ -317,16 +321,28 @@ DataToken FileManagerStrategy::read(std::string &data) {
 
 void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
   if (is_success) {
-    auto file_info = token_store_->resolve(token);
-    if (file_info.eof_) {
-      deleteFile(file_info.file_path_);
+    try {
+      auto file_info = token_store_->resolve(token);
+      if (file_info.eof_) {
+        deleteFile(file_info.file_path_);
+      }
+    } catch(std::runtime_error& exception) {
+      AWS_LOG_WARN(__func__,
+                   "FileManagerStrategy resolve caught runtime_error attempting to resolve token %i",
+                   token);
     }
   } else {
-    auto file_info = token_store_->fail(token);
-    if (file_info.eof_) {
-      AWS_LOG_DEBUG(__func__,
-        "Failed last token, pushing file to stored: %s", file_info.file_path_.c_str());
-      stored_files_.push_back(file_info.file_path_);
+    try {
+      auto file_info = token_store_->fail(token);
+      if (file_info.eof_) {
+        AWS_LOG_DEBUG(__func__,
+                      "Failed last token %d, pushing file to stored: %s", token, file_info.file_path_.c_str());
+        stored_files_.push_back(file_info.file_path_);
+      }
+    } catch(std::runtime_error& exception) {
+      AWS_LOG_WARN(__func__,
+                   "FileManagerStrategy resolve caught runtime_error attempting to resolve token %i",
+                   token);
     }
   }
 }
