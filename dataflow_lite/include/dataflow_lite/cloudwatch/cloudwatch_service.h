@@ -103,13 +103,13 @@ virtual bool start() override {
 virtual inline bool shutdown() {
 
   //  stop the work thread immediately, don't hand any more tasks to the publisher
-  bool shutdown = RunnableService::shutdown();
+  bool is_shutdown = RunnableService::shutdown();
 
-  shutdown &= publisher_->shutdown();
-  shutdown &= batcher_->shutdown();
+  is_shutdown &= publisher_->shutdown();
+  is_shutdown &= batcher_->shutdown();
 
   if (file_upload_streamer_) {
-    shutdown &= file_upload_streamer_->shutdown();
+    is_shutdown &= file_upload_streamer_->shutdown();
     // wait for file_upload_streamer_ (RunnableService) shutdown to complete
     file_upload_streamer_->join();
   }
@@ -117,7 +117,7 @@ virtual inline bool shutdown() {
   // wait for RunnableService shutdown to complete
   this->join();
 
-  return shutdown;
+  return is_shutdown;
 }
 
 /**

@@ -149,9 +149,9 @@ public:
      * @return
      */
     virtual bool shutdown() override {
-      bool shutdown = Service::shutdown();
-      shutdown &= stopWorkerThread();
-      return shutdown;
+      bool is_shutdown = Service::shutdown();
+      is_shutdown &= stopWorkerThread();
+      return is_shutdown;
     }
 
     /**
