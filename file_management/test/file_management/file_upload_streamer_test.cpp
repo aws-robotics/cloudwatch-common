@@ -119,7 +119,7 @@ TEST_F(FileStreamerTest, success_on_network_and_file) {
   test_file_object.batch_size = 1;
   EXPECT_CALL(*mock_sink, tryEnqueue(testing::_, testing::_))
   .WillOnce(testing::Return(true));
-  EXPECT_CALL(*file_manager, readBatch(testing::Eq(50)))
+  EXPECT_CALL(*file_manager, readBatch(testing::Eq(50u)))
   .WillOnce(testing::Return(test_file_object));
   // Expect a batch call and enqueue from the file upload streamer
   file_upload_streamer->forceWork();
@@ -145,7 +145,7 @@ TEST_F(FileStreamerTest, fail_enqueue_retry) {
         return false;
       }))
       .WillOnce(testing::Return(true));
-  EXPECT_CALL(*file_manager, readBatch(testing::Eq(50)))
+  EXPECT_CALL(*file_manager, readBatch(testing::Eq(50u)))
       .WillOnce(testing::Return(test_file_object));
   // Expect a batch call and enqueue from the file upload streamer
   file_upload_streamer->forceWork();
@@ -171,7 +171,7 @@ TEST_F(FileStreamerTest, fail_task_clears_queue) {
       task = data;
       return true;
     }));
-  EXPECT_CALL(*file_manager, readBatch(testing::Eq(50)))
+  EXPECT_CALL(*file_manager, readBatch(testing::Eq(50u)))
       .WillOnce(testing::Return(test_file_object));
   EXPECT_CALL(*mock_sink, clear());
   EXPECT_CALL(*file_manager, fileUploadCompleteStatus(FAIL, testing::_));
@@ -198,7 +198,7 @@ TEST_F(FileStreamerTest, success_task_does_not_clear_queue) {
             task = data;
             return true;
           }));
-  EXPECT_CALL(*file_manager, readBatch(testing::Eq(50)))
+  EXPECT_CALL(*file_manager, readBatch(testing::Eq(50u)))
           .WillOnce(testing::Return(test_file_object));
   EXPECT_CALL(*file_manager, fileUploadCompleteStatus(SUCCESS, testing::_));
   // Expect a batch call and enqueue from the file upload streamer

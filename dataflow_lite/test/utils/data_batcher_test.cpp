@@ -78,7 +78,7 @@ TEST_F(DataBatcherTest, Init) {
 
   EXPECT_EQ((size_t) TestBatcher::kDefaultTriggerSize,  test_batcher->getTriggerBatchSize());
   EXPECT_EQ((size_t) TestBatcher::kDefaultMaxBatchSize, test_batcher->getMaxAllowableBatchSize());
-  EXPECT_EQ(0, test_batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, test_batcher->getCurrentBatchSize());
 }
 
 TEST_F(DataBatcherTest, TestMaxSizeClear) {
