@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(cloudwatch_logs_common)
-set(CLOUDWATCH_LOGS_COMMON_VERSION 1.0.0) #todo
+set(CLOUDWATCH_LOGS_COMMON_VERSION 1.1.0)
 
 # Default to C11
 if(NOT CMAKE_C_STANDARD)
-    set(CMAKE_C_STANDARD 11)
+  set(CMAKE_C_STANDARD 11)
 endif()
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD 14)
 endif()
 
 # Enable strict compiler flags if possible.
@@ -86,13 +86,11 @@ INSTALL(EXPORT ${PROJECT_NAME}-targets DESTINATION share/${PROJECT_NAME}/cmake)
 enable_testing()
 find_common_test_packages()
 if(GMOCK_LIBRARY)
-  message("Building tests")
   add_common_gtest(test_cloudwatch_logs_common
         test/main_test.cpp
         test/log_publisher_test.cpp
         test/cloudwatch_facade_test.cpp
         )
-
   target_include_directories(test_cloudwatch_logs_common
         PRIVATE include
         PRIVATE ${aws_common_INCLUDE_DIRS}
