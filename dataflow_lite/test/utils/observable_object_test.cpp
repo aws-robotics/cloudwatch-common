@@ -81,21 +81,24 @@ TEST_F(ObservableObjectTest, TestListener) {
 }
 
 TEST_F(ObservableObjectTest, TestFaultyListener) {
-  EXPECT_EQ(INITIAL_VALUE, testIntObservable->getValue());
-  int first_set = 42;
-  testIntObservable->setValue(first_set);
-  EXPECT_EQ(first_set, testIntObservable->getValue());
 
   enum Value {
-      VALID = 1,
+      VALID_1 = 1,
+      VALID_2 = 42,
       INVALID = 999999999
   };
+
+  EXPECT_EQ(INITIAL_VALUE, testIntObservable->getValue());
+  int first_set = VALID_2;
+  testIntObservable->setValue(first_set);
+  EXPECT_EQ(first_set, testIntObservable->getValue());
 
   // register listener
   int listened_value;
   auto bad_lambda = [&listened_value](const int &currentValue){
     switch(currentValue) {
-      case VALID:
+      case VALID_1:
+      case VALID_2:
         listened_value = currentValue;
         break;
       default:
@@ -114,16 +117,22 @@ TEST_F(ObservableObjectTest, TestFaultyListener) {
 
   testIntObservable->setValue(1); // currently synchronous
 
-  EXPECT_EQ(VALID, listened_value);
-  EXPECT_EQ(VALID, good_listened_value);
-  EXPECT_EQ(VALID, testIntObservable->getValue());
+  EXPECT_EQ(VALID_1, listened_value);
+  EXPECT_EQ(VALID_1, good_listened_value);
+  EXPECT_EQ(VALID_1, testIntObservable->getValue());
 
   testIntObservable->setValue(INVALID); // currently synchronous
 
   EXPECT_EQ(1, testIntObservable->getNumberOfListeners());
   EXPECT_EQ(INVALID, testIntObservable->getValue());
   EXPECT_EQ(INVALID, good_listened_value);
-  EXPECT_EQ(VALID , listened_value);
+  EXPECT_EQ(VALID_1 , listened_value);
+
+  // ensure the bad listener is not added if it immediately throws
+  bool added = testIntObservable->addListener(bad_lambda);
+  EXPECT_EQ(1, testIntObservable->getNumberOfListeners());
+  EXPECT_FALSE(added);
+  EXPECT_EQ(INVALID, testIntObservable->getValue());
 }
 
 int main(int argc, char **argv) {

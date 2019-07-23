@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -207,6 +207,17 @@ public:
     if(kDefaultTriggerSize != batch_trigger_publish_size && batch_trigger_publish_size >= batch_max_queue_size) {
       throw std::invalid_argument("batch_trigger_publish_size must be less than batch_max_queue_size");
     }
+  }
+
+  /**
+   * Shutdown the batcher: this blocks until publish has completed in order to attempt to empty any unpublished data.
+   * @return the result of Service::shutdown()
+   */
+  bool shutdown() {
+    bool is_shutdown = Service::shutdown();
+    std::lock_guard<std::recursive_mutex> lk(mtx);
+    this->emptyCollection();  // attempt to write to disk before discarding
+    return is_shutdown;
   }
 
 protected:

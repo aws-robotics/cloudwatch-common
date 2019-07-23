@@ -37,11 +37,13 @@ FileObject<MetricDatumCollection> MetricFileManager::readBatch(
      puts in a single batch to be sorted chronologically */
   auto metric_comparison = [](const MetricDatum & metric1, const MetricDatum & metric2)
     { return metric1.GetTimestamp() < metric2.GetTimestamp(); };
+
   std::set<MetricDatum, decltype(metric_comparison)> metrics_set(metric_comparison);
   FileManagement::DataToken data_token;
   std::list<FileManagement::DataToken> data_tokens;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
   size_t actual_batch_size = 0;
+
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line;
     if (!file_manager_strategy_->isDataAvailable()) {

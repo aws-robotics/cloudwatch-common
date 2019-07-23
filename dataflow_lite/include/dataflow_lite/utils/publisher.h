@@ -20,11 +20,10 @@
 #include <list>
 #include <functional>
 #include <iostream>
+#include <mutex>
 
 #include <dataflow_lite/utils/observable_object.h>
 #include <dataflow_lite/utils/service.h>
-
-#include <file_management/file_upload/file_upload_task.h>
 #include <dataflow_lite/task/task.h>
 
 /**
@@ -62,25 +61,35 @@ public:
      *
      * @return
      */
-    PublisherState getPublisherState()
-    {
+    PublisherState getPublisherState() {
       return publisher_state_.getValue();
     }
 
     /**
-     * Attempt to publish data to CloudWatch.
+     * Attempt to publish data to CloudWatch if this service is in the started state.
      *
      * @param data the data to publish
-     * @return the resulting Aws::DataFlow::UploadStatus from the publish attempt
+     * @return the resulting Aws::DataFlow::UploadStatus from the publish attempt. Returns FAIL if not in the started
+     * state.
      */
-    virtual Aws::DataFlow::UploadStatus attemptPublish(T &data) override
-    {
+    virtual Aws::DataFlow::UploadStatus attemptPublish(T &data) override {
+
+      // don't attempt to publish if not in the started state
+      if(ServiceState::STARTED != this->getState()) {
+        return Aws::DataFlow::UploadStatus::FAIL;
+      }
 
       publish_attempts_++;
+      auto published_status = Aws::DataFlow::UploadStatus::FAIL;
 
-      auto start = std::chrono::high_resolution_clock::now();
-      auto published_status = publishData(data); // always at least try
-      last_publish_duration_.store(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start));
+      // acquire lock to publish
+      std::lock_guard<std::mutex> lck (publish_mutex_);
+      {
+        auto start = std::chrono::high_resolution_clock::now();
+        published_status = publishData(data); // always at least try
+        last_publish_duration_.store(std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::high_resolution_clock::now() - start));
+      }
 
       if (Aws::DataFlow::UploadStatus::SUCCESS == published_status) {
         publish_successes_++;
@@ -93,12 +102,25 @@ public:
     }
 
     /**
+     * Shutdown the publisher. This waits for attemptPublish to finish before returning.
+     * @return the result of shutdown
+     */
+    virtual bool shutdown() override {
+      bool b = Service::shutdown();  // set shutdown state to try and fast fail any publish calls
+
+      std::lock_guard<std::mutex> lck (publish_mutex_);
+      //acquire the lock to ensure attemptPublish has finished
+      publisher_state_.setValue(UNKNOWN);
+      return b;
+    }
+
+    /**
      * Return true if this publisher can send data to CloudWatch, false otherwise.
      * @return
      */
-    bool canPublish(){
+    bool canPublish() {
       auto current_state = publisher_state_.getValue();
-      return current_state == UNKNOWN || current_state == CONNECTED; //at least try once when configured
+      return (current_state == UNKNOWN || current_state == CONNECTED) && ServiceState::STARTED == this->getState();
     }
 
     /**
@@ -126,11 +148,11 @@ public:
       return last_publish_duration_.load();
     }
 
-
     /**
      * Calculate and return the success rate of this publisher.
      *
-     * @return the number of sucesses divided by the number of attempts
+     * @return the number of successes divided by the number of attempts. If zero attempts have been made
+     * then return 0.
      */
     float getPublishSuccessPercentage() {
       int attempts = publish_attempts_.load();
@@ -142,7 +164,7 @@ public:
     }
 
     /**
-     * Provide the regristration mechanism for ObservableObject (in this case PublisherState) changes.
+     * Provide the registration mechanism for ObservableObject (in this case PublisherState) changes.
      *
      * @param listener the PublisherState listener
      * @return true if the listener was added, false otherwise
@@ -162,8 +184,25 @@ protected:
     virtual Aws::DataFlow::UploadStatus publishData(T &data) = 0;
 
 private:
+    /**
+     * Track the publish state in a thread safe container which can provide events to registered listeners.
+     */
     ObservableObject<PublisherState> publisher_state_;
+    /**
+     * Number of publish successes
+     */
     std::atomic<int> publish_successes_;
+    /**
+     * Number of publish attempts
+     */
     std::atomic<int> publish_attempts_;
+    /**
+     * The amount of time taken for the last publish action
+     */
     std::atomic<std::chrono::milliseconds> last_publish_duration_;
+    /**
+     * Mutex used in publish and shutdown
+     */
+    mutable std::mutex publish_mutex_;
+
 };

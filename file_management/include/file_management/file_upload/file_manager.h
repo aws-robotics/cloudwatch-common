@@ -111,21 +111,24 @@ public:
   }
 
   virtual bool start() override {
+    bool started = true;
     if(file_manager_strategy_) {
-      file_manager_strategy_->start();
+      started &= file_manager_strategy_->start();
       if (file_manager_strategy_->isDataAvailable()) {
         FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
       }
     }
-    return true;
+    started &= Service::start();
+    return started;
   }
 
   virtual bool shutdown() override {
+    bool is_shutdown = Service::shutdown();
     if(file_manager_strategy_) {
       FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::UNAVAILABLE);
-      file_manager_strategy_->shutdown();
+      is_shutdown &= file_manager_strategy_->shutdown();
     }
-    return true;
+    return is_shutdown;
   }
 
   virtual ~FileManager() = default;

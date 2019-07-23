@@ -201,30 +201,3 @@ TEST_F(FileStreamerTest, success_task_does_not_clear_queue) {
   file_upload_streamer->forceWork();
   task->onComplete(SUCCESS);
 }
-
-TEST_F(FileStreamerTest, block_on_no_network) {
-  // Create the pipeline
-  file_upload_streamer->setSink(mock_sink);
-
-  // Set the file available, network is still unavailable
-  file_manager->status_monitor_->setStatus(AVAILABLE);
-  file_upload_streamer->onPublisherStateChange(UNAVAILABLE);
-
-  // The strict mocks will throw an error should the run function pass the status monitor check
-  file_upload_streamer->forceWork();
-}
-
-TEST_F(FileStreamerTest, block_on_file_not_available) {
-  // Create the pipeline
-  file_upload_streamer->setSink(mock_sink);
-  file_upload_streamer->onPublisherStateChange(AVAILABLE);
-  // The strict mocks will throw an error should the run function pass the status monitor check
-  file_upload_streamer->forceWork();
-}
-
-TEST_F(FileStreamerTest, test_no_sink_installed) {
-
-  // The strict mocks will throw an error should the run function pass the status monitor check
-  file_upload_streamer->forceWork();
-}
-

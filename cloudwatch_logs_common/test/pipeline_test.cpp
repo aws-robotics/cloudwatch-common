@@ -51,16 +51,17 @@ public:
     force_invalid_data_failure = false;
     last_upload_status = Aws::DataFlow::UploadStatus::UNKNOWN;
   };
-  virtual ~TestPublisher() {
-    shutdown();
-  };
+  virtual ~TestPublisher() = default;
 
-  bool start() override {return true;}
+  bool start() override {
+    return Publisher::start();
+  }
 
   // notify just in case anyone is waiting
   bool shutdown() override {
+    bool is_shutdown = Publisher::shutdown();
     this->notify(); //don't leave anyone blocking
-    return true;
+    return is_shutdown;
   };
 
   void setForceFailure(bool nv) {
@@ -185,10 +186,10 @@ TEST_F(PipelineTest, TestBatcherManualPublish) {
 
   std::string toBatch("TestBatcherManualPublish");
   EXPECT_EQ(0, batcher->getCurrentBatchSize());
-  bool b1 = cw_service->batchData(toBatch);
+  bool batched = cw_service->batchData(toBatch);
   EXPECT_EQ(1, batcher->getCurrentBatchSize());
 
-  EXPECT_TRUE(b1);
+  EXPECT_TRUE(batched);
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   EXPECT_FALSE(cw_service->isConnected());
@@ -216,15 +217,15 @@ TEST_F(PipelineTest, TestBatcherManualPublish) {
 TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
 
   std::string toBatch("TestBatcherManualPublish");
-  bool b1 = cw_service->batchData(toBatch);
-  EXPECT_TRUE(b1);
+  bool batched = cw_service->batchData(toBatch);
+  EXPECT_TRUE(batched);
 
   for(int i=99; i>0; i--) {
     b1 = cw_service->batchData(std::to_string(99) + std::string(" bottles of beer on the wall"));
-    EXPECT_TRUE(b1);
+    EXPECT_TRUE(batched);
   }
 
-  EXPECT_TRUE(b1);
+  EXPECT_TRUE(batched);
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   EXPECT_FALSE(cw_service->isConnected());
@@ -257,9 +258,9 @@ TEST_F(PipelineTest, TestBatcherSize) {
 
   for(size_t i=1; i<size; i++) {
     std::string toBatch("test message " + std::to_string(i));
-    bool b1 = cw_service->batchData(toBatch);
+    bool batched = cw_service->batchData(toBatch);
 
-    EXPECT_TRUE(b1);
+    EXPECT_TRUE(batched);
     EXPECT_EQ(0, test_publisher->getPublishAttempts());
     EXPECT_EQ(i, batcher->getCurrentBatchSize());
     EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
@@ -268,9 +269,9 @@ TEST_F(PipelineTest, TestBatcherSize) {
 
   ASSERT_EQ(size, batcher->getTriggerBatchSize());
   std::string toBatch("test message publish trigger");
-  bool b1 = cw_service->batchData(toBatch);
+  bool batched = cw_service->batchData(toBatch);
 
-  EXPECT_TRUE(b1);
+  EXPECT_TRUE(batched);
 
   test_publisher->wait_for(std::chrono::seconds(1));
 
@@ -291,9 +292,9 @@ TEST_F(PipelineTest, TestSinglePublisherFailureToFileManager) {
   // batch
   std::string toBatch("TestBatcherManualPublish");
   EXPECT_EQ(0, batcher->getCurrentBatchSize());
-  bool b1 = cw_service->batchData(toBatch);
+  bool batched = cw_service->batchData(toBatch);
   EXPECT_EQ(1, batcher->getCurrentBatchSize());
-  EXPECT_EQ(true, b1);
+  EXPECT_EQ(true, batched);
 
   // force failure
   test_publisher->setForceFailure(true);
@@ -325,9 +326,9 @@ TEST_F(PipelineTest, TestInvalidDataNotPassedToFileManager) {
   // batch
   std::string toBatch("TestBatcherManualPublish");
   EXPECT_EQ(0, batcher->getCurrentBatchSize());
-  bool b1 = cw_service->batchData(toBatch);
+  bool batched = cw_service->batchData(toBatch);
   EXPECT_EQ(1, batcher->getCurrentBatchSize());
-  EXPECT_EQ(true, b1);
+  EXPECT_EQ(true, batched);
 
   // force failure
   test_publisher->setForceInvalidDataFailure(true);
@@ -369,9 +370,9 @@ TEST_F(PipelineTest, TestPublisherIntermittant) {
       // batch
       std::string toBatch("TestPublisherIntermittant");
       EXPECT_EQ(0, batcher->getCurrentBatchSize());
-      bool b1 = cw_service->batchData(toBatch);
+      bool batched = cw_service->batchData(toBatch);
       EXPECT_EQ(1, batcher->getCurrentBatchSize());
-      EXPECT_EQ(true, b1);
+      EXPECT_EQ(true, batched);
 
       // force failure
       test_publisher->setForceFailure(force_failure);
@@ -381,10 +382,10 @@ TEST_F(PipelineTest, TestPublisherIntermittant) {
       }
 
       // publish
-      bool b2 = cw_service->publishBatchedData();
+      batched = cw_service->publishBatchedData();
       test_publisher->wait_for(std::chrono::seconds(1));
 
-      EXPECT_TRUE(b2);
+      EXPECT_TRUE(batched);
       EXPECT_EQ(0, batcher->getCurrentBatchSize());
 
       auto expected_state = force_failure ? PublisherState::NOT_CONNECTED : PublisherState::CONNECTED;
@@ -419,18 +420,18 @@ TEST_F(PipelineTest, TestBatchDataTooFast) {
 
   for(size_t i=1; i<=max; i++) {
     std::string toBatch("test message " + std::to_string(i));
-    bool b1 = cw_service->batchData(toBatch);
+    bool batched = cw_service->batchData(toBatch);
 
-    EXPECT_TRUE(b1);
+    EXPECT_TRUE(batched);
     EXPECT_EQ(0, test_publisher->getPublishAttempts());
     EXPECT_EQ(i, batcher->getCurrentBatchSize());
     EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   }
 
   std::string toBatch("iocaine powder");
-  bool b = cw_service->batchData(toBatch);
+  bool batched = cw_service->batchData(toBatch);
 
-  EXPECT_FALSE(b);
+  EXPECT_FALSE(batched);
   EXPECT_EQ(0, batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState()); // hasn't changed since not attempted
   EXPECT_FALSE(cw_service->isConnected());

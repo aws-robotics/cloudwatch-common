@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -15,18 +15,28 @@
 
 #pragma once
 
-#include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <map>
+#include <mutex>
+#include <string>
 #include <thread>
+#include <typeinfo>
 
-//enum ServiceState {
-//    INITIALIZED, // initialized and ready to start
-//    STARTED,     // started and ready to use
-//    RUNNING,     // actively running (thread, etc)
-//    SHUTDOWN,    // clean shutdown, possibly restartable
-//    TERMINATED   // failure, not restartable
-//};
+#include <dataflow_lite/utils/observable_object.h>
+#include <aws/core/utils/logging/LogMacros.h>
+
+enum ServiceState {
+    CREATED,  // created and ready to start
+    STARTED,  // started and ready to use
+    SHUTDOWN,  // clean shutdown, possibly restartable
+};
+
+/**
+ * Map used to pretty print the ServiceState enum.
+ */
+static std::map<ServiceState, std::string> SERVICE_STATE_NAME_MAP = {{CREATED, "CREATED"}, {STARTED, "STARTED"},
+                                                                     {SHUTDOWN,"SHUTDOWN"}};
 
 /**
  * Interface that defines init, start, and shutdown methods for an implementing class to define.
@@ -34,27 +44,80 @@
 class Service {
 public:
 
-    Service() = default;
+    Service() : state_(CREATED) {};
     virtual ~Service() = default;
+
     /**
-     * Called to start doing work.
+     * Called to start doing work. The format overriding classes should use is the following:
+     *
+     *   virtual bool start() {
+     *       // do specific start logic here
+     *
+     *       // ensure the service state has been set to started
+     *       bool b = Service::start();
+     *
+     *       // return the result of Service::start() or something else if desired
+     *       return b;
+     *   }
+     *
      * @return
      */
-    virtual bool start() = 0;
+    virtual bool start() {
+      state_.setValue(STARTED);
+      return true;
+    }
+
     /**
-     * Cleanup. Should be called before destruction.
+     * Cleanup. Should be called before destruction. The format overriding classes should use is the following:
+     *
+     *   virtual bool shutdown() {
+     *       //  immediately set the shutdown state
+     *       bool b = Service::shutdown();
+     *
+     *       // do specific shutdown logic here
+     *
+     *       // return the result of Service::shutdown() or something else if desired
+     *       return b;
+     *   }
      * @return
      */
-    virtual bool shutdown() = 0;
+    virtual bool shutdown() {
+      state_.setValue(SHUTDOWN);
+      return true;
+    }
 
-    // todo getStatusString : useful for debugging
+    /**
+     * Return a descriptive string describing the service and it's state.
+     * @return
+     */
+    virtual std::string getStatusString() {
+      // a more descriptive name (tag supplied on construction) would be ideal
+      return typeid(this).name() + std::string(", state=") + SERVICE_STATE_NAME_MAP[getState()];
+    }
 
-//protected:
-//    void getState() {
-//      return state_.load();
-//    }
-//private:
-//    std::atomic<ServiceState> state_; // todo use observer
+    /**
+     * Return the current ServiceState if this service.
+     * @return ServiceState
+     */
+    ServiceState getState() {
+      return state_.getValue();
+    }
+
+protected:
+    /**
+     * Set the current state of the service. To be used by overriding classes.
+     *
+     * @param new_state
+     */
+    void setState(ServiceState new_state) {
+      state_.setValue(new_state);
+    }
+
+private:
+    /**
+     * The current state of this service.
+     */
+    ObservableObject<ServiceState> state_;
 };
 
 /**
@@ -62,54 +125,61 @@ public:
  * in the implemented class should be implemented in the "work" method. Note: start and shutdown methods should be
  * override if the implementing class requires extra steps in either scenarios.
  */
- //todo consider extending the waiter interface (pipeline test)
-class RunnableService : public Service {
+//  consider extending the waiter interface
+class RunnableService : public Service
+{
 public:
     RunnableService() {
       should_run_.store(false);
     }
     virtual ~RunnableService() = default;
 
-    //todo
-//    inline bool restart() {
-//
-//    }
-
     /**
      * Starts the worker thread. Should be overridden if other actions are necessary to start.
      * @return
      */
-    inline bool start() {
-      return startWorkerThread();
+    virtual bool start() override {
+      bool started = startWorkerThread();
+      started &= Service::start();
+      return started;
     }
 
     /**
      * Stops the worker thread. Should be overridden if other actions are necessary to stop.
      * @return
      */
-    inline bool shutdown() {
-      if(should_run_.load()) {
-        should_run_.store(false);
-        return true;
-      }
-      return false;
+    virtual bool shutdown() override {
+      bool is_shutdown = Service::shutdown();
+      is_shutdown &= stopWorkerThread();
+      return is_shutdown;
     }
 
-    inline bool isRunning() {
-      return should_run_.load(); //todo this is an overload of state, actually track state
+    /**
+     * Return if the RunnableService work thread is active
+     * @return true if the work thread is active / running, false otherwise
+     */
+    virtual bool isRunning() {
+      return Service::getState() == ServiceState::STARTED && should_run_.load();
     }
 
+    /**
+     * Wait for the work thread shutdown
+     */
     void waitForShutdown() {
+      std::unique_lock <std::mutex> lck(this->mtx_);
       if (runnable_thread_.joinable()) {
-        std::unique_lock <std::mutex> lck(this->mtx);
-        cv.wait(lck); // todo guard against spurious wakeup, or could do while
+        cv_.wait(lck); // todo guard against spurious wakeup, or could do while
       }
     }
 
+    /**
+     * Wait for the work thread shutdown
+     * @param millis time to wait
+     */
     void waitForShutdown(std::chrono::milliseconds millis) {
+      std::unique_lock <std::mutex> lck(this->mtx_);
       if (runnable_thread_.joinable()) {
-        std::unique_lock <std::mutex> lck(this->mtx);
-        cv.wait_for(lck, millis); // todo guard against spurious wakeup
+        cv_.wait_for(lck, millis); // todo guard against spurious wakeup
       }
     }
 
@@ -122,14 +192,22 @@ public:
       }
     }
 
+    /**
+     * Return a descriptive string describing the service and it's state.
+     * @return
+     */
+    virtual std::string getStatusString() override {
+      return Service::getStatusString() + std::string(", isRunning=") + (isRunning()
+        ? std::string("True") : std::string("False"));
+    }
+
 protected:
 
   /**
    * Start the worker thread if not already running.
    * @return true if the worker thread was started, false if already running
    */
-  virtual inline bool startWorkerThread() {
-    //todo lock
+  virtual bool startWorkerThread() {
     if(!runnable_thread_.joinable()) {
       should_run_.store(true);
       runnable_thread_ = std::thread(&RunnableService::run, this);
@@ -139,15 +217,27 @@ protected:
   }
 
   /**
+   * Set the should_run_ flag to false for the worker thread to exit
+   * @return
+   */
+  virtual bool stopWorkerThread() {
+    if(should_run_.load()) {
+      should_run_.store(false);
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Calls the abstract work method and notifies when shutdown was called.
    */
   virtual void run() {
-    while(should_run_.load()) {
+    while(should_run_.load() && ServiceState::STARTED == Service::getState()) {
       work();
     }
-    //done
-    std::unique_lock <std::mutex> lck(this->mtx);
-    this->cv.notify_all();
+    // done, notify anyone waiting
+    std::unique_lock <std::mutex> lck(this->mtx_);
+    this->cv_.notify_all();
   }
 
   /**
@@ -158,6 +248,6 @@ protected:
 private:
   std::thread runnable_thread_;
   std::atomic<bool> should_run_;
-  std::condition_variable cv;
-  mutable std::mutex mtx;
+  std::condition_variable cv_;
+  mutable std::mutex mtx_;
 };

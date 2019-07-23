@@ -36,7 +36,7 @@ namespace FileManagement {
 using Aws::DataFlow::MultiStatusConditionMonitor;
 using Aws::DataFlow::OutputStage;
 
-static constexpr std::chrono::milliseconds kTimeout = std::chrono::minutes(1);
+static constexpr std::chrono::milliseconds kTimeout = std::chrono::minutes(5);
 
 struct FileUploadStreamerOptions {
 
@@ -80,7 +80,7 @@ public:
 
     data_reader_->setStatusMonitor(data_status_monitor);
     batch_size_ = options.batch_size;
-
+    status_monitor_timeout_ = kTimeout;
   }
 
   virtual ~FileUploadStreamer() = default;
@@ -95,10 +95,10 @@ public:
   }
 
   inline bool shutdown() {
-    bool b = true;
-    b &= RunnableService::shutdown();
-    b &= data_reader_->shutdown();
-    return b;
+    bool is_shutdown = true;
+    is_shutdown &= RunnableService::shutdown();
+    is_shutdown &= data_reader_->shutdown();
+    return is_shutdown;
   }
 
   void onPublisherStateChange(const Aws::DataFlow::Status &status) {
@@ -123,15 +123,19 @@ public:
    * Start the upload thread.
    */
   bool start() {
-    bool b = true;
-    b &= data_reader_->start();
-    b &= RunnableService::start();
-    return b;
+    bool is_started = true;
+    is_started &= data_reader_->start();
+    is_started &= RunnableService::start();
+    return is_started;
   }
 
   // todo this is a hack. Should just implement an extension in test
   inline void forceWork() {
     this->work();
+  }
+
+  void setStatusMonitorTimeout(std::chrono::milliseconds new_timeout) {
+    status_monitor_timeout_ = new_timeout;
   }
 
 protected:
@@ -148,7 +152,7 @@ protected:
       if (!stored_task_) {
         AWS_LOG_DEBUG(__func__,
                      "Waiting for files and work.");
-        auto wait_result = status_condition_monitor_.waitForWork(kTimeout);
+        auto wait_result = status_condition_monitor_.waitForWork(status_monitor_timeout_);
 
         // is there data available?
 
@@ -168,9 +172,9 @@ protected:
           return;
         }
         AWS_LOG_DEBUG(__func__,
-                     "Found work! Batching");
+                     "Found work, batching");
         FileObject<T> file_object = data_reader_->readBatch(batch_size_);
-        total_logs_uploaded += file_object.batch_size;
+        total_logs_uploaded += file_object.batch_size;  // todo this is attempted, not truly uploaded
         stored_task_ = std::make_shared<FileUploadTask<T>>(
             std::move(file_object),
             std::bind(
@@ -223,6 +227,11 @@ private:
    * Network status monitor.
    */
   std::shared_ptr<StatusMonitor> network_monitor_;
+
+  /**
+   * Timeout to wait for work.
+   */
+  std::chrono::milliseconds status_monitor_timeout_;
 };
 
 }  // namespace FileManagement
