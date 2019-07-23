@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(cloudwatch_metrics_common)
-set(CLOUDWATCH_METRICS_COMMON_VERSION 1.0.0) #todo
+set(CLOUDWATCH_METRICS_COMMON_VERSION 1.1.0)
 
 # Default to C11
 if(NOT CMAKE_C_STANDARD)
@@ -104,7 +104,7 @@ if(GMOCK_LIBRARY)
   add_common_gtest(test_cloudwatch_metrics
           test/main_test.cpp
           test/metric_publisher_test.cpp
-          #test/file_manager_test.cpp
+          test/file_manager_test.cpp
           test/metric_serialization_test.cpp
           )
   target_include_directories(test_cloudwatch_metrics
