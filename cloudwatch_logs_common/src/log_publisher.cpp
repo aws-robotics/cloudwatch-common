@@ -316,8 +316,8 @@ bool LogPublisher::start() {
 }
 
 bool LogPublisher::shutdown() {
-  bool b = Publisher::shutdown();
+  bool shutdown = Publisher::shutdown();
   resetInitToken();
   Aws::ShutdownAPI(this->options_);
-  return b;
+  return shutdown;
 }

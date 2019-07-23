@@ -36,7 +36,7 @@ namespace FileManagement {
 using Aws::DataFlow::MultiStatusConditionMonitor;
 using Aws::DataFlow::OutputStage;
 
-static constexpr std::chrono::milliseconds kTimeout = std::chrono::minutes(1);
+static constexpr std::chrono::milliseconds kTimeout = std::chrono::minutes(5);
 
 struct FileUploadStreamerOptions {
 
@@ -80,7 +80,7 @@ public:
 
     data_reader_->setStatusMonitor(data_status_monitor);
     batch_size_ = options.batch_size;
-
+    status_monitor_timeout_ = kTimeout;
   }
 
   virtual ~FileUploadStreamer() = default;
@@ -134,6 +134,10 @@ public:
     this->work();
   }
 
+  void setStatusMonitorTimeout(std::chrono::milliseconds new_timeout) {
+    status_monitor_timeout_ = new_timeout;
+  }
+
 protected:
 
     /**
@@ -148,7 +152,7 @@ protected:
       if (!stored_task_) {
         AWS_LOG_DEBUG(__func__,
                      "Waiting for files and work.");
-        auto wait_result = status_condition_monitor_.waitForWork(kTimeout);
+        auto wait_result = status_condition_monitor_.waitForWork(status_monitor_timeout_);
 
         // is there data available?
 
@@ -223,6 +227,11 @@ private:
    * Network status monitor.
    */
   std::shared_ptr<StatusMonitor> network_monitor_;
+
+  /**
+   * Timeout to wait for work.
+   */
+  std::chrono::milliseconds status_monitor_timeout_;
 };
 
 }  // namespace FileManagement
