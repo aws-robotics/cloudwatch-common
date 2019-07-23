@@ -63,9 +63,9 @@ public:
 
   // notify just in case anyone is waiting
   bool shutdown() override {
-    bool b = Publisher::shutdown();
+    bool shutdown = Publisher::shutdown();
     this->notify(); //don't leave anyone blocking
-    return b;
+    return shutdown;
   };
 
   void setForceFailure(bool nv) {

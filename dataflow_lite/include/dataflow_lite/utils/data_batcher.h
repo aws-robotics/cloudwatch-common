@@ -214,10 +214,10 @@ public:
    * @return the result of Service::shutdown()
    */
   bool shutdown() {
-    bool b = Service::shutdown();
+    bool shutdown = Service::shutdown();
     std::lock_guard<std::recursive_mutex> lk(mtx);
     this->emptyCollection();  // attempt to write to disk before discarding
-    return b;
+    return shutdown;
   }
 
 protected:
