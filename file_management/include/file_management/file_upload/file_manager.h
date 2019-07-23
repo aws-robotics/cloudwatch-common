@@ -124,12 +124,12 @@ public:
   }
 
   virtual bool shutdown() override {
-    bool b = Service::shutdown();
+    bool is_shutdown = Service::shutdown();
     if(file_manager_strategy_) {
       FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::UNAVAILABLE);
-      b &= file_manager_strategy_->shutdown();
+      is_shutdown &= file_manager_strategy_->shutdown();
     }
-    return b;
+    return is_shutdown;
   }
 
   virtual ~FileManager() = default;

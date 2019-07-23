@@ -95,10 +95,10 @@ public:
   }
 
   inline bool shutdown() {
-    bool b = true;
-    b &= RunnableService::shutdown();
-    b &= data_reader_->shutdown();
-    return b;
+    bool is_shutdown = true;
+    is_shutdown &= RunnableService::shutdown();
+    is_shutdown &= data_reader_->shutdown();
+    return is_shutdown;
   }
 
   void onPublisherStateChange(const Aws::DataFlow::Status &status) {
@@ -123,10 +123,10 @@ public:
    * Start the upload thread.
    */
   bool start() {
-    bool b = true;
-    b &= data_reader_->start();
-    b &= RunnableService::start();
-    return b;
+    bool is_started = true;
+    is_started &= data_reader_->start();
+    is_started &= RunnableService::start();
+    return is_started;
   }
 
   // todo this is a hack. Should just implement an extension in test
