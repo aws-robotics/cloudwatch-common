@@ -216,10 +216,10 @@ TEST_F(PipelineTest, TestBatcherManualPublish) {
 
   auto toBatch = createTestMetricObject(std::string("testMetric"));
   EXPECT_EQ(0, batcher->getCurrentBatchSize());
-  bool batched = cw_service->batchData(toBatch);
+  bool is_batched = cw_service->batchData(toBatch);
   EXPECT_EQ(1, batcher->getCurrentBatchSize());
 
-  EXPECT_TRUE(batched);
+  EXPECT_TRUE(is_batched);
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());
@@ -245,25 +245,23 @@ TEST_F(PipelineTest, TestBatcherManualPublish) {
 TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
 
   auto toBatch = createTestMetricObject(std::string("TestBatcherManualPublish"));
-  bool batched = cw_service->batchData(toBatch);
-  EXPECT_TRUE(b1);
+  bool is_batched = cw_service->batchData(toBatch);
+  EXPECT_TRUE(is_batched);
 
   for(int i=99; i>0; i--) {
     auto batchedBottles = createTestMetricObject(std::to_string(99) + std::string(" bottles of beer on the wall"));
-    batched = cw_service->batchData(batchedBottles);
-    EXPECT_TRUE(batched);
+    is_batched = cw_service->batchData(batchedBottles);
+    EXPECT_TRUE(is_batched);
   }
-
-  EXPECT_TRUE(batched);
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   EXPECT_EQ(100, batcher->getCurrentBatchSize());
 
   // force a publish
-  batched = cw_service->publishBatchedData();
+  is_batched = cw_service->publishBatchedData();
   test_publisher->wait_for(std::chrono::seconds(1));
 
-  EXPECT_TRUE(batched);
+  EXPECT_TRUE(is_batched);
   EXPECT_EQ(1, test_publisher->getPublishSuccesses());
   EXPECT_EQ(0, batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
@@ -284,9 +282,9 @@ TEST_F(PipelineTest, TestBatcherSize) {
 
   for(size_t i=1; i<size; i++) {
     auto toBatch = createTestMetricObject(std::string("test message ") + std::to_string(i));
-    bool batched = cw_service->batchData(toBatch);
+    bool is_batched = cw_service->batchData(toBatch);
 
-    EXPECT_TRUE(batched);
+    EXPECT_TRUE(is_batched);
     EXPECT_EQ(0, test_publisher->getPublishAttempts());
     EXPECT_EQ(i, batcher->getCurrentBatchSize());
     EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
@@ -294,9 +292,9 @@ TEST_F(PipelineTest, TestBatcherSize) {
 
   ASSERT_EQ(size, batcher->getTriggerBatchSize());
   auto toBatch = createTestMetricObject(("test message " + std::to_string(size)));
-  bool batched = cw_service->batchData(toBatch);
+  bool is_batched = cw_service->batchData(toBatch);
 
-  EXPECT_TRUE(batched);
+  EXPECT_TRUE(is_batched);
 
   test_publisher->wait_for(std::chrono::seconds(1));
 
@@ -316,9 +314,9 @@ TEST_F(PipelineTest, TestSinglePublisherFailureToFileManager) {
   // batch
   auto toBatch = createTestMetricObject(std::string("TestBatcherManualPublish"));
   EXPECT_EQ(0, batcher->getCurrentBatchSize());
-  bool batched = cw_service->batchData(toBatch);
+  bool is_batched = cw_service->batchData(toBatch);
   EXPECT_EQ(1, batcher->getCurrentBatchSize());
-  EXPECT_EQ(true, batched);
+  EXPECT_EQ(true, is_batched);
 
   // force failure
   test_publisher->setForceFailure(true);
@@ -350,9 +348,9 @@ TEST_F(PipelineTest, TestInvalidDataNotPassedToFileManager) {
   // batch
   auto toBatch = createTestMetricObject(std::string("TestBatcherManualPublish"));
   EXPECT_EQ(0, batcher->getCurrentBatchSize());
-  bool batched = cw_service->batchData(toBatch);
+  bool is_batched = cw_service->batchData(toBatch);
   EXPECT_EQ(1, batcher->getCurrentBatchSize());
-  EXPECT_EQ(true, batched);
+  EXPECT_EQ(true, is_batched);
 
   // force failure
   test_publisher->setForceInvalidDataFailure(true);
@@ -394,9 +392,9 @@ TEST_F(PipelineTest, TestPublisherIntermittant) {
     // batch
     auto toBatch = createTestMetricObject(std::string("TestPublisherIntermittant"));
     EXPECT_EQ(0, batcher->getCurrentBatchSize());
-    bool batched = cw_service->batchData(toBatch);
+    bool is_batched = cw_service->batchData(toBatch);
     EXPECT_EQ(1, batcher->getCurrentBatchSize());
-    EXPECT_EQ(true, batched);
+    EXPECT_EQ(true, is_batched);
 
     // force failure
     test_publisher->setForceFailure(force_failure);
@@ -441,9 +439,9 @@ TEST_F(PipelineTest, TestBatchDataTooFast) {
 
   for(size_t i=1; i<=max; i++) {
   auto toBatch = createTestMetricObject(std::string("test message " + std::to_string(i)));
-  bool batched = cw_service->batchData(toBatch);
+  bool is_batched = cw_service->batchData(toBatch);
 
-  EXPECT_TRUE(batched);
+  EXPECT_TRUE(is_batched);
   EXPECT_EQ(0, test_publisher->getPublishAttempts());
   EXPECT_EQ(i, batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
