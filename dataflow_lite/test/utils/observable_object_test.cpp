@@ -60,7 +60,7 @@ TEST_F(ObservableObjectTest, TestListener) {
   int listened_value;
   std::function<void(const int&)> lambda = [&listened_value](const int &currentValue){listened_value = currentValue;};
   testIntObservable->addListener(lambda);
-  EXPECT_EQ(1, testIntObservable->getNumberOfListeners());
+  EXPECT_EQ(1u, testIntObservable->getNumberOfListeners());
 
   int second_set = 242;
   testIntObservable->setValue(second_set); // currently synchronous
@@ -71,7 +71,7 @@ TEST_F(ObservableObjectTest, TestListener) {
   // test clear
 
   testIntObservable->clearListeners();
-  EXPECT_EQ(0, testIntObservable->getNumberOfListeners());
+  EXPECT_EQ(0u, testIntObservable->getNumberOfListeners());
 
   int third_set = 1999;
   testIntObservable->setValue(third_set); // currently synchronous
@@ -110,10 +110,10 @@ TEST_F(ObservableObjectTest, TestFaultyListener) {
   auto lambda = [&good_listened_value](const int &currentValue) {good_listened_value = currentValue;};
 
   testIntObservable->addListener(bad_lambda);
-  EXPECT_EQ(1, testIntObservable->getNumberOfListeners());
+  EXPECT_EQ(1u, testIntObservable->getNumberOfListeners());
 
   testIntObservable->addListener(lambda);
-  EXPECT_EQ(2, testIntObservable->getNumberOfListeners());
+  EXPECT_EQ(2u, testIntObservable->getNumberOfListeners());
 
   testIntObservable->setValue(1); // currently synchronous
 
@@ -123,14 +123,14 @@ TEST_F(ObservableObjectTest, TestFaultyListener) {
 
   testIntObservable->setValue(INVALID); // currently synchronous
 
-  EXPECT_EQ(1, testIntObservable->getNumberOfListeners());
+  EXPECT_EQ(1u, testIntObservable->getNumberOfListeners());
   EXPECT_EQ(INVALID, testIntObservable->getValue());
   EXPECT_EQ(INVALID, good_listened_value);
   EXPECT_EQ(VALID_1 , listened_value);
 
   // ensure the bad listener is not added if it immediately throws
   bool added = testIntObservable->addListener(bad_lambda);
-  EXPECT_EQ(1, testIntObservable->getNumberOfListeners());
+  EXPECT_EQ(1u, testIntObservable->getNumberOfListeners());
   EXPECT_FALSE(added);
   EXPECT_EQ(INVALID, testIntObservable->getValue());
 }

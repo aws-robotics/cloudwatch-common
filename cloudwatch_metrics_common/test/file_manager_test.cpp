@@ -64,7 +64,7 @@ TEST_F(FileManagerTest, file_manager_write) {
   file_manager.write(metric_data);
   std::string line;
   auto batch = file_manager.readBatch(1);
-  ASSERT_EQ(1, batch.batch_data.size());
+  ASSERT_EQ(1u, batch.batch_data.size());
   auto result = *batch.batch_data.begin();
   EXPECT_EQ(input_event.GetCounts(), result.GetCounts());
   EXPECT_EQ(input_event.GetMetricName(), result.GetMetricName());

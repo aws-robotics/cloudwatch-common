@@ -93,7 +93,7 @@ TEST_F(DataBatcherTest, TestMaxSizeClear) {
   }
 
   test_batcher->batchData(42);
-  EXPECT_EQ(0, test_batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, test_batcher->getCurrentBatchSize());
   EXPECT_EQ(0, test_batcher->pub_called);
 }
 
@@ -109,7 +109,7 @@ TEST_F(DataBatcherTest, TestPublishTrigger) {
   }
 
   test_batcher->batchData(42);
-  EXPECT_EQ(0, test_batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, test_batcher->getCurrentBatchSize());
   EXPECT_EQ(1, test_batcher->pub_called);
 }
 
