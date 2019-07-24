@@ -1,23 +1,9 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Changelog for package file_management
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-1.0.1 (2019-03-20)
-------------------
-* adding unit tests for cloudwatch facade
-* Merge pull request `#4 <https://github.com/aws-robotics/cloudwatch-common/issues/4>`_ from juanrh/improve-coverage-cloudwatch_logger
-  Improve coverage cloudwatch logger
-* Make LogManagerFactory mockeable
-* Make file_management shared lib to use it in other libs
-* Merge pull request `#1 <https://github.com/aws-robotics/cloudwatch-common/issues/1>`_ from xabxx/master
-  [Bug Fix] Resolved false-positive error log messages
-* Resolved false-positive error log messages
-* Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Changelog for package dataflow_lite
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Forthcoming
 -----------
-* modify changelist to be compatible with catkin_generate_changelog (`#39 <https://github.com/aws-robotics/cloudwatch-common/issues/39>`_)
-  Signed-off-by: Miaofei <miaofei@amazon.com>
 * synchronize version of new packages with rest of the packages in the repo (`#38 <https://github.com/aws-robotics/cloudwatch-common/issues/38>`_)
   Signed-off-by: Miaofei <miaofei@amazon.com>
 * Merge pull request `#36 <https://github.com/aws-robotics/cloudwatch-common/issues/36>`_ from aws-robotics/guard_test_libs
@@ -525,6 +511,3 @@ Forthcoming
   * fix unit test failures
   Signed-off-by: Miaofei <miaofei@amazon.com>
 * Contributors: Devin Bonnie, M. M
-
-1.0.0 (2019-03-20)
-------------------
