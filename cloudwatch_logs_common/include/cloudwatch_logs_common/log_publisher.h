@@ -17,16 +17,23 @@
 
 #include <aws/core/Aws.h>
 #include <aws/logs/CloudWatchLogsClient.h>
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/utils/cloudwatch_facade.h>
-#include <cloudwatch_logs_common/utils/shared_object.h>
+#include <cloudwatch_logs_common/utils/cloudwatch_logs_facade.h>
 
+#include <dataflow_lite/utils/publisher.h>
+#include <dataflow_lite/dataflow/source.h>
+
+#include <file_management/file_upload/file_upload_task.h>
+#include <dataflow_lite/task/task.h>
+
+#include <cloudwatch_logs_common/definitions/definitions.h>
+
+#include <list>
 #include <memory>
 #include <thread>
 
 namespace Aws {
 namespace CloudWatchLogs {
-  
+
 /** 
  * @enum Aws::CloudWatchLogs::LogPublisherRunState
  * @brief Defines the different runtime states for the Publisher
@@ -36,19 +43,27 @@ enum LogPublisherRunState {
   LOG_PUBLISHER_RUN_CREATE_GROUP,
   LOG_PUBLISHER_RUN_CREATE_STREAM,
   LOG_PUBLISHER_RUN_INIT_TOKEN,
-  LOG_PUBLISHER_RUN_SEND_LOGS
+  LOG_PUBLISHER_ATTEMPT_SEND_LOGS,
 };
 
+const static Aws::String UNINITIALIZED_TOKEN = "_NOT_SET_";
+
 /**
- *  @brief Class that handles sending logs data to CloudWatch
- *  This class is responsible for emitting all the stored logs to AWS CloudWatch.
- *  Logs are published asynchronously using a thread. The thread waits on a condition
- *  variable and is signaled (by AWSCloudWatchLogManager) whenever new logs are
- *  available.
+ * Wrapping class around the CloudWatch Logs API.
  */
-class LogPublisher
+class LogPublisher : public Publisher<LogCollection>
 {
 public:
+  /**
+   *  @brief Creates a LogPublisher object that uses the provided client and SDK configuration
+   *  Constructs a LogPublisher object that will use the provided CloudWatchClient and SDKOptions
+   * when it publishes logs.
+   *
+   *  @param client_config The ClientConfiguration that this publisher will use to create the Client.
+   */
+  LogPublisher(const std::string & log_group, const std::string & log_stream,
+               const Aws::Client::ClientConfiguration & client_config);
+
   /**
    *  @brief Creates a LogPublisher object that uses the provided client and SDK configuration
    *  Constructs a LogPublisher object that will use the provided CloudWatchClient and SDKOptions
@@ -58,63 +73,60 @@ public:
    * CloudWatch.
    */
   LogPublisher(const std::string & log_group, const std::string & log_stream,
-               std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cw_client);
+               std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cw_client);
 
   /**
    *  @brief Tears down the LogPublisher object
    */
   virtual ~LogPublisher();
 
-  /**
-   *  @brief Asynchronously publishes the provided logs to CloudWatch.
-   *  This function will start an asynchronous request to CloudWatch to post the provided logs. If
-   * the publisher is already in the process of publishing a previous batch of logs it will fail
-   * with AWS_ERR_ALREADY.
-   *
-   *  @param shared_logs A reference to a shared object that contains a map where the key is a
-   * string representing logs group name and the value is a map where the key is a string
-   *      representing log stream and the value is a list containing the logs to be published
-   *  @return An error code that will be SUCCESS if it started publishing successfully, otherwise it
-   * will be an error code.
-   */
-  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors PublishLogs(
-    Aws::CloudWatchLogs::Utils::SharedObject<
-      std::list<Aws::CloudWatchLogs::Model::InputLogEvent> *> * shared_logs);
+  virtual bool shutdown() override;
 
   /**
-   *  @brief Starts the background thread used by the publisher.
-   *  Use this function in order to start the background thread that the publisher uses for the
-   * asynchronous posting of logs to CloudWatch
+   * Create the cloudwatch facade
+   * @return
    */
-  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors StartPublisherThread();
+  virtual bool start() override;
 
-  /**
-   *  @brief Stops the background thread used by the publisher.
-   *  Use this function in order to attempt a graceful shutdown of the background thread that the
-   * publisher uses.
-   *
-   *  @return An error code that will be SUCCESS if the thread was shutdown successfully
-   */
-  virtual Aws::CloudWatchLogs::ROSCloudWatchLogsErrors StopPublisherThread();
+  LogPublisherRunState getRunState();
 
 private:
-  void CreateGroup();
-  void CreateStream();
-  void InitToken(Aws::String & next_token);
-  void SendLogs(Aws::String & next_token);
-  void Run();
 
-  std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchFacade> cloudwatch_facade_;
-  std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cloudwatch_client_;
+  /**
+   * Check if the input status is related to a network failure.
+   *
+   * @param error
+   * @return true if connected to the internet, false otherwise
+   */
+  bool checkIfConnected(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors error);
+
+  /**
+   * Reset the current init token to UNINITIALIZED_TOKEN
+   */
+  void resetInitToken();
+
+  //overall config
+  bool configure();
+
+  //main publish mechanism
+  Aws::DataFlow::UploadStatus publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) override;
+
+  bool CreateGroup();
+  bool CreateStream();
+  bool InitToken(Aws::String & next_token);
+
+  Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogs(Aws::String & next_token, std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data);
+
+  std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cloudwatch_facade_;
   Aws::SDKOptions aws_sdk_options_;
-  std::thread * publisher_thread_;
-  std::atomic_bool thread_keep_running_;
-  std::atomic<Aws::CloudWatchLogs::Utils::SharedObject<
-    std::list<Aws::CloudWatchLogs::Model::InputLogEvent> *> *>
-    shared_logs_;
   std::string log_group_;
   std::string log_stream_;
-  LogPublisherRunState run_state_;
+  Aws::SDKOptions options_;
+  Aws::Client::ClientConfiguration client_config_;
+
+  ObservableObject<LogPublisherRunState> run_state_;
+  Aws::String next_token;
+  mutable std::recursive_mutex mtx_;
 };
 
 }  // namespace CloudWatchLogs

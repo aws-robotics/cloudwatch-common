@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(cloudwatch_logs_common)
-set(CLOUDWATCH_LOGS_COMMON_VERSION 1.0.0)
+set(CLOUDWATCH_LOGS_COMMON_VERSION 1.1.0)
 
 # Default to C11
 if(NOT CMAKE_C_STANDARD)
@@ -11,22 +11,48 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
 endif()
 
+# Enable strict compiler flags if possible.
+include(CheckCXXCompilerFlag)
+# Removed -Wmissing-declarations until gmock is ignored
+set(FLAGS -pedantic -Wno-long-long -Wall -Wextra -Wcast-align -Wcast-qual -Wformat -Wwrite-strings)
+foreach(FLAG ${FLAGS})
+  check_cxx_compiler_flag(${FLAG} R${FLAG})
+  if(${R${FLAG}})
+    set(WARNING_CXX_FLAGS "${WARNING_CXX_FLAGS} ${FLAG}")
+  endif()
+endforeach()
+
+if(NOT DEFINED CXX_DISABLE_WERROR)
+  set(WARNING_CXX_FLAGS "-Werror ${WARNING_CXX_FLAGS}")
+endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_CXX_FLAGS}")
+
+find_package(dataflow_lite REQUIRED)
+find_package(file_management REQUIRED)
 find_package(aws_common REQUIRED)
+
 if(AWSSDK_FOUND)
   set(SERVICE logs)
   AWSSDK_DETERMINE_LIBS_TO_LINK(SERVICE OUTPUT)
   link_directories("${AWSSDK_LIB_DIR}")
 endif()
 
-set(ALL_SRC_FILES src/log_manager.cpp src/log_manager_factory.cpp src/log_publisher.cpp src/utils/cloudwatch_facade.cpp)
+set(ALL_SRC_FILES
+    src/log_batcher.cpp
+    src/log_service_factory.cpp
+    src/utils/cloudwatch_logs_facade.cpp
+    src/utils/log_file_manager.cpp
+    src/log_service_factory.cpp
+    src/log_publisher.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})
-target_link_libraries(${PROJECT_NAME} ${OUTPUT})
-target_include_directories(${PROJECT_NAME} PRIVATE ${AWSSDK_INCLUDE_DIRS} include ${aws_common_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} ${OUTPUT} ${file_management_LIBRARIES} ${dataflow_lite_LIBRARIES} stdc++fs)
+target_include_directories(${PROJECT_NAME}
+        PRIVATE ${AWSSDK_INCLUDE_DIRS}
+        include ${aws_common_INCLUDE_DIRS} ${file_management_INCLUDE_DIRS} ${dataflow_lite_INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME} PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>)
 
 #############
 ## Install ##
@@ -37,6 +63,7 @@ install(TARGETS ${PROJECT_NAME}
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
 
+## Mark cpp header files for installation
 install(DIRECTORY include/
         DESTINATION include)
 
@@ -60,21 +87,35 @@ INSTALL(EXPORT ${PROJECT_NAME}-targets DESTINATION share/${PROJECT_NAME}/cmake)
 
 enable_testing()
 find_common_test_packages()
-add_common_gtest(test_cloudwatch_logs_common
-  test/main_test.cpp
-  test/shared_object_test.cpp
-  test/log_manager_test.cpp
-  test/log_publisher_test.cpp
-  test/cloudwatch_facade_test.cpp
-)
-target_include_directories(test_cloudwatch_logs_common PRIVATE
-  include
-  ${aws_common_INCLUDE_DIRS}
-  ${PROJECT_SOURCE_DIR}/test/include
-)
-target_link_libraries(test_cloudwatch_logs_common
-  ${PROJECT_NAME}
-  ${aws_common_LIBRARIES}
-  ${GMOCK_LIBRARY}
-  pthread
-)
+if(GMOCK_LIBRARY)
+  add_common_gtest(test_cloudwatch_logs_common
+        test/main_test.cpp
+        test/log_publisher_test.cpp
+        test/cloudwatch_facade_test.cpp
+        )
+  target_include_directories(test_cloudwatch_logs_common
+        PRIVATE include
+        PRIVATE ${aws_common_INCLUDE_DIRS}
+        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+        )
+  target_link_libraries(test_cloudwatch_logs_common
+        ${GTEST_LIBRARIES}
+        pthread
+        ${GMOCK_LIBRARY}
+        ${PROJECT_NAME})
+
+  add_common_gtest(test_pipelines
+        test/pipeline_test.cpp
+        )
+
+  target_include_directories(test_pipelines
+        PRIVATE include
+        PRIVATE ${aws_common_INCLUDE_DIRS}
+        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+        )
+  target_link_libraries(test_pipelines
+        ${GTEST_LIBRARIES}
+        pthread
+        ${GMOCK_LIBRARY}
+        ${PROJECT_NAME})
+endif()
