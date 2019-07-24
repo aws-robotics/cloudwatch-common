@@ -1,8 +1,6 @@
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package cloudwatch_logs_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-1.0.0 (2019-03-20)
-------------------
 
 1.0.1 (2019-03-20)
 ------------------
@@ -15,3 +13,6 @@ Changelog for package cloudwatch_logs_common
   [Bug Fix] Resolved false-positive error log messages
 * Resolved false-positive error log messages
 * Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
+
+1.0.0 (2019-03-20)
+------------------
