@@ -185,9 +185,9 @@ TEST_F(PipelineTest, Sanity) {
 TEST_F(PipelineTest, TestBatcherManualPublish) {
 
   std::string toBatch("TestBatcherManualPublish");
-  EXPECT_EQ(0, batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   bool is_batched = cw_service->batchData(toBatch);
-  EXPECT_EQ(1, batcher->getCurrentBatchSize());
+  EXPECT_EQ(1u, batcher->getCurrentBatchSize());
 
   EXPECT_TRUE(is_batched);
 
@@ -202,7 +202,7 @@ TEST_F(PipelineTest, TestBatcherManualPublish) {
   test_publisher->wait_for(std::chrono::seconds(1));
 
   EXPECT_TRUE(b2);
-  EXPECT_EQ(0, batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
   EXPECT_TRUE(cw_service->isConnected());
   EXPECT_EQ(1, test_publisher->getPublishSuccesses());
@@ -229,7 +229,7 @@ TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
 
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   EXPECT_FALSE(cw_service->isConnected());
-  EXPECT_EQ(100, batcher->getCurrentBatchSize());
+  EXPECT_EQ(100u, batcher->getCurrentBatchSize());
 
   // force a publish
   bool b2 = cw_service->publishBatchedData();
@@ -237,7 +237,7 @@ TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
 
   EXPECT_TRUE(b2);
   EXPECT_EQ(1, test_publisher->getPublishSuccesses());
-  EXPECT_EQ(0, batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
   EXPECT_TRUE(cw_service->isConnected());
   EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, test_publisher->getLastUploadStatus());
@@ -277,7 +277,7 @@ TEST_F(PipelineTest, TestBatcherSize) {
 
   EXPECT_EQ(1, test_publisher->getPublishAttempts());
   EXPECT_EQ(1, test_publisher->getPublishSuccesses());
-  EXPECT_EQ(0, batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
   EXPECT_TRUE(cw_service->isConnected());
   EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, test_publisher->getLastUploadStatus());
@@ -291,9 +291,9 @@ TEST_F(PipelineTest, TestSinglePublisherFailureToFileManager) {
 
   // batch
   std::string toBatch("TestBatcherManualPublish");
-  EXPECT_EQ(0, batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   bool is_batched = cw_service->batchData(toBatch);
-  EXPECT_EQ(1, batcher->getCurrentBatchSize());
+  EXPECT_EQ(1u, batcher->getCurrentBatchSize());
   EXPECT_EQ(true, is_batched);
 
   // force failure
@@ -304,7 +304,7 @@ TEST_F(PipelineTest, TestSinglePublisherFailureToFileManager) {
   test_publisher->wait_for(std::chrono::seconds(1));
 
   EXPECT_TRUE(b2);
-  EXPECT_EQ(0, batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState());
   EXPECT_FALSE(cw_service->isConnected());
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());
@@ -325,9 +325,9 @@ TEST_F(PipelineTest, TestInvalidDataNotPassedToFileManager) {
 
   // batch
   std::string toBatch("TestBatcherManualPublish");
-  EXPECT_EQ(0, batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   bool is_batched = cw_service->batchData(toBatch);
-  EXPECT_EQ(1, batcher->getCurrentBatchSize());
+  EXPECT_EQ(1u, batcher->getCurrentBatchSize());
   EXPECT_EQ(true, is_batched);
 
   // force failure
@@ -338,7 +338,7 @@ TEST_F(PipelineTest, TestInvalidDataNotPassedToFileManager) {
   test_publisher->wait_for(std::chrono::seconds(1));
 
   EXPECT_TRUE(b2);
-  EXPECT_EQ(0, batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState());
   EXPECT_FALSE(cw_service->isConnected());
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());
@@ -369,9 +369,9 @@ TEST_F(PipelineTest, TestPublisherIntermittant) {
 
       // batch
       std::string toBatch("TestPublisherIntermittant");
-      EXPECT_EQ(0, batcher->getCurrentBatchSize());
+      EXPECT_EQ(0u, batcher->getCurrentBatchSize());
       bool is_batched = cw_service->batchData(toBatch);
-      EXPECT_EQ(1, batcher->getCurrentBatchSize());
+      EXPECT_EQ(1u, batcher->getCurrentBatchSize());
       EXPECT_EQ(true, is_batched);
 
       // force failure
@@ -386,7 +386,7 @@ TEST_F(PipelineTest, TestPublisherIntermittant) {
       test_publisher->wait_for(std::chrono::seconds(1));
 
       EXPECT_TRUE(is_batched);
-      EXPECT_EQ(0, batcher->getCurrentBatchSize());
+      EXPECT_EQ(0u, batcher->getCurrentBatchSize());
 
       auto expected_state = force_failure ? PublisherState::NOT_CONNECTED : PublisherState::CONNECTED;
 
@@ -432,7 +432,7 @@ TEST_F(PipelineTest, TestBatchDataTooFast) {
   bool is_batched = cw_service->batchData(toBatch);
 
   EXPECT_FALSE(is_batched);
-  EXPECT_EQ(0, batcher->getCurrentBatchSize());
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState()); // hasn't changed since not attempted
   EXPECT_FALSE(cw_service->isConnected());
   EXPECT_EQ(0, test_publisher->getPublishSuccesses());

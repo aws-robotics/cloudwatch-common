@@ -81,7 +81,6 @@ INSTALL(EXPORT ${PROJECT_NAME}-targets DESTINATION share/${PROJECT_NAME}/cmake)
 enable_testing()
 find_common_test_packages()
 if(GMOCK_LIBRARY)
-  message("Building tests")
   add_common_gtest(test_common_utilities
           test/file_management/file_manager_strategy_test.cpp
           test/file_management/file_upload_streamer_test.cpp

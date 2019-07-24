@@ -190,7 +190,7 @@ TEST_F(TestLogPublisherFixture, TestLogPublisher_CallsSendLogsToCW)
 
   EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, publisher_->attemptPublish(logs_list_));
   EXPECT_EQ(PublisherState::CONNECTED, publisher_->getPublisherState());
-  EXPECT_EQ(1, mock_cw_->send_logs_call_count);
+  EXPECT_EQ(1u, mock_cw_->send_logs_call_count);
   EXPECT_EQ(LOG_PUBLISHER_ATTEMPT_SEND_LOGS, publisher_->getRunState());
 }
 
