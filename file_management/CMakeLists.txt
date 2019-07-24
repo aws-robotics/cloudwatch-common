@@ -81,19 +81,33 @@ INSTALL(EXPORT ${PROJECT_NAME}-targets DESTINATION share/${PROJECT_NAME}/cmake)
 enable_testing()
 find_common_test_packages()
 if(GMOCK_LIBRARY)
+
+  macro(link_test_target target_name)
+    if(TARGET ${target_name})
+      target_include_directories("${target_name}" PRIVATE ${HEADERS_FOR_TESTS})
+      target_link_libraries("${target_name}" ${LIBS_FOR_TESTS})
+    endif()
+  endmacro()
+
   add_common_gtest(test_common_utilities
           test/file_management/file_manager_strategy_test.cpp
           test/file_management/file_upload_streamer_test.cpp
           test/file_management/token_test.cpp
           )
-  target_include_directories(test_common_utilities
-        PRIVATE include
-        PRIVATE ${aws_common_INCLUDE_DIRS}
-        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
-        )
-  target_link_libraries(test_common_utilities
-        ${GTEST_LIBRARIES}
-        pthread
-        ${GMOCK_LIBRARY}
-        ${PROJECT_NAME})
+
+  set(LIBS_FOR_TESTS
+          ${GTEST_LIBRARIES}
+          pthread
+          ${GMOCK_LIBRARY}
+          ${PROJECT_NAME}
+          )
+
+  set(HEADERS_FOR_TESTS
+          PRIVATE include
+          PRIVATE ${aws_common_INCLUDE_DIRS}
+          PUBLIC ${PROJECT_SOURCE_DIR}/test/include
+          )
+
+  link_test_target(test_common_utilities)
+
 endif()
