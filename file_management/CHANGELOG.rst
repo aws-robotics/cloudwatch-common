@@ -13,3 +13,6 @@ Changelog for package file_management
   [Bug Fix] Resolved false-positive error log messages
 * Resolved false-positive error log messages
 * Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
+
+1.0.0 (2019-03-20)
+------------------
