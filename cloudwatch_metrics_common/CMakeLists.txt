@@ -104,7 +104,7 @@ if(GMOCK_LIBRARY)
   add_common_gtest(test_cloudwatch_metrics
           test/main_test.cpp
           test/metric_publisher_test.cpp
-          test/file_manager_test.cpp
+          #test/file_manager_test.cpp
           test/metric_serialization_test.cpp
           )
   target_include_directories(test_cloudwatch_metrics

@@ -54,7 +54,9 @@ protected:
  */
 TEST_F(FileManagerTest, file_manager_write) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
+  std::shared_ptr<StatusMonitor> status_monitor = std::make_shared<StatusMonitor>();
   MetricFileManager file_manager(file_manager_strategy);
+  file_manager.setStatusMonitor(status_monitor);
   file_manager.start();
   MetricDatumCollection metric_data;
   Aws::CloudWatch::Model::MetricDatum input_event;

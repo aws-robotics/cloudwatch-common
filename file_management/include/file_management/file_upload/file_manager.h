@@ -115,7 +115,7 @@ public:
     if(file_manager_strategy_) {
       started &= file_manager_strategy_->start();
       if (file_manager_strategy_->isDataAvailable()) {
-        FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
+        file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
       }
     }
     started &= Service::start();
@@ -125,7 +125,7 @@ public:
   virtual bool shutdown() override {
     bool is_shutdown = Service::shutdown();
     if(file_manager_strategy_) {
-      FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::UNAVAILABLE);
+      file_status_monitor_->setStatus(Aws::DataFlow::Status::UNAVAILABLE);
       is_shutdown &= file_manager_strategy_->shutdown();
     }
     return is_shutdown;
