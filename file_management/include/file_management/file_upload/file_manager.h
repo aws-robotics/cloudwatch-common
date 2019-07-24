@@ -78,7 +78,6 @@ public:
 template <typename T>
 class FileManager :
   public DataReader <T>
-//  public Service
 {
 public:
 

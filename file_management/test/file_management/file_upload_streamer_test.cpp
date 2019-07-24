@@ -19,14 +19,10 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <cloudwatch_logs_common/ros_cloudwatch_logs_errors.h>
-#include <cloudwatch_logs_common/file_upload/file_manager.h>
-#include <cloudwatch_logs_common/file_upload/file_management_factory.h>
-#include <cloudwatch_logs_common/utils/log_file_manager.h>
+#include <file_management/file_upload/file_manager.h>
+#include <file_management/file_upload/file_management_factory.h>
 #include <dataflow_lite/dataflow/dataflow.h>
 
-using namespace Aws::CloudWatchLogs;
-using namespace Aws::CloudWatchLogs::Utils;
 using namespace Aws::FileManagement;
 using namespace Aws::DataFlow;
 

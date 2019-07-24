@@ -28,6 +28,7 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_CXX_FLAGS}")
 
 find_package(dataflow_lite REQUIRED)
+find_package(file_management REQUIRED)
 find_package(aws_common REQUIRED)
 
 if(AWSSDK_FOUND)
@@ -45,9 +46,10 @@ set(ALL_SRC_FILES
     src/log_publisher.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${ALL_SRC_FILES})
-target_link_libraries(${PROJECT_NAME} ${OUTPUT} ${dataflow_lite_LIBRARIES} stdc++fs)
+target_link_libraries(${PROJECT_NAME} ${OUTPUT} ${file_management_LIBRARIES} ${dataflow_lite_LIBRARIES} stdc++fs)
 target_include_directories(${PROJECT_NAME}
-        PRIVATE ${AWSSDK_INCLUDE_DIRS} include ${aws_common_INCLUDE_DIRS} ${dataflow_lite_INCLUDE_DIRS})
+        PRIVATE ${AWSSDK_INCLUDE_DIRS}
+        include ${aws_common_INCLUDE_DIRS} ${file_management_INCLUDE_DIRS} ${dataflow_lite_INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
@@ -97,24 +99,6 @@ if(GMOCK_LIBRARY)
         PUBLIC ${PROJECT_SOURCE_DIR}/test/include
         )
   target_link_libraries(test_cloudwatch_logs_common
-        ${GTEST_LIBRARIES}
-        pthread
-        ${GMOCK_LIBRARY}
-        ${PROJECT_NAME})
-
-  add_common_gtest(test_common_utilities
-          test/file_management/file_manager_test.cpp
-          test/file_management/file_manager_strategy_test.cpp
-          test/file_management/file_upload_streamer_test.cpp
-          test/file_management/token_test.cpp
-          )
-
-  target_include_directories(test_common_utilities
-        PRIVATE include
-        PRIVATE ${aws_common_INCLUDE_DIRS}
-        PUBLIC ${PROJECT_SOURCE_DIR}/test/include
-        )
-  target_link_libraries(test_common_utilities
         ${GTEST_LIBRARIES}
         pthread
         ${GMOCK_LIBRARY}

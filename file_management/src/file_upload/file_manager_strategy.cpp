@@ -400,7 +400,6 @@ void FileManagerStrategy::addFilePathToStorage(const fs::path &file_path) {
 }
 
 void FileManagerStrategy::rotateWriteFile() {
-  // TODO create using UUID or something.
   AWS_LOG_DEBUG(__func__, "Rotating offline storage file");
   using std::chrono::system_clock;
   time_t tt = system_clock::to_time_t (system_clock::now());

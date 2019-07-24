@@ -22,6 +22,8 @@
 
 #include <cloudwatch_metrics_common/utils/cloudwatch_metrics_facade.hpp>
 
+#include <cloudwatch_metrics_common/definitions/definitions.h>
+
 #include <string>
 
 using namespace Aws::CloudWatchMetrics::Utils;
@@ -69,19 +71,20 @@ CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsRequest(
 }
 
 CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsToCloudWatch(
-  const std::string & metric_namespace, std::list<Aws::CloudWatch::Model::MetricDatum> &metrics)
+  const std::string & metric_namespace, MetricDatumCollection &metrics)
 {
   auto status = SUCCESS;
   Aws::CloudWatch::Model::PutMetricDataRequest request;
   Aws::Vector<Aws::CloudWatch::Model::MetricDatum> datums;
 
   if (metrics.empty()) {
-    //todo log
+    AWS_LOGSTREAM_DEBUG( __func__, "CloudWatchMetricsFacade: no metrics to send");
     return FAILURE;
   }
 
   request.SetNamespace(metric_namespace.c_str());
 
+  // Note: this fails an entire set of metrics, even if some are sent back successfully
   for (auto it = metrics.begin(); it != metrics.end(); ++it) {
     datums.push_back(*it);
     if (datums.size() >= MAX_METRIC_DATUMS_PER_REQUEST) {

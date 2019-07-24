@@ -81,7 +81,7 @@ INSTALL(EXPORT ${PROJECT_NAME}-targets DESTINATION share/${PROJECT_NAME}/cmake)
 enable_testing()
 find_common_test_packages()
 if(GMOCK_LIBRARY)
-  add_common_gtest(test_common_utilities
+  add_common_gtest(test_dataflow_utilities
           test/dataflow/observed_queue_test.cpp
           test/dataflow/queue_monitor_test.cpp
           )

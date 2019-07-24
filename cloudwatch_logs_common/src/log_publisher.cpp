@@ -61,7 +61,6 @@ LogPublisher::LogPublisher(
 
 LogPublisher::~LogPublisher()
 {
-
 }
 
 bool LogPublisher::checkIfConnected(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors error) {
