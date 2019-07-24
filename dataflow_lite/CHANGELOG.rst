@@ -2,8 +2,8 @@
 Changelog for package dataflow_lite
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.0 (2019-07-24)
+------------------
 * synchronize version of new packages with rest of the packages in the repo (`#38 <https://github.com/aws-robotics/cloudwatch-common/issues/38>`_)
   Signed-off-by: Miaofei <miaofei@amazon.com>
 * Merge pull request `#36 <https://github.com/aws-robotics/cloudwatch-common/issues/36>`_ from aws-robotics/guard_test_libs

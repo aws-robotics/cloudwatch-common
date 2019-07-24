@@ -14,8 +14,8 @@ Changelog for package file_management
 * Resolved false-positive error log messages
 * Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
 
-Forthcoming
------------
+1.1.0 (2019-07-24)
+------------------
 * modify changelist to be compatible with catkin_generate_changelog (`#39 <https://github.com/aws-robotics/cloudwatch-common/issues/39>`_)
   Signed-off-by: Miaofei <miaofei@amazon.com>
 * synchronize version of new packages with rest of the packages in the repo (`#38 <https://github.com/aws-robotics/cloudwatch-common/issues/38>`_)

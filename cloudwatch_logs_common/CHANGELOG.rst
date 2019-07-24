@@ -14,8 +14,8 @@ Changelog for package cloudwatch_logs_common
 * Resolved false-positive error log messages
 * Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
 
-Forthcoming
------------
+1.1.0 (2019-07-24)
+------------------
 * modify changelist to be compatible with catkin_generate_changelog (`#39 <https://github.com/aws-robotics/cloudwatch-common/issues/39>`_)
   Signed-off-by: Miaofei <miaofei@amazon.com>
 * Merge pull request `#36 <https://github.com/aws-robotics/cloudwatch-common/issues/36>`_ from aws-robotics/guard_test_libs
