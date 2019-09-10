@@ -23,9 +23,6 @@
 #include <memory>
 #include <mutex>
 
-#include <aws/core/Aws.h>
-#include <aws/core/utils/logging/LogMacros.h>
-
 /**
  * Class used as an atomic container of type T. Provides a listener registration and
  * broadcast mechanism for this container's updates.

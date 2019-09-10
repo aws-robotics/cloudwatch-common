@@ -22,7 +22,7 @@
 #include <stdexcept>
 
 /**
- * Simple extension to test basic funtionality
+ * Simple extension to test basic functionality
  */
 class TestBatcher : public DataBatcher<int> {
 public:

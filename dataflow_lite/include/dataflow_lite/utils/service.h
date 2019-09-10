@@ -24,7 +24,6 @@
 #include <typeinfo>
 
 #include <dataflow_lite/utils/observable_object.h>
-#include <aws/core/utils/logging/LogMacros.h>
 
 enum ServiceState {
     CREATED,  // created and ready to start
