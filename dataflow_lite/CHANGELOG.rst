@@ -1,9 +1,6 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Changelog for package cloudwatch_metrics_common
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-1.0.1 (2019-03-20)
-------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Changelog for package dataflow_lite
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Forthcoming
 -----------
@@ -13,7 +10,7 @@ Forthcoming
   - restored cast-align, but added as a warning
   - removed unused headers
   * Removed duplicate Werror
-* modify changelist to be compatible with catkin_generate_changelog (`#39 <https://github.com/aws-robotics/cloudwatch-common/issues/39>`_)
+* synchronize version of new packages with rest of the packages in the repo (`#38 <https://github.com/aws-robotics/cloudwatch-common/issues/38>`_)
   Signed-off-by: Miaofei <miaofei@amazon.com>
 * Merge pull request `#36 <https://github.com/aws-robotics/cloudwatch-common/issues/36>`_ from aws-robotics/guard_test_libs
   Added guards for test libraries
@@ -519,25 +516,4 @@ Forthcoming
   Signed-off-by: Miaofei <miaofei@amazon.com>
   * fix unit test failures
   Signed-off-by: Miaofei <miaofei@amazon.com>
-* Modify cloudwatch common to depend on gtest, gmock (`#19 <https://github.com/aws-robotics/cloudwatch-common/issues/19>`_)
-  * Modify cloudwatch common to depend on gtest, gmock
-  Use the macro in aws_common to find test dependencies for ROS1 or ROS2.
-  Signed-off-by: Miaofei <miaofei@amazon.com>
-  * more CMakeLists.txt cleanup
-  Signed-off-by: Miaofei <miaofei@amazon.com>
-  * update travis.yml to be compatible with specifying multiple package names
-  Signed-off-by: Miaofei <miaofei@amazon.com>
-  * update travis.yml test matrix
-  Signed-off-by: Miaofei <miaofei@amazon.com>
-  * update PACKAGE_NAMES
-  Signed-off-by: Miaofei <miaofei@amazon.com>
-* Adding old release to change log
-* Update package.xml for 1.0.2 release
-  Signed-off-by: Ryan Newell <ryanewel@amazon.com>
-* Release 1.0.1 (`#14 <https://github.com/aws-robotics/cloudwatch-common/issues/14>`_)
-  * Release 1.0.1
-  * 1.0.1
-* Contributors: AAlon, Devin Bonnie, M. M, Ross Desmond, Ryan Newell, ryanewel
-
-1.0.0 (2019-03-20)
-------------------
+* Contributors: Devin Bonnie, M. M
