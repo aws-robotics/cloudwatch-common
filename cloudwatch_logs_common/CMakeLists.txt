@@ -14,7 +14,7 @@ endif()
 # Enable strict compiler flags if possible.
 include(CheckCXXCompilerFlag)
 # Removed -Wmissing-declarations until gmock is ignored
-set(FLAGS -pedantic -Wno-long-long -Wall -Wextra -Wcast-align -Wcast-qual -Wformat -Wwrite-strings)
+set(FLAGS -pedantic -Wno-long-long -Wall -Wextra -Wcast-qual -Wformat -Wwrite-strings -Wcast-align -Wno-error=cast-align)
 foreach(FLAG ${FLAGS})
   check_cxx_compiler_flag(${FLAG} R${FLAG})
   if(${R${FLAG}})
