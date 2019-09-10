@@ -5,8 +5,8 @@ Changelog for package cloudwatch_metrics_common
 1.0.1 (2019-03-20)
 ------------------
 
-Forthcoming
------------
+1.1.1 (2019-09-10)
+------------------
 * Disable error on cast-align warning to support ARMhf builds (`#41 <https://github.com/aws-robotics/cloudwatch-common/issues/41>`_)
   * Remove -Wcast-align flag to support ARMhf builds
   *  - bumped versions to 1.1.1
