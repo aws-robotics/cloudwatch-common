@@ -14,6 +14,7 @@ The source code is released under an [Apache 2.0].
 ### Supported ROS Distributions
 - Kinetic
 - Melodic
+- Dashing
 
 ### Build status
 * Travis CI:
@@ -23,18 +24,26 @@ The source code is released under an [Apache 2.0].
     * ROS Kinetic @ u16.04 Xenial
         * cloudwatch_metrics_common [![Build Status](http://build.ros.org/job/Kbin_uX64__cloudwatch_metrics_common__ubuntu_xenial_amd64__binary/badge/icon)](http://build.ros.org/job/Kbin_uX64__cloudwatch_metrics_common__ubuntu_xenial_amd64__binary)
         * cloudwatch_logs_common [![Build Status](http://build.ros.org/job/Kbin_uX64__cloudwatch_logs_common__ubuntu_xenial_amd64__binary/badge/icon)](http://build.ros.org/job/Kbin_uX64__cloudwatch_logs_common__ubuntu_xenial_amd64__binary)
+        * file_management [![Build Status](http://build.ros.org/job/Kbin_uX64__file_management__ubuntu_xenial_amd64__binary/badge/icon)](http://build.ros.org/job/Kbin_uX64__file_management__ubuntu_xenial_amd64__binary)
+        * dataflow_lite [![Build Status](http://build.ros.org/job/Kbin_uX64__dataflow_lite__ubuntu_xenial_amd64__binary/badge/icon)](http://build.ros.org/job/Kbin_uX64__dataflow_lite__ubuntu_xenial_amd64__binary)
     * ROS Melodic @ u18.04 Bionic
         * cloudwatch_metrics_common [![Build Status](http://build.ros.org/job/Mbin_uB64__cloudwatch_metrics_common__ubuntu_bionic_amd64__binary/badge/icon)](http://build.ros.org/job/Mbin_uB64__cloudwatch_metrics_common__ubuntu_bionic_amd64__binary)
         * cloudwatch_logs_common [![Build Status](http://build.ros.org/job/Mbin_uB64__cloudwatch_logs_common__ubuntu_bionic_amd64__binary/badge/icon)](http://build.ros.org/job/Mbin_uB64__cloudwatch_logs_common__ubuntu_bionic_amd64__binary)
-
-
+        * file_management [![Build Status](http://build.ros.org/job/Mbin_uB64__file_management__ubuntu_bionic_amd64__binary/badge/icon)](http://build.ros.org/job/Mbin_uB64__file_management__ubuntu_bionic_amd64__binary)
+        * dataflow_lite [![Build Status](http://build.ros.org/job/Mbin_uB64__dataflow_lite__ubuntu_bionic_amd64__binary/badge/icon)](http://build.ros.org/job/Mbin_uB64__dataflow_lite__ubuntu_bionic_amd64__binary)
+    * ROS Dashing @ u18.04 Bionic
+        * cloudwatch_metrics_common [![Build Status](http://build.ros2.org/job/Dbin_uB64__cloudwatch_metrics_common__ubuntu_bionic_amd64__binary/badge/icon)](http://build.ros2.org/job/Dbin_uB64__cloudwatch_metrics_common__ubuntu_bionic_amd64__binary)
+        * cloudwatch_logs_common [![Build Status](http://build.ros2.org/job/Dbin_uB64__cloudwatch_logs_common__ubuntu_bionic_amd64__binary/badge/icon)](http://build.ros2.org/job/Dbin_uB64__cloudwatch_logs_common__ubuntu_bionic_amd64__binary)
+        * file_management [![Build Status](http://build.ros2.org/job/Dbin_uB64__file_management__ubuntu_bionic_amd64__binary/badge/icon)](http://build.ros2.org/job/Dbin_uB64__file_management__ubuntu_bionic_amd64__binary)
+        * dataflow_lite [![Build Status](http://build.ros2.org/job/Dbin_uB64__dataflow_lite__ubuntu_bionic_amd64__binary/badge/icon)](http://build.ros2.org/job/Dbin_uB64__dataflow_lite__ubuntu_bionic_amd64__binary)
+        
 ## Installation
 
 ### Binaries
-On Ubuntu you can install the latest version of this package using the following command
+On Ubuntu you can install the latest version of the packages in this repository using the following command
 
         sudo apt-get update
-        sudo apt-get install -y ros-$ROS_DISTRO-cloudwatch-logs-common ros-$ROS_DISTRO-cloudwatch-metrics-common
+        sudo apt-get install -y ros-$ROS_DISTRO-cloudwatch-logs-common ros-$ROS_DISTRO-cloudwatch-metrics-common ros-$ROS_DISTRO-file-management ros-$ROS_DISTRO-dataflow-lite
 
 ### Building from Source
 
@@ -63,7 +72,7 @@ _Note: If building the master branch instead of a release branch you may need to
 
 - Configure ROS library path
 
-        source ~/ros-workspace/install/setup.bash
+        source ~/ros-workspace/install/local_setup.bash
 
 
 [Amazon Web Services (AWS)]: https://aws.amazon.com/
