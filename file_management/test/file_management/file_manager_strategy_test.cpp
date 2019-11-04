@@ -288,7 +288,19 @@ TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
   }
 }
 
-TEST_F(FileManagerStrategyTest, sanitizePath_home_set) {
+class SanitizePathTest : public ::testing::Test {
+public:
+  void SetUp() override
+  {
+  }
+
+  void TearDown() override
+  {
+  }
+
+};
+
+TEST_F(SanitizePathTest, sanitizePath_home_set) {
   std::string test_path = "~/dir/";
   char * original_home = getenv("HOME");
   setenv("HOME", "/home", 1);
@@ -305,7 +317,7 @@ TEST_F(FileManagerStrategyTest, sanitizePath_home_set) {
   EXPECT_STREQ(test_path.c_str(), "/home/dir/");
 }
 
-TEST_F(FileManagerStrategyTest, sanitizePath_home_not_set_roshome_set) {
+TEST_F(SanitizePathTest, sanitizePath_home_not_set_roshome_set) {
   std::string test_path = "~/dir/";
   char * original_home = getenv("HOME");
   char * original_ros_home = getenv("ROS_HOME");
@@ -328,7 +340,7 @@ TEST_F(FileManagerStrategyTest, sanitizePath_home_not_set_roshome_set) {
 }
 
 
-TEST_F(FileManagerStrategyTest, sanitizePath_home_not_set_roshome_not_set) {
+TEST_F(SanitizePathTest, sanitizePath_home_not_set_roshome_not_set) {
   std::string test_path = "~/dir/";
   char * original_home = getenv("HOME");
   char * original_ros_home = getenv("ROS_HOME");
@@ -348,7 +360,7 @@ TEST_F(FileManagerStrategyTest, sanitizePath_home_not_set_roshome_not_set) {
 
 }
 
-TEST_F(FileManagerStrategyTest, sanitizePath_adds_trailing_slash) {
+TEST_F(SanitizePathTest, sanitizePath_adds_trailing_slash) {
   std::string test_path = "/test/path";
   sanitizePath(test_path);
   EXPECT_STREQ(test_path.c_str(), "/test/path/");
