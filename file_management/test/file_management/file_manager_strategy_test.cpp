@@ -298,6 +298,8 @@ TEST_F(FileManagerStrategyTest, sanitizePath_home_set) {
   // Cleanup before test
   if (NULL != original_home) {
     setenv("HOME", original_home, 1);
+  } else {
+    unsetenv("HOME");
   }
 
   EXPECT_STREQ(test_path.c_str(), "/home/dir/");
@@ -318,6 +320,8 @@ TEST_F(FileManagerStrategyTest, sanitizePath_home_not_set_roshome_set) {
   }
   if (NULL != original_ros_home) {
     setenv("ROS_HOME", original_ros_home, 1);
+  } else {
+    unsetenv("ROS_HOME");
   }
 
   EXPECT_STREQ(test_path.c_str(), "/ros_home/dir/");
