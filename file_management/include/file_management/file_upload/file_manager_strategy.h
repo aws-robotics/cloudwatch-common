@@ -44,6 +44,14 @@ static constexpr const char* kEofKey = "eof";
 static constexpr const char* kFilePathKey = "file_path";
 
 /**
+ * Sanitizes the path provided by making sure it ends with a '/' character
+ * and also replacing the '~', if it's at the front of the string, with the
+ * value of the $HOME environment variable. If $HOME is not set it attempts 
+ * to use $ROS_HOME. If niether is set then it throws a runtime exception.
+ */
+void sanitizePath(std::string & path);
+
+/**
  * Stores file token information for the purpose of tracking read locations.
  */
 class FileTokenInfo {

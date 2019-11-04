@@ -36,7 +36,16 @@ void sanitizePath(std::string & path) {
     path += '/';
   }
   if (path.front() == '~') {
-    path.replace(0, 1, getenv("HOME"));
+    char * home = getenv("HOME");
+    if (NULL == home) {
+      AWS_LOG_WARN(__func__, "No HOME environment variable set. Attempting to use ROS_HOME instead.");
+      home = getenv("ROS_HOME");
+    }
+    if (NULL != home) {
+      path.replace(0, 1, home);
+    } else {
+      throw std::runtime_error("The storage directory path uses '~' but no HOME environment variable set.");
+    }
   }
 }
 
@@ -53,7 +62,7 @@ void TokenStore::initializeBackupDirectory() {
   auto backup_directory = std::experimental::filesystem::path(options_.backup_directory);
   if (!std::experimental::filesystem::exists(backup_directory)) {
     AWS_LOG_INFO(__func__, "TokenStore backup directory %s does not exist, creating.", backup_directory.c_str());
-    std::experimental::filesystem::create_directory(backup_directory);
+    std::experimental::filesystem::create_directories(backup_directory);
   }
 }
 
@@ -243,7 +252,7 @@ void FileManagerStrategy::initializeStorage() {
   auto storage = std::experimental::filesystem::path(options_.storage_directory);
   if (!std::experimental::filesystem::exists(storage)) {
     AWS_LOG_INFO(__func__, "File storage directory %s does not exist, creating.", storage.c_str());
-    std::experimental::filesystem::create_directory(storage);
+    std::experimental::filesystem::create_directories(storage);
     stored_files_size_ = 0;
   }
 }
