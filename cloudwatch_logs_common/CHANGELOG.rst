@@ -14,6 +14,11 @@ Changelog for package cloudwatch_logs_common
 * Resolved false-positive error log messages
 * Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
 
+Forthcoming
+-----------
+* Increase package version numbers to 1.1.2 (`#44 <https://github.com/aws-robotics/cloudwatch-common/issues/44>`_)
+* Contributors: Nick Burek
+
 1.1.1 (2019-09-10)
 ------------------
 * Disable error on cast-align warning to support ARMhf builds (`#41 <https://github.com/aws-robotics/cloudwatch-common/issues/41>`_)
