@@ -5,8 +5,8 @@ Changelog for package cloudwatch_metrics_common
 1.0.1 (2019-03-20)
 ------------------
 
-Forthcoming
------------
+1.1.2 (2019-11-07)
+------------------
 * Increase package version numbers to 1.1.2 (`#44 <https://github.com/aws-robotics/cloudwatch-common/issues/44>`_)
 * Contributors: Nick Burek
 
