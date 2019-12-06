@@ -31,7 +31,7 @@
 
 using namespace Aws::CloudWatchMetrics;
 
-std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
+std::shared_ptr<MetricService> MetricServiceFactory:: CreateMetricService(
         const std::string & metrics_namespace,
         const Aws::Client::ClientConfiguration & client_config,
         const Aws::SDKOptions & sdk_options,
@@ -52,13 +52,13 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
   };
 
   auto metric_file_upload_streamer =
-          Aws::FileManagement::createFileUploadStreamer<MetricDatumCollection>(metric_file_manager, file_upload_options);
+          Aws::FileManagement::CreateFileUploadStreamer<MetricDatumCollection>(metric_file_manager, file_upload_options);
 
   // connect publisher state changes to the File Streamer
-  metric_publisher->addPublisherStateListener([upload_streamer = metric_file_upload_streamer](const PublisherState& state) {
+  metric_publisher->AddPublisherStateListener([upload_streamer = metric_file_upload_streamer](const PublisherState& state) {
       auto status =
               (state == PublisherState::CONNECTED) ? Aws::DataFlow::Status::AVAILABLE : Aws::DataFlow::Status::UNAVAILABLE;
-      upload_streamer->onPublisherStateChange(status);
+      upload_streamer->OnPublisherStateChange(status);
   });
 
   // Create an observed queue to trigger a publish when data is available
@@ -67,20 +67,20 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
 
   auto stream_data_queue = std::make_shared<TaskObservedBlockingQueue<MetricDatumCollection>>(cloudwatch_options.uploader_options.stream_max_queue_size);
 
-  metric_file_upload_streamer->setSink(file_data_queue);
-  queue_monitor->addSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
+  metric_file_upload_streamer->SetSink(file_data_queue);
+  queue_monitor->AddSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
 
   auto metric_batcher = std::make_shared<MetricBatcher>(
           cloudwatch_options.uploader_options.batch_max_queue_size,
           cloudwatch_options.uploader_options.batch_trigger_publish_size
   );
-  metric_batcher->setMetricFileManager(metric_file_manager);
+  metric_batcher->SetMetricFileManager(metric_file_manager);
 
-  metric_batcher->setSink(stream_data_queue);
-  queue_monitor->addSource(stream_data_queue, Aws::DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
+  metric_batcher->SetSink(stream_data_queue);
+  queue_monitor->AddSource(stream_data_queue, Aws::DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
 
   auto metric_service = std::make_shared<MetricService>(metric_publisher, metric_batcher, metric_file_upload_streamer);
-  metric_service->setSource(queue_monitor);
+  metric_service->SetSource(queue_monitor);
 
   return metric_service;
 }

@@ -25,7 +25,7 @@ namespace Aws {
 namespace CloudWatchMetrics {
 namespace Utils {
 
-static std::unordered_map<std::string, Aws::CloudWatch::Model ::StandardUnit> units_mapper = {
+static std::unordered_map<std::string, Aws::CloudWatch::Model ::StandardUnit> g_units_mapper = {
   {"sec", Aws::CloudWatch::Model::StandardUnit::Seconds},
   {"msec", Aws::CloudWatch::Model::StandardUnit::Milliseconds},
   {"usec", Aws::CloudWatch::Model::StandardUnit::Microseconds},
@@ -68,26 +68,26 @@ struct MetricObject {
  * @param timestamp
  * @return Aws::CloudWatch::Model::MetricDatum
  */
-static MetricDatum metricObjectToDatum(const MetricObject &metrics, const int64_t timestamp) {
+static MetricDatum MetricObjectToDatum(const MetricObject &metrics, const int64_t timestamp) {
 
   MetricDatum datum;
-  Aws::String aws_metric_name(metrics.metric_name.c_str());
+  Aws::String aws_metric_name(metrics.metric_name.c_str()); // NOLINT(readability-redundant-string-cstr)
   Aws::Utils::DateTime date_time(timestamp);
 
   datum.WithMetricName(aws_metric_name).WithTimestamp(date_time).WithValue(metrics.value);
 
-  auto mapped_unit = units_mapper.find(metrics.unit);
-  if (units_mapper.end() != mapped_unit) {
+  auto mapped_unit = g_units_mapper.find(metrics.unit);
+  if (g_units_mapper.end() != mapped_unit) {
     datum.WithUnit(mapped_unit->second);
   } else {
-    Aws::String unit_name(metrics.unit.c_str());
+    Aws::String unit_name(metrics.unit.c_str());  // NOLINT(readability-redundant-string-cstr)
     datum.WithUnit(Aws::CloudWatch::Model::StandardUnitMapper::GetStandardUnitForName(unit_name));
   }
 
   for (auto it = metrics.dimensions.begin(); it != metrics.dimensions.end(); ++it) {
     Aws::CloudWatch::Model::Dimension dimension;
-    Aws::String name(it->first.c_str());
-    Aws::String d_value(it->second.c_str());
+    Aws::String name(it->first.c_str());      // NOLINT(readability-redundant-string-cstr)
+    Aws::String d_value(it->second.c_str());  // NOLINT(readability-redundant-string-cstr)
     dimension.WithName(name.c_str()).WithValue(d_value);
     datum.AddDimensions(dimension);
   }

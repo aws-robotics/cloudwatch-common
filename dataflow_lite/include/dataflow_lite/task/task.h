@@ -46,7 +46,7 @@ enum UploadStatus {
 template<typename T>
 class IPublisher {
 public:
-    virtual UploadStatus attemptPublish(T &batch_data) = 0;
+    virtual UploadStatus AttemptPublish(T &batch_data) = 0;
 };
 
 /**
@@ -65,21 +65,21 @@ public:
     virtual ~Task() = default;
 
     /**
-     * Run this task with the input publisher. Run calls IPublisher::attemptPublish and then calls onComplete
+     * Run this task with the input publisher. Run calls IPublisher::attemptPublish and then calls OnComplete
      * with the resulting IPublisher UploadStatus status.
      *
      * @param publisher mechanism to publish
      */
-    virtual void run(std::shared_ptr<IPublisher<T>> publisher) {
-      auto status = publisher->attemptPublish(getBatchData());
-      this->onComplete(status);
+    virtual void Run(std::shared_ptr<IPublisher<T>> publisher) {
+      auto status = publisher->AttemptPublish(GetBatchData());
+      OnComplete(status);
     }
 
     /**
-     * This task is no longer valid. Call onComplete with a FAIL status.
+     * This task is no longer valid. Call OnComplete with a FAIL status.
      */
-    virtual void cancel() {
-      this->onComplete(FAIL);
+    virtual void Cancel() {
+      OnComplete(FAIL);
     }
 
     /**
@@ -87,14 +87,14 @@ public:
      *
      * @param status
      */
-    virtual void onComplete(const UploadStatus &status) = 0;
+    virtual void OnComplete(const UploadStatus &status) = 0;
 
     /**
      * Get this task's data
      *
      * @return
      */
-    virtual T& getBatchData() = 0;
+    virtual T& GetBatchData() = 0;
 };
 
 template<typename T>
@@ -104,27 +104,26 @@ public:
     explicit BasicTask(
             std::shared_ptr<T> batch_data) : Task<T>()
     {
-      this->batch_data_ = batch_data;
+      batch_data_ = batch_data;
       // null is allowable as there is a guard above (default action do nothing)
-      this->upload_status_function_ = nullptr;
+      upload_status_function_ = nullptr;
     }
 
     virtual ~BasicTask() = default;
 
-    virtual void onComplete(const UploadStatus &status) override {
+    void OnComplete(const UploadStatus &status) override {
       if (upload_status_function_) {
         upload_status_function_(status, *batch_data_);
       }
     }
 
-    void setOnCompleteFunction(
-            const UploadStatusFunction<UploadStatus, T> upload_status_function)
+    void SetOnCompleteFunction(const UploadStatusFunction<UploadStatus, T> upload_status_function)
     {
       // null is allowable as there is a guard above (default action do nothing)
       upload_status_function_ = upload_status_function;
     }
 
-    T& getBatchData() override {
+    T& GetBatchData() override {
       return *batch_data_;
     }
 
@@ -133,5 +132,5 @@ private:
     UploadStatusFunction<UploadStatus, T> upload_status_function_;
 };
 
-}
-}
+}  // namespace DataFlow
+}  // namespace Aws

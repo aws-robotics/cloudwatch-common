@@ -40,7 +40,7 @@ public:
    */
   MetricFileManager() = default;
 
-  MetricFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
+  explicit MetricFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
     : FileManager(options) {
   }
 
@@ -55,15 +55,15 @@ public:
    * Write data to disk
    * @param data - A reference to a list of metrics to write to disk
    */
-  void write(const MetricDatumCollection &data) override;
+  void Write(const MetricDatumCollection &data) override;
 
   /**
    * Read a batch of data from disk
    * @param batch_size - The number of items to read
    */
-  FileObject<MetricDatumCollection> readBatch(size_t batch_size) override;
+  FileObject<MetricDatumCollection> ReadBatch(size_t batch_size) override;
 };
 
 }  // namespace Utils
-}  // namespace CloudwatchMetrics
+}  // namespace CloudWatchMetrics
 }  // namespace Aws

@@ -40,14 +40,14 @@ class MultiStatusConditionMonitor;
 class StatusMonitor {
 public:
   virtual ~StatusMonitor() = default;
-  void setStatus(const Status &status);
+  void SetStatus(const Status &status);
 
-  inline Status getStatus() const {
+  inline Status GetStatus() const {
     return status_;
   }
 private:
   friend MultiStatusConditionMonitor;
-  inline void setStatusObserver(MultiStatusConditionMonitor *multi_status_cond) {
+  inline void SetStatusObserver(MultiStatusConditionMonitor *multi_status_cond) {
     multi_status_cond_ = multi_status_cond;
   }
   Status status_ = UNAVAILABLE;
@@ -62,13 +62,13 @@ public:
    *
    * @return mask
    */
-  uint64_t getNewMask() {
+  uint64_t GetNewMask() {
     uint64_t current_mask = 0, new_mask;
     size_t shift = 0;
     while (current_mask == 0) {
-      new_mask = (uint64_t) 1 << shift++;
-      current_mask = !(collective_mask_ & new_mask) ? new_mask : 0;
-      if (shift > max_size) {
+      new_mask = static_cast<uint64_t>(1) << shift++;
+      current_mask = (collective_mask_ & new_mask) == 0u ? new_mask : 0;
+      if (shift > kMaxSize) {
         throw "No more masks available";
       }
     }
@@ -81,50 +81,50 @@ public:
    *
    * @param mask to remove
    */
-  void removeMask(uint64_t mask) {
+  void RemoveMask(uint64_t mask) {
     collective_mask_ &= ~mask;
   }
 
   /**
    * @return Get the collective mask.
    */
-  uint64_t getCollectiveMask() const {
+  uint64_t GetCollectiveMask() const {
     return collective_mask_;
   }
 private:
-  static constexpr size_t max_size = sizeof(uint64_t) * 8;
+  static constexpr size_t kMaxSize = sizeof(uint64_t) * 8;
   uint64_t collective_mask_ = 0;
 };
 
 class ThreadMonitor {
 public:
   virtual ~ThreadMonitor() = default;
-  void waitForWork();
-  std::cv_status waitForWork(const std::chrono::microseconds &duration);
-  void notify();
+  void WaitForWork();
+  std::cv_status WaitForWork(const std::chrono::microseconds &duration);
+  void Notify();
 private:
-  virtual bool hasWork() = 0;
+  virtual bool HasWork() = 0;
   std::mutex idle_mutex_;
   std::condition_variable work_condition_;
 };
 
 /**
  * Multi Status Condition Monitor listens to N StatusMonitors and determines whether to trigger wait for work
- * based on the hasWork() function.
+ * based on the HasWork() function.
  */
 class MultiStatusConditionMonitor : public ThreadMonitor {
 public:
   MultiStatusConditionMonitor() {
     mask_ = 0;
   }
-  virtual ~MultiStatusConditionMonitor() = default;
-  void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor);
+  ~MultiStatusConditionMonitor() override = default;
+  void AddStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor);
 protected:
   friend StatusMonitor;
-  virtual void setStatus(const Status &status, StatusMonitor *status_monitor);
-  bool hasWork() override;
+  virtual void SetStatus(const Status &status, StatusMonitor *status_monitor);
+  bool HasWork() override;
   MaskFactory mask_factory_;
-  std::atomic<uint64_t> mask_;
+  std::atomic<uint64_t> mask_{};
   std::unordered_map<StatusMonitor*, uint64_t> status_monitors_;
 };
 

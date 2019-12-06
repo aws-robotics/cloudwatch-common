@@ -54,15 +54,15 @@ public:
       last_publish_duration_.store(std::chrono::milliseconds(0));
     }
 
-    virtual ~Publisher() = default;
+    ~Publisher() override = default;
 
     /**
      * Return the current state of the publisher.
      *
      * @return
      */
-    PublisherState getPublisherState() {
-      return publisher_state_.getValue();
+    PublisherState GetPublisherState() {
+      return publisher_state_.GetValue();
     }
 
     /**
@@ -72,10 +72,10 @@ public:
      * @return the resulting Aws::DataFlow::UploadStatus from the publish attempt. Returns FAIL if not in the started
      * state.
      */
-    virtual Aws::DataFlow::UploadStatus attemptPublish(T &data) override {
+    Aws::DataFlow::UploadStatus AttemptPublish(T &data) override {
 
       // don't attempt to publish if not in the started state
-      if(ServiceState::STARTED != this->getState()) {
+      if(ServiceState::STARTED != this->GetState()) {
         return Aws::DataFlow::UploadStatus::FAIL;
       }
 
@@ -86,16 +86,16 @@ public:
       std::lock_guard<std::mutex> lck (publish_mutex_);
       {
         auto start = std::chrono::high_resolution_clock::now();
-        published_status = publishData(data); // always at least try
+        published_status = PublishData(data); // always at least try
         last_publish_duration_.store(std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::high_resolution_clock::now() - start));
       }
 
       if (Aws::DataFlow::UploadStatus::SUCCESS == published_status) {
         publish_successes_++;
-        publisher_state_.setValue(CONNECTED);
+        publisher_state_.SetValue(CONNECTED);
       } else {
-        publisher_state_.setValue(NOT_CONNECTED);
+        publisher_state_.SetValue(NOT_CONNECTED);
       }
 
       return published_status;
@@ -105,12 +105,12 @@ public:
      * Shutdown the publisher. This waits for attemptPublish to finish before returning.
      * @return the result of shutdown
      */
-    virtual bool shutdown() override {
-      bool b = Service::shutdown();  // set shutdown state to try and fast fail any publish calls
+    bool Shutdown() override {
+      bool b = Service::Shutdown();  // set shutdown state to try and fast fail any publish calls
 
       std::lock_guard<std::mutex> lck (publish_mutex_);
       //acquire the lock to ensure attemptPublish has finished
-      publisher_state_.setValue(UNKNOWN);
+      publisher_state_.SetValue(UNKNOWN);
       return b;
     }
 
@@ -118,16 +118,16 @@ public:
      * Return true if this publisher can send data to CloudWatch, false otherwise.
      * @return
      */
-    bool canPublish() {
-      auto current_state = publisher_state_.getValue();
-      return (current_state == UNKNOWN || current_state == CONNECTED) && ServiceState::STARTED == this->getState();
+    bool CanPublish() {
+      auto current_state = publisher_state_.GetValue();
+      return (current_state == UNKNOWN || current_state == CONNECTED) && ServiceState::STARTED == this->GetState();
     }
 
     /**
      * Return the number of publish successes
      * @return
      */
-    int getPublishSuccesses() {
+    int GetPublishSuccesses() {
       return publish_successes_.load();
     }
 
@@ -135,7 +135,7 @@ public:
      * Return the number of attempts made to publish
      * @return
      */
-    int getPublishAttempts() {
+    int GetPublishAttempts() {
       return publish_attempts_.load();
     }
 
@@ -144,7 +144,7 @@ public:
      *
      * @return std::chrono::milliseconds the last publish attempt duration
      */
-    std::chrono::milliseconds getLastPublishDuration() {
+    std::chrono::milliseconds GetLastPublishDuration() {
       return last_publish_duration_.load();
     }
 
@@ -154,13 +154,13 @@ public:
      * @return the number of successes divided by the number of attempts. If zero attempts have been made
      * then return 0.
      */
-    float getPublishSuccessPercentage() {
+    float GetPublishSuccessPercentage() {
       int attempts = publish_attempts_.load();
       if (attempts == 0) {
         return 0;
       }
       int successes = publish_successes_.load();
-      return (float) successes / (float) attempts * 100.0f;
+      return static_cast<float>(successes) / static_cast<float>(attempts) * 100.0f;
     }
 
     /**
@@ -169,8 +169,8 @@ public:
      * @param listener the PublisherState listener
      * @return true if the listener was added, false otherwise
      */
-    virtual void addPublisherStateListener(const std::function<void(const PublisherState&)> & listener) {
-      publisher_state_.addListener(listener);
+    virtual void AddPublisherStateListener(const std::function<void(const PublisherState&)> & listener) {
+      publisher_state_.AddListener(listener);
     }
 
 protected:
@@ -181,7 +181,7 @@ protected:
      * @param data
      * @return the Aws::DataFlow::UploadStatus resulting from the implemented attempt
      */
-    virtual Aws::DataFlow::UploadStatus publishData(T &data) = 0;
+    virtual Aws::DataFlow::UploadStatus PublishData(T &data) = 0;
 
 private:
     /**
@@ -191,15 +191,15 @@ private:
     /**
      * Number of publish successes
      */
-    std::atomic<int> publish_successes_;
+    std::atomic<int> publish_successes_{};
     /**
      * Number of publish attempts
      */
-    std::atomic<int> publish_attempts_;
+    std::atomic<int> publish_attempts_{};
     /**
      * The amount of time taken for the last publish action
      */
-    std::atomic<std::chrono::milliseconds> last_publish_duration_;
+    std::atomic<std::chrono::milliseconds> last_publish_duration_{};
     /**
      * Mutex used in publish and shutdown
      */

@@ -60,9 +60,9 @@ TEST_F(FileManagerTest, file_manager_write) {
   input_event.SetTimestamp(0);
   input_event.SetMessage("Hello my name is foo");
   log_data.push_back(input_event);
-  file_manager.write(log_data);
+  file_manager.Write(log_data);
   std::string line;
-  file_manager_strategy->read(line);
+  file_manager_strategy->Read(line);
   EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
 }
 

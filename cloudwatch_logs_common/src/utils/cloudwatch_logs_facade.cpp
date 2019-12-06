@@ -39,7 +39,7 @@ CloudWatchLogsFacade::CloudWatchLogsFacade(const Aws::Client::ClientConfiguratio
   this->cw_client_ = std::make_shared<Aws::CloudWatchLogs::CloudWatchLogsClient>(client_config);
 }
 
-CloudWatchLogsFacade::CloudWatchLogsFacade(const std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client)
+CloudWatchLogsFacade::CloudWatchLogsFacade(const std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient>& cw_client)
 {
   this->cw_client_ = cw_client;
 }
@@ -96,12 +96,12 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::SendLogsToClo
   request.SetLogGroupName(log_group.c_str());
   request.SetLogStreamName(log_stream.c_str());
 
-  if (next_token != "") {
+  if (!next_token.empty()) {
     request.SetSequenceToken(next_token);
   }
 
-  for (auto it = logs.begin(); it != logs.end(); ++it) {
-    events.push_back(*it);
+  for (auto & log : logs) {
+    events.push_back(log);
     if (events.size() >= kMaxLogsPerRequest) {
       request.SetLogEvents(events);
       status = SendLogsRequest(request, next_token);
@@ -176,7 +176,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CheckLogGroup
   describe_log_group_request.SetLogGroupNamePrefix(log_group.c_str());
 
   while (CW_LOGS_LOG_GROUP_NOT_FOUND == status) {
-    if (next_token.size() != 0) {
+    if (!next_token.empty()) {
       describe_log_group_request.SetNextToken(next_token);
     }
 
@@ -200,15 +200,14 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CheckLogGroup
     auto & log_group_list = response.GetResult().GetLogGroups();
     next_token = response.GetResult().GetNextToken();
 
-    for (auto it = log_group_list.begin(); it != log_group_list.end(); ++it) {
-      Aws::CloudWatchLogs::Model::LogGroup curr_log_group = *it;
-      if (curr_log_group.GetLogGroupName().c_str() == log_group) {
+    for (auto curr_log_group : log_group_list) {
+      if (curr_log_group.GetLogGroupName().c_str() == log_group) {  // NOLINT(readability-redundant-string-cstr)
         AWS_LOGSTREAM_DEBUG(__func__, "Found Log Group named: " << log_group << ".");
         status = CW_LOGS_SUCCEEDED;
         break;
       }
     }
-    if (CW_LOGS_SUCCEEDED != status && next_token.size() == 0) {
+    if (CW_LOGS_SUCCEEDED != status && next_token.empty()) {
       AWS_LOGSTREAM_INFO(__func__, "Failed to find Log Group named: " << log_group << ".");
       break;
     }
@@ -258,7 +257,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CheckLogStrea
   describe_log_stream_request.SetLogStreamNamePrefix(log_stream.c_str());
 
   while (CW_LOGS_LOG_STREAM_NOT_FOUND == status) {
-    if (next_token.size() != 0) {
+    if (!next_token.empty()) {
       describe_log_stream_request.SetNextToken(next_token);
     }
 
@@ -283,9 +282,8 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CheckLogStrea
     auto & log_stream_list = response.GetResult().GetLogStreams();
     next_token = response.GetResult().GetNextToken();
 
-    for (auto it = log_stream_list.begin(); it != log_stream_list.end(); ++it) {
-      Aws::CloudWatchLogs::Model::LogStream curr_log_stream = *it;
-      if (curr_log_stream.GetLogStreamName().c_str() == log_stream) {
+    for (auto curr_log_stream : log_stream_list) {
+      if (curr_log_stream.GetLogStreamName().c_str() == log_stream) { // NOLINT(readability-redundant-string-cstr)
         AWS_LOGSTREAM_DEBUG(__func__, "Found Log Stream named: " << log_stream << " in Log Group :"
                                                                  << log_group << ".");
         if (nullptr != log_stream_object) {
@@ -295,7 +293,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CheckLogStrea
         break;
       }
     }
-    if (CW_LOGS_SUCCEEDED != status && next_token.size() == 0) {
+    if (CW_LOGS_SUCCEEDED != status && next_token.empty()) {
       AWS_LOGSTREAM_INFO(__func__, "Failed to find Log Stream named: " << log_stream
                                                                        << ".");
       break;

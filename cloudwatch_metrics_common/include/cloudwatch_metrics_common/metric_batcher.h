@@ -41,18 +41,18 @@ public:
     /**
      *  @brief Creates a new MetricBatcher
      *  Creates a new MetricBatcher that will group/buffer metrics. Note: metrics are only automatically published if the
-     *  size is set, otherwise the publishBatchedData is necessary to push data to be published.
+     *  size is set, otherwise the PublishBatchedData is necessary to push data to be published.
      *
      *  @throws invalid argument if publish_trigger_size is strictly greater than max_allowable_batch_size
      *  @param size of the batched data that will trigger a publish
      */
     explicit MetricBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
-                        size_t publish_trigger_size = DataBatcher::kDefaultTriggerSize);
+                            size_t publish_trigger_size = DataBatcher::kDefaultTriggerSize);
 
     /**
      *  @brief Tears down a MetricBatcher object
      */
-    virtual ~MetricBatcher();
+    ~MetricBatcher() override;
 
     /**
      * Queue the batched data to be given to the publisher and sent to CloudWatch. Attempts to write to disk (through
@@ -60,16 +60,16 @@ public:
      *
      * @return true if the batched data could be queued, false otherwise
      */
-    virtual bool publishBatchedData() override;
+    bool PublishBatchedData() override;
     /**
      * Override default behavior to attempt to write to file to disk when emptying the collection.
      */
-    virtual void emptyCollection() override;
+    void EmptyCollection() override;
     /**
      * Start this service
      * @return
      */
-    virtual bool start() override;
+    bool Start() override;
 
     /**
      * Set the log file manager, used for task publishing failures (write to disk if unable to send to CloudWatch).
@@ -77,7 +77,7 @@ public:
      * @throws invalid argument if the input is null
      * @param log_file_manager
      */
-    virtual void setMetricFileManager(std::shared_ptr<Aws::FileManagement::FileManager<MetricDatumCollection>> file_manager);
+    virtual void SetMetricFileManager(std::shared_ptr<Aws::FileManagement::FileManager<MetricDatumCollection>> metric_file_manager);
 
 private:
     std::shared_ptr<Aws::FileManagement::FileManager<MetricDatumCollection>> metric_file_manager_;

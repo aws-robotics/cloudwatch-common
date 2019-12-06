@@ -41,9 +41,9 @@ public:
   }
 
 protected:
-  std::string backup_folder = "token_backups/";
-  std::string kBackupFilename = "token_store.info";
-  TokenStoreOptions options{backup_folder};
+  std::string backup_folder_ = "token_backups/";
+  std::string kBackupFilename_ = "token_store.info";
+  TokenStoreOptions options_{backup_folder};
 };
 
 TEST(token_test, fail_unknown_token) {
@@ -53,8 +53,8 @@ TEST(token_test, fail_unknown_token) {
 
 TEST(token_test, fail_token_twice) {
   TokenStore token_store;
-  FileTokenInfo kTestToken1("fake_file", 0, false);
-  auto token = token_store.createToken(kTestToken1.file_path_, kTestToken1.position_, kTestToken1.eof_);
+  FileTokenInfo k_test_token1("fake_file", 0, false);
+  auto token = token_store.createToken(k_test_token1.file_path_, k_test_token1.position_, k_test_token1.eof_);
   token_store.fail(token);
   EXPECT_THROW(token_store.fail(token), std::runtime_error);
 }
@@ -196,7 +196,7 @@ int main(int argc, char** argv)
       Aws::MakeShared<Aws::Utils::Logging::ConsoleLogSystem>(
           "RunUnitTests", Aws::Utils::Logging::LogLevel::Trace));
   ::testing::InitGoogleMock(&argc, argv);
-  int exitCode = RUN_ALL_TESTS();
+  int exit_code = RUN_ALL_TESTS();
   Aws::Utils::Logging::ShutdownAWSLogging();
-  return exitCode;
+  return exit_code;
 }

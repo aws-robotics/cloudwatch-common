@@ -36,17 +36,17 @@ using namespace Aws::CloudWatchMetrics;
 using namespace Aws::FileManagement;
 
 MetricBatcher::MetricBatcher(size_t max_allowable_batch_size,
-                       size_t publish_trigger_size)
+                             size_t publish_trigger_size)
         : DataBatcher(max_allowable_batch_size, publish_trigger_size) {
 }
 
 MetricBatcher::~MetricBatcher() = default;
 
-bool MetricBatcher::publishBatchedData() {
-  std::lock_guard<std::recursive_mutex> lk(mtx);
+bool MetricBatcher::PublishBatchedData() {
+  std::lock_guard<std::recursive_mutex> lk(mtx_);
 
   // is there anything to send?
-  if (getCurrentBatchSize() == 0) {
+  if (GetCurrentBatchSize() == 0) {
     AWS_LOGSTREAM_DEBUG(__func__, "Nothing batched to publish");
     return false;
   }
@@ -71,7 +71,7 @@ bool MetricBatcher::publishBatchedData() {
           } else if (DataFlow::UploadStatus::SUCCESS != upload_status) {
 
             AWS_LOG_INFO(__func__, "MetricBatcher: Task failed: writing metrics to file");
-            metric_file_manager->write(metrics_to_publish);
+            metric_file_manager->Write(metrics_to_publish);
 
           } else {
             AWS_LOG_DEBUG(__func__, "MetricBatcher: Task metric upload successful");
@@ -81,22 +81,22 @@ bool MetricBatcher::publishBatchedData() {
         }
     };
 
-    metric_task->setOnCompleteFunction(function);
+    metric_task->SetOnCompleteFunction(function);
   }
 
   // dont attempt to queue if not started
-  if(ServiceState::STARTED != this->getState()) {
-    AWS_LOG_WARN(__func__, "current service state is not Started, canceling task: %s", Service::getStatusString().c_str());
-    metric_task->cancel();
+  if(ServiceState::STARTED != this->GetState()) {
+    AWS_LOG_WARN(__func__, "current service state is not Started, canceling task: %s", Service::GetStatusString().c_str());
+    metric_task->Cancel();
     return false;
   }
 
   bool enqueue_success = false;
 
   // try to enqueue
-  if (getSink()) {
+  if (GetSink()) {
 
-    enqueue_success = getSink()->tryEnqueue(metric_task, this->getTryEnqueueDuration());
+    enqueue_success = GetSink()->TryEnqueue(metric_task, this->GetTryEnqueueDuration());
 
     if (!enqueue_success) {
       AWS_LOG_WARN(__func__, "Unable to enqueue data, canceling task");
@@ -107,33 +107,33 @@ bool MetricBatcher::publishBatchedData() {
   }
 
   if (!enqueue_success) {
-    metric_task->cancel();
+    metric_task->Cancel();
   }
-  this->resetBatchedData();
+  this->ResetBatchedData();
   return enqueue_success;
 }
 
-void MetricBatcher::emptyCollection() {
-  std::lock_guard<std::recursive_mutex> lk(mtx);
+void MetricBatcher::EmptyCollection() {
+  std::lock_guard<std::recursive_mutex> lk(mtx_);
 
   if (this->metric_file_manager_) {
     AWS_LOG_INFO(__func__, "Writing data to file");
-    metric_file_manager_->write(*this->batched_data_);
+    metric_file_manager_->Write(*this->batched_data_);
   } else {
     AWS_LOG_WARN(__func__, "Dropping data");
   }
-  this->resetBatchedData();
+  this->ResetBatchedData();
 }
 
 
-bool MetricBatcher::start() {
+bool MetricBatcher::Start() {
   if (metric_file_manager_ == nullptr) {
     AWS_LOGSTREAM_WARN(__func__, "FileManager not found: data will be dropped on failure.");
   }
-  return Service::start();
+  return Service::Start();
 }
 
-void MetricBatcher::setMetricFileManager(std::shared_ptr<Aws::FileManagement::FileManager<MetricDatumCollection>> metric_file_manager)
+void MetricBatcher::SetMetricFileManager(std::shared_ptr<Aws::FileManagement::FileManager<MetricDatumCollection>> metric_file_manager)
 {
   if (nullptr == metric_file_manager) {
     throw std::invalid_argument("input FileManager cannot be null");

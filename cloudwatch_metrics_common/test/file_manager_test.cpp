@@ -57,13 +57,13 @@ TEST_F(FileManagerTest, file_manager_write) {
   std::shared_ptr<StatusMonitor> status_monitor = std::make_shared<StatusMonitor>();
   MetricFileManager file_manager(file_manager_strategy);
   file_manager.setStatusMonitor(status_monitor);
-  file_manager.start();
+  file_manager.Start();
   MetricDatumCollection metric_data;
   Aws::CloudWatch::Model::MetricDatum input_event;
   input_event.AddCounts(2);
   input_event.SetMetricName("MetricName");
   metric_data.push_back(input_event);
-  file_manager.write(metric_data);
+  file_manager.Write(metric_data);
   std::string line;
   auto batch = file_manager.readBatch(1);
   ASSERT_EQ(1u, batch.batch_data.size());

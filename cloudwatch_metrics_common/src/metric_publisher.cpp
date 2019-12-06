@@ -36,25 +36,25 @@ MetricPublisher::MetricPublisher(
 }
 
 MetricPublisher::MetricPublisher(const std::string & metrics_namespace,
-                const std::shared_ptr<Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade> cloudwatch_metrics_facade)
+                const std::shared_ptr<Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade>& cloudwatch_metrics_facade)
 {
   this->metrics_namespace_ = metrics_namespace;
   this->cloudwatch_metrics_facade_ = cloudwatch_metrics_facade;
 }
 
-bool MetricPublisher::start() {
+bool MetricPublisher::Start() {
 
   if (!this->cloudwatch_metrics_facade_) {
     this->cloudwatch_metrics_facade_ = std::make_shared<CloudWatchMetricsFacade>(this->client_config_);
   }
-  return Service::start();
+  return Service::Start();
 }
 
-bool MetricPublisher::shutdown() {
+bool MetricPublisher::Shutdown() {
   return true;
 }
 
-Aws::DataFlow::UploadStatus MetricPublisher::publishData(MetricDatumCollection &data)
+Aws::DataFlow::UploadStatus MetricPublisher::PublishData(MetricDatumCollection &data)
 {
 
   if (data.empty()) {

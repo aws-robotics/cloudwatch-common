@@ -32,6 +32,7 @@
 #include <chrono>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -58,9 +59,9 @@ public:
   LogService(std::shared_ptr<Publisher<LogCollection>> log_publisher,
              std::shared_ptr<DataBatcher<LogType>> log_batcher,
              std::shared_ptr<FileUploadStreamer<LogCollection>> log_file_upload_streamer = nullptr)
-          : CloudWatchService(log_publisher, log_batcher) {
+          : CloudWatchService(std::move(log_publisher), std::move(log_batcher)) {
 
-    this->file_upload_streamer_ = log_file_upload_streamer; // allow null, all this means is failures aren't written to file
+    this->file_upload_streamer_ = std::move(log_file_upload_streamer); // allow null, all this means is failures aren't written to file
   }
 
   /**
@@ -70,7 +71,7 @@ public:
   * @param milliseconds timestamp of the log event
   * @return the AWS SDK log object to  be send to CloudWatch
   */
-  virtual Aws::CloudWatchLogs::Model::InputLogEvent convertInputToBatched(
+  Aws::CloudWatchLogs::Model::InputLogEvent convertInputToBatched(
           const std::string &input,
           const std::chrono::milliseconds &milliseconds) override {
 
@@ -88,13 +89,13 @@ public:
   * @param input string input to be sent as a log
   * @return the AWS SDK log object to  be send to CloudWatch
   */
-  virtual Aws::CloudWatchLogs::Model::InputLogEvent convertInputToBatched(
+  Aws::CloudWatchLogs::Model::InputLogEvent convertInputToBatched(
           const std::string &input) override {
 
     Aws::CloudWatchLogs::Model::InputLogEvent log_event;
 
     log_event.SetMessage(input.c_str());
-    log_event.SetTimestamp(this->getCurrentTimestamp().count());
+    log_event.SetTimestamp(this->GetCurrentTimestamp().count());
 
     return log_event;
   }
@@ -102,6 +103,6 @@ public:
 };
 
 
-}  // namespace CloudWatchlogs
-}  // namespace AWS
+}  // namespace CloudWatchLogs
+}  // namespace Aws
 

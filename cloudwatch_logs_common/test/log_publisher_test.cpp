@@ -23,23 +23,23 @@ using namespace Aws::CloudWatchLogs;
 
 #define _unused(x) ((void)(x))
 
-constexpr int WAIT_TIME =
+constexpr int kWaitTime =
   2000;  // the amount of time (ms) to wait for publisher thread to do its work
 
 class MockCloudWatchFacade : public Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade
 {
 public:
-  uint32_t send_logs_call_count;
+  uint32_t send_logs_call_count{};
   std::string last_log_group;
   std::string last_log_stream;
   std::list<Aws::CloudWatchLogs::Model::InputLogEvent> last_logs;
   Aws::String next_token;
-  bool fail_cw_log_group;
-  bool fail_cw_log_stream;
-  bool fail_cw_create_log_group;
-  bool fail_cw_create_log_stream;
-  bool fail_cw_init_token;
-  bool fail_cw_send_logs;
+  bool fail_cw_log_group{};
+  bool fail_cw_log_stream{};
+  bool fail_cw_create_log_group{};
+  bool fail_cw_create_log_stream{};
+  bool fail_cw_init_token{};
+  bool fail_cw_send_logs{};
   void Reset()
   {
     this->last_log_group = "";
@@ -138,7 +138,7 @@ protected:
   void StartPublisher()
   {
     EXPECT_EQ(ServiceState::CREATED, publisher_->getState());
-    EXPECT_EQ(true, publisher_->start());
+    EXPECT_EQ(true, publisher_->Start());
     EXPECT_EQ(ServiceState::STARTED, publisher_->getState());
   }
 
@@ -157,7 +157,7 @@ protected:
 
   void TearDown() override
   {
-    publisher_->shutdown();
+    publisher_->Shutdown();
   }
 };
 
@@ -239,6 +239,6 @@ TEST_F(TestLogPublisherFixture, TestLogPublisher_FailSendLogs)
 TEST_F(TestLogPublisherFixture, TestLogPublisher_FailNotStarted)
 {
   EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, publisher_->attemptPublish(logs_list_));
-  EXPECT_TRUE(publisher_->shutdown());
+  EXPECT_TRUE(publisher_->Shutdown());
   EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, publisher_->attemptPublish(logs_list_));
 }

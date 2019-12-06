@@ -28,7 +28,7 @@ namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
-FileObject<LogCollection> LogFileManager::readBatch(
+FileObject<LogCollection> LogFileManager::ReadBatch(
   size_t batch_size)
 {
   /* We must sort the log data chronologically because it is not guaranteed
@@ -43,11 +43,11 @@ FileObject<LogCollection> LogFileManager::readBatch(
   size_t actual_batch_size = 0;
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line;
-    if (!file_manager_strategy_->isDataAvailable()) {
+    if (!file_manager_strategy_->IsDataAvailable()) {
       break;
     }
-    data_token = read(line);
-    Aws::String aws_line(line.c_str());
+    data_token = Read(line);
+    Aws::String aws_line(line.c_str()); // NOLINT(readability-redundant-string-cstr)
     Aws::Utils::Json::JsonValue value(aws_line);
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
     actual_batch_size++;
@@ -62,19 +62,19 @@ FileObject<LogCollection> LogFileManager::readBatch(
   return file_object;
 }
 
-void LogFileManager::write(const LogCollection & data) {
+void LogFileManager::Write(const LogCollection & data) {
   for (const Model::InputLogEvent &log: data) {
     auto aws_str = log.Jsonize().View().WriteCompact();
-    std::string str(aws_str.c_str());
-    file_manager_strategy_->write(str);
+    std::string str(aws_str.c_str()); // NOLINT(readability-redundant-string-cstr)
+    file_manager_strategy_->Write(str);
   }
   if (FileManager::file_status_monitor_) {
     AWS_LOG_INFO(__func__,
                  "Set file status available");
-    FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
+    FileManager::file_status_monitor_->SetStatus(Aws::DataFlow::Status::AVAILABLE);
   }
 }
 
 }  // namespace Utils
-}  // namespace CloudwatchLogs
+}  // namespace CloudWatchLogs
 }  // namespace Aws

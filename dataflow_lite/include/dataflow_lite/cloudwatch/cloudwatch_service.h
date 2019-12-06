@@ -78,18 +78,18 @@ CloudWatchService(std::shared_ptr<Publisher<std::list<T>>> publisher,
  *
  * @return true if everything started correctly
  */
-virtual bool start() override {
+virtual bool Start() override {
   bool started = true;
 
-  started &= publisher_->start();
-  started &= batcher_->start();
+  started &= publisher_->Start();
+  started &= batcher_->Start();
 
   if (file_upload_streamer_) {
-    started &= file_upload_streamer_->start();
+    started &= file_upload_streamer_->Start();
   }
 
   //start the thread to dequeue
-  started &= RunnableService::start();
+  started &= RunnableService::Start();
 
   return started;
 }
@@ -100,22 +100,22 @@ virtual bool start() override {
  *
  * @return true if everything shutdown correctly
  */
-virtual inline bool shutdown() {
+virtual inline bool Shutdown() {
 
   //  stop the work thread immediately, don't hand any more tasks to the publisher
-  bool is_shutdown = RunnableService::shutdown();
+  bool is_shutdown = RunnableService::Shutdown();
 
-  is_shutdown &= publisher_->shutdown();
-  is_shutdown &= batcher_->shutdown();
+  is_shutdown &= publisher_->Shutdown();
+  is_shutdown &= batcher_->Shutdown();
 
   if (file_upload_streamer_) {
-    is_shutdown &= file_upload_streamer_->shutdown();
+    is_shutdown &= file_upload_streamer_->Shutdown();
     // wait for file_upload_streamer_ (RunnableService) shutdown to complete
-    file_upload_streamer_->join();
+    file_upload_streamer_->Join();
   }
 
   // wait for RunnableService shutdown to complete
-  this->join();
+  this->Join();
 
   return is_shutdown;
 }
@@ -126,10 +126,10 @@ virtual inline bool shutdown() {
  * @param data_to_batch
  * @return true of the data was successfully batched, false otherwise
  */
-virtual inline bool batchData(const D &data_to_batch) {
+virtual inline bool BatchData(const D &data_to_batch) {
 
   T t = convertInputToBatched(data_to_batch);
-  return batcher_->batchData(t);
+  return batcher_->BatchData(t);
 }
 
 /**
@@ -139,11 +139,11 @@ virtual inline bool batchData(const D &data_to_batch) {
  * @param milliseconds timestamp of the data
  * @return true of the data was successfully batched, false otherwise
  */
-virtual inline bool batchData(const D &data_to_batch, const std::chrono::milliseconds &milliseconds) {
+virtual inline bool BatchData(const D &data_to_batch, const std::chrono::milliseconds &milliseconds) {
 
   // convert
   T t = convertInputToBatched(data_to_batch, milliseconds);
-  return batcher_->batchData(t);
+  return batcher_->BatchData(t);
 }
 
 /**
@@ -152,9 +152,9 @@ virtual inline bool batchData(const D &data_to_batch, const std::chrono::millise
  * @param data_to_batch
  *
  */
-virtual inline bool publishBatchedData() {
+virtual inline bool PublishBatchedData() {
   if (batcher_) {
-    return batcher_->publishBatchedData();
+    return batcher_->PublishBatchedData();
   }
   return false;
 }
@@ -164,7 +164,7 @@ virtual inline bool publishBatchedData() {
  *
  * @return std::chrono::milliseconds the amount of time to wait for tryDequeue
  */
-virtual inline std::chrono::milliseconds getDequeueDuration() {
+virtual inline std::chrono::milliseconds GetDequeueDuration() {
   return this->dequeue_duration_;
 }
 
@@ -182,7 +182,7 @@ virtual inline bool setDequeueDuration(std::chrono::milliseconds new_value) {
  *
  * @return the number of items dequeued and attempted to publish
  */
-int getNumberDequeued() {
+int GetNumberDequeued() {
   return this->number_dequeued_.load();
 }
 
@@ -191,8 +191,8 @@ int getNumberDequeued() {
  *
  * @return true if a connection to CloudWatch has been made, false if offline.
  */
-virtual bool isConnected() {
-  return this->publisher_->getPublisherState() == PublisherState::CONNECTED;
+virtual bool IsConnected() {
+  return this->publisher_->GetPublisherState() == PublisherState::CONNECTED;
 }
 
 
@@ -201,7 +201,7 @@ virtual bool isConnected() {
  *
  * @return current timestamp in std::chrono::milliseconds
  */
-virtual std::chrono::milliseconds getCurrentTimestamp() {
+virtual std::chrono::milliseconds GetCurrentTimestamp() {
   return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 }
 
@@ -214,11 +214,11 @@ virtual T convertInputToBatched(const D &input) = 0;
 /**
  * Main workhorse thread that dequeues from the source and calls Task run.
  */
-void work() {
+void Work() {
 
   TaskPtr<std::list<T>> task_to_publish;
-  bool is_dequeued = Aws::DataFlow::InputStage<TaskPtr<std::list<T>>>::getSource()
-          ->dequeue(task_to_publish, dequeue_duration_);
+  bool is_dequeued = Aws::DataFlow::InputStage<TaskPtr<std::list<T>>>::GetSource()
+          ->Dequeue(task_to_publish, dequeue_duration_);
 
   if (is_dequeued) {
 
@@ -226,12 +226,12 @@ void work() {
       this->number_dequeued_++;
       AWS_LOGSTREAM_DEBUG(__func__, "Number of tasks dequeued = " << this->number_dequeued_++);
 
-      if (Service::getState() == ServiceState::STARTED) {
+      if (Service::GetState() == ServiceState::STARTED) {
         // publish mechanism via the TaskFactory
-        task_to_publish->run(publisher_);
+        task_to_publish->Run(publisher_);
       } else {
         // unable to publish, fast fail and cancel the current task
-        task_to_publish->cancel();
+        task_to_publish->Cancel();
       }
     }
   }
@@ -255,4 +255,3 @@ std::atomic<int> number_dequeued_;
 
 }  // namespace Cloudwatch
 }  // namespace AWS
-

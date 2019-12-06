@@ -46,7 +46,7 @@ enum LogPublisherRunState {
   LOG_PUBLISHER_ATTEMPT_SEND_LOGS,
 };
 
-const static Aws::String UNINITIALIZED_TOKEN = "_NOT_SET_";
+const static Aws::String kUninitializedToken = "_NOT_SET_";
 
 /**
  * Wrapping class around the CloudWatch Logs API.
@@ -73,22 +73,22 @@ public:
    * CloudWatch.
    */
   LogPublisher(const std::string & log_group, const std::string & log_stream,
-               std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cw_client);
+               std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cloudwatch_facade);
 
   /**
    *  @brief Tears down the LogPublisher object
    */
-  virtual ~LogPublisher();
+  ~LogPublisher() override;
 
-  virtual bool shutdown() override;
+  bool Shutdown() override;
 
   /**
    * Create the cloudwatch facade
    * @return
    */
-  virtual bool start() override;
+  bool Start() override;
 
-  LogPublisherRunState getRunState();
+  LogPublisherRunState GetRunState();
 
 private:
 
@@ -98,18 +98,18 @@ private:
    * @param error
    * @return true if connected to the internet, false otherwise
    */
-  bool checkIfConnected(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors error);
+  bool CheckIfConnected(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors error);
 
   /**
    * Reset the current init token to UNINITIALIZED_TOKEN
    */
-  void resetInitToken();
+  void ResetInitToken();
 
   //overall config
-  bool configure();
+  bool Configure();
 
   //main publish mechanism
-  Aws::DataFlow::UploadStatus publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) override;
+  Aws::DataFlow::UploadStatus PublishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> & data) override;
 
   bool CreateGroup();
   bool CreateStream();
@@ -125,7 +125,7 @@ private:
   Aws::Client::ClientConfiguration client_config_;
 
   ObservableObject<LogPublisherRunState> run_state_;
-  Aws::String next_token;
+  Aws::String next_token_;
   mutable std::recursive_mutex mtx_;
 };
 

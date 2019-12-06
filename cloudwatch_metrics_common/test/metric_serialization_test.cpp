@@ -15,7 +15,7 @@ using namespace Aws::CloudWatch::Model;
 class TestMetricSerialization : public ::testing::Test
 {
 protected:
-  MetricDatum metric_datum;
+  MetricDatum metric_datum_;
 
   void SetUp() override {
     metric_datum = MetricDatum();
@@ -32,8 +32,8 @@ TEST_F(TestMetricSerialization, deserialize_returns_metric_datum) {
   };
 
   MetricDatum result;
-  EXPECT_NO_THROW(result = deserializeMetricDatum(mock_serialized_metric_datum));
-  Aws::Utils::DateTime ts((int64_t)5);
+  EXPECT_NO_THROW(result = DeserializeMetricDatum(mock_serialized_metric_datum));
+  Aws::Utils::DateTime ts(static_cast<int64_t>(5));
   EXPECT_EQ(result.GetTimestamp(), ts);
   EXPECT_EQ(result.GetMetricName(), "awesomeness");
   auto expected_counts = Aws::Vector<double>();
@@ -44,15 +44,15 @@ TEST_F(TestMetricSerialization, deserialize_returns_metric_datum) {
 TEST_F(TestMetricSerialization, deserialize_works_with_minimum_data) {
   const Aws::String min_json = R"({"metric_name": "minimum", "timestamp": 10})";
   MetricDatum result;
-  EXPECT_NO_THROW(result = deserializeMetricDatum(min_json));
+  EXPECT_NO_THROW(result = DeserializeMetricDatum(min_json));
   EXPECT_EQ(result.GetMetricName(), "minimum");
 }
 
 TEST_F(TestMetricSerialization, deserialize_fail_throws_runtime_exception) {
   const Aws::String bad_json = "not json";
-  EXPECT_THROW(deserializeMetricDatum(bad_json), std::invalid_argument);
+  EXPECT_THROW(DeserializeMetricDatum(bad_json), std::invalid_argument);
   const Aws::String json_missing_values = "{}";
-  EXPECT_THROW(deserializeMetricDatum(json_missing_values), std::invalid_argument);
+  EXPECT_THROW(DeserializeMetricDatum(json_missing_values), std::invalid_argument);
 }
 
 TEST_F(TestMetricSerialization, serialize_returns_valid_string) {
@@ -69,9 +69,9 @@ TEST_F(TestMetricSerialization, serialize_returns_valid_string) {
   metric_datum.SetUnit(metric_unit);
   metric_datum.SetValue(value);
   Aws::String serialized_metric_datum;
-  EXPECT_NO_THROW(serialized_metric_datum = serializeMetricDatum(metric_datum));
+  EXPECT_NO_THROW(serialized_metric_datum = SerializeMetricDatum(metric_datum));
   MetricDatum result;
-  EXPECT_NO_THROW(result = deserializeMetricDatum(serialized_metric_datum));
+  EXPECT_NO_THROW(result = DeserializeMetricDatum(serialized_metric_datum));
   EXPECT_EQ(result.GetTimestamp().Millis(), ts.Millis());
   EXPECT_EQ(result.GetMetricName(), metric_name);
   EXPECT_EQ(result.GetStorageResolution(), storage_resolution);

@@ -23,15 +23,15 @@ namespace DataFlow {
 template<typename T>
 class Sink {
 public:
-  virtual bool enqueue(T&& value) = 0;
-  virtual bool enqueue(T& value) = 0;
-  virtual bool tryEnqueue(
+  virtual bool Enqueue(T&& value) = 0;
+  virtual bool Enqueue(T& value) = 0;
+  virtual bool TryEnqueue(
     T& value,
     const std::chrono::microseconds &duration) = 0;
-  virtual bool tryEnqueue(
+  virtual bool TryEnqueue(
     T&& value,
     const std::chrono::microseconds &duration) = 0;
-  virtual void clear() = 0;
+  virtual void Clear() = 0;
 };
 
 }  // namespace DataFlow

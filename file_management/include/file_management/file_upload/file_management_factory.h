@@ -37,7 +37,7 @@ template<
   typename T,
   typename O,
   class = typename std::enable_if<std::is_base_of<DataReader<T>, O>::value, O>::type>
-std::shared_ptr<FileUploadStreamer<T>> createFileUploadStreamer(
+std::shared_ptr<FileUploadStreamer<T>> CreateFileUploadStreamer(
   std::shared_ptr<O> file_manager,
   FileUploadStreamerOptions file_manager_options)
   {

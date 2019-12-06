@@ -35,9 +35,9 @@ class IObservedQueue:
   public Source<T>
 {
 public:
-  virtual bool empty() const = 0;
-  virtual size_t size() const = 0;
-  virtual void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
+  virtual bool Empty() const = 0;
+  virtual size_t Size() const = 0;
+  virtual void SetStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
 };
 
 /**
@@ -53,14 +53,14 @@ class ObservedQueue :
   public IObservedQueue<T, Allocator> {
 public:
 
-  virtual ~ObservedQueue() = default;
+  ~ObservedQueue() override = default;
 
   /**
    * Set the observer for the queue.
    *
    * @param status_monitor
    */
-  inline void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
+  inline void SetStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
     status_monitor_ = status_monitor;
   }
 
@@ -69,9 +69,9 @@ public:
    *
    * @param value to enqueue
    */
-  inline bool enqueue(T&& value) override {
+  inline bool Enqueue(T&& value) override {
     dequeue_.push_back(value);
-    notifyMonitor(AVAILABLE);
+    NotifyMonitor(AVAILABLE);
     return true;
   }
 
@@ -80,24 +80,24 @@ public:
    *
    * @param value to enqueue
    */
-  inline bool enqueue(T& value) override {
+  inline bool Enqueue(T& value) override {
     dequeue_.push_back(value);
-    notifyMonitor(AVAILABLE);
+    NotifyMonitor(AVAILABLE);
     return true;
   }
 
-  inline bool tryEnqueue(
+  inline bool TryEnqueue(
       T& value,
-      const std::chrono::microseconds&) override
+      const std::chrono::microseconds& /*unused*/) override
   {
-    return enqueue(value);
+    return Enqueue(value);
   }
 
-  inline bool tryEnqueue(
+  inline bool TryEnqueue(
       T&& value,
-      const std::chrono::microseconds&) override
+      const std::chrono::microseconds& /*unused*/) override
   {
-    return enqueue(value);
+    return Enqueue(value);
   }
 
   /**
@@ -105,9 +105,9 @@ public:
    *
    * @return the front of the dequeue
    */
-  inline bool dequeue(
+  inline bool Dequeue(
     T& data,
-    const std::chrono::microseconds&) override
+    const std::chrono::microseconds& /*unused*/) override
   {
     bool is_data = false;
     if (!dequeue_.empty()) {
@@ -115,7 +115,7 @@ public:
       dequeue_.pop_front();
       is_data = true;
       if (dequeue_.empty()) {
-        notifyMonitor(UNAVAILABLE);
+        NotifyMonitor(UNAVAILABLE);
       }
     }
     return is_data;
@@ -124,21 +124,21 @@ public:
   /**
    * @return true if the queue is empty
    */
-  inline bool empty() const override {
+  inline bool Empty() const override {
     return dequeue_.empty();
   }
 
   /**
    * @return the size of the queue
    */
-  inline size_t size() const override {
+  inline size_t Size() const override {
     return dequeue_.size();
   }
 
   /**
    * Clear the dequeue
    */
-  void clear() {
+  void Clear() override {
     dequeue_.clear();
   }
 
@@ -149,9 +149,9 @@ protected:
    *
    * @param status the status to notify the monitor of.
    */
-  void notifyMonitor(const Status &status) {
+  void NotifyMonitor(const Status &status) {
     if (status_monitor_) {
-      status_monitor_->setStatus(status);
+      status_monitor_->SetStatus(status);
     }
   }
 
@@ -178,16 +178,16 @@ template<
     class Allocator = std::allocator<T>>
 class ObservedSynchronizedQueue : public ObservedQueue<T, Allocator> {
 public:
-  virtual ~ObservedSynchronizedQueue() = default;
+  ~ObservedSynchronizedQueue() override = default;
 
   /**
    * Enqueue data and notify the observer of data available.
    *
    * @param value to enqueue
    */
-  inline bool enqueue(T&& value) override {
+  inline bool Enqueue(T&& value) override {
     std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
-    return OQ::enqueue(std::move(value));
+    return OQ::Enqueue(std::move(value));
   }
 
   /**
@@ -195,31 +195,31 @@ public:
    *
    * @param value to enqueue
    */
-  inline bool enqueue(T& value) override {
+  inline bool Enqueue(T& value) override {
     std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
-    return OQ::enqueue(value);
+    return OQ::Enqueue(value);
   }
 
-  inline bool tryEnqueue(
+  inline bool TryEnqueue(
       T& value,
       const std::chrono::microseconds &duration) override
   {
     std::unique_lock<DequeueMutex> lock(dequeue_mutex_, std::defer_lock);
     bool result = lock.try_lock_for(duration);
     if (result) {
-      OQ::enqueue(value);
+      OQ::Enqueue(value);
     }
     return result;
   }
 
-  inline bool tryEnqueue(
+  inline bool TryEnqueue(
       T&& value,
       const std::chrono::microseconds &duration) override
   {
     std::unique_lock<DequeueMutex> lock(dequeue_mutex_, std::defer_lock);
     bool result = lock.try_lock_for(duration);
     if (result) {
-      OQ::enqueue(std::move(value));
+      OQ::Enqueue(std::move(value));
     }
     return result;
   }
@@ -229,14 +229,14 @@ public:
    *
    * @return the front of the dequeue
    */
-  inline bool dequeue(
+  inline bool Dequeue(
       T& data,
       const std::chrono::microseconds &duration) override
   {
     std::unique_lock<DequeueMutex> lock(dequeue_mutex_, std::defer_lock);
     bool result = lock.try_lock_for(duration);
     if (result) {
-      result = OQ::dequeue(data, duration);
+      result = OQ::Dequeue(data, duration);
     }
     return result;
   }
@@ -244,25 +244,25 @@ public:
   /**
    * @return true if the queue is empty
    */
-  inline bool empty() const override {
+  inline bool Empty() const override {
     std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
-    return OQ::empty();
+    return OQ::Empty();
   }
 
   /**
    * @return the size of the queue
    */
-  inline size_t size() const override {
+  inline size_t Size() const override {
     std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
-    return OQ::size();
+    return OQ::Size();
   }
 
   /**
    * Clear the dequeue
    */
-  void clear() {
+  void Clear() override {
     std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
-    OQ::clear();
+    OQ::Clear();
   }
 
 private:
@@ -296,28 +296,28 @@ public:
     max_queue_size_ = max_queue_size;
   }
 
-  virtual ~ObservedBlockingQueue() = default;
+  ~ObservedBlockingQueue() override = default;
   /**
    * Enqueue data and notify the observer of data available.
    *
    * @param value to enqueue
    */
-  inline bool enqueue(T&& value) override
+  inline bool Enqueue(T&& value) override
   {
     bool is_queued = false;
     std::unique_lock<std::mutex> lk(dequeue_mutex_);
-    if (OQ::size() <= max_queue_size_) {
-      OQ::enqueue(value);
+    if (OQ::Size() <= max_queue_size_) {
+      OQ::Enqueue(value);
       is_queued = true;
     }
     return is_queued;
   }
 
-  inline bool enqueue(T& value) override {
+  inline bool Enqueue(T& value) override {
     bool is_queued = false;
     std::unique_lock<std::mutex> lk(dequeue_mutex_);
-    if (OQ::size() <= max_queue_size_) {
-      OQ::enqueue(value);
+    if (OQ::Size() <= max_queue_size_) {
+      OQ::Enqueue(value);
       is_queued = true;
     }
     return is_queued;
@@ -330,24 +330,24 @@ public:
    * @param duration
    * @return
    */
-  inline bool tryEnqueue(
+  inline bool TryEnqueue(
     T& value,
     const std::chrono::microseconds &duration) override
   {
     std::cv_status (std::condition_variable::*wf)(std::unique_lock<std::mutex>&, const std::chrono::microseconds&);
     wf = &std::condition_variable::wait_for;
-    return enqueueOnCondition(
+    return EnqueueOnCondition(
       value,
       std::bind(wf, &condition_variable_, std::placeholders::_1, duration));
   }
 
-  inline bool tryEnqueue(
+  inline bool TryEnqueue(
       T&& value,
       const std::chrono::microseconds &duration) override
   {
     std::cv_status (std::condition_variable::*wf)(std::unique_lock<std::mutex>&, const std::chrono::microseconds&);
     wf = &std::condition_variable::wait_for;
-    return enqueueOnCondition(
+    return EnqueueOnCondition(
       value,
       std::bind(wf, &condition_variable_, std::placeholders::_1, duration));
   }
@@ -357,8 +357,8 @@ public:
    *
    * @return the front of the dequeue
    */
-  inline bool dequeue(T& data, const std::chrono::microseconds &duration) override {
-    auto is_retrieved = OQ::dequeue(data, duration);
+  inline bool Dequeue(T& data, const std::chrono::microseconds &duration) override {
+    auto is_retrieved = OQ::Dequeue(data, duration);
     if (is_retrieved) {
       std::unique_lock<std::mutex> lck(dequeue_mutex_);
       condition_variable_.notify_one();
@@ -369,25 +369,25 @@ public:
   /**
    * @return true if the queue is empty
    */
-  inline bool empty() const override {
+  inline bool Empty() const override {
     std::lock_guard<std::mutex> lock(dequeue_mutex_);
-    return OQ::empty();
+    return OQ::Empty();
   }
 
   /**
    * @return the size of the queue
    */
-  inline size_t size() const override {
+  inline size_t Size() const override {
     std::lock_guard<std::mutex> lock(dequeue_mutex_);
-    return OQ::size();
+    return OQ::Size();
   }
 
   /**
    * Clear the dequeue
    */
-  void clear() {
+  void Clear() override {
     std::lock_guard<std::mutex> lock(dequeue_mutex_);
-    OQ::clear();
+    OQ::Clear();
   }
 
 private:
@@ -401,7 +401,7 @@ private:
    * @param lock
    * @return std::cv_status::no_timeout
    */
-  static std::cv_status wait(
+  static std::cv_status Wait(
     std::condition_variable &condition_variable,
     std::unique_lock<std::mutex> &lock)
   {
@@ -416,16 +416,16 @@ private:
    * @param wait_func to wait for availability
    * @return true if the value was enqueued
    */
-  inline bool enqueueOnCondition(T& value,
+  inline bool EnqueueOnCondition(T& value,
     const WaitFunc &wait_func)
   {
     std::unique_lock<std::mutex> lk(dequeue_mutex_);
     bool can_enqueue = true;
-    if (OQ::size() >= max_queue_size_) {
+    if (OQ::Size() >= max_queue_size_) {
       can_enqueue = wait_func(lk) == std::cv_status::no_timeout;
     }
     if (can_enqueue) {
-      OQ::enqueue(value);
+      OQ::Enqueue(value);
     }
     return can_enqueue;
   }

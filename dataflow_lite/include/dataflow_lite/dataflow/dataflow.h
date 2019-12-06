@@ -35,7 +35,7 @@ inline operator >> (
   OutputStage<T> &output_stage,
   std::shared_ptr<O> sink)
 {
-  output_stage.setSink(sink);
+  output_stage.SetSink(sink);
   return sink;
 }
 
@@ -48,7 +48,7 @@ inline operator >> (
   PriorityOptions> observed_queue,
   std::shared_ptr<O> sink)
 {
-  sink->addSource(std::get<0>(observed_queue), std::get<1>(observed_queue));
+  sink->AddSource(std::get<0>(observed_queue), std::get<1>(observed_queue));
   return sink;
 }
 

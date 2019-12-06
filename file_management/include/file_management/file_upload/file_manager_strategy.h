@@ -25,6 +25,7 @@
 #include <random>
 #include <mutex>
 #include <experimental/filesystem>
+#include <utility>
 #include <dataflow_lite/utils/service.h>
 #include <file_management/file_manager_options.h>
 #include <aws/core/utils/json/JsonSerializer.h>
@@ -49,7 +50,7 @@ static constexpr const char* kFilePathKey = "file_path";
  * value of the $HOME environment variable. If $HOME is not set it attempts 
  * to use $ROS_HOME. If niether is set then it throws a runtime exception.
  */
-void sanitizePath(std::string & path);
+void SanitizePath(std::string & path);
 
 /**
  * Stores file token information for the purpose of tracking read locations.
@@ -59,6 +60,7 @@ public:
 
   FileTokenInfo() = default;
 
+  // NOLINTNEXTLINE(modernize-pass-by-value)
   explicit FileTokenInfo(const std::string &file_path, const long position, const bool eof) :
   file_path_{file_path},
   position_(position),
@@ -75,34 +77,28 @@ public:
 
   };
 
-  FileTokenInfo(const FileTokenInfo &info) :
-      file_path_{info.file_path_},
-      position_(info.position_),
-      eof_(info.eof_)
-  {
-
-  };
+  FileTokenInfo(const FileTokenInfo &info) = default;
 
   /**
    * Serializes a tokens information into a JSON string
    * @return A JSON representation of the token
    */
-  std::string serialize() const {
+  std::string Serialize() const {
     Aws::Utils::Json::JsonValue json_value;
-    const Aws::String file_path(file_path_.c_str());
+    const Aws::String file_path(file_path_.c_str());  // NOLINT(readability-redundant-string-cstr)
     json_value
         .WithInt64(kPositionKey, position_)
         .WithBool(kEofKey, eof_)
         .WithString(kFilePathKey, file_path);
-    return std::string(json_value.View().WriteCompact().c_str());
+    return std::string(json_value.View().WriteCompact().c_str()); // NOLINT(readability-redundant-string-cstr)
   }
 
   /** 
    * Takes a Token JSON string and sets this tokens
    * values based on that. 
    */
-  void deserialize(const std::string token_info_json) {
-    const Aws::String aws_str(token_info_json.c_str());
+  void Deserialize(const std::string& token_info_json) {
+    const Aws::String aws_str(token_info_json.c_str()); // NOLINT(readability-redundant-string-cstr)
     const Aws::Utils::Json::JsonValue json_value(aws_str);
     if (!json_value.WasParseSuccessful()) {
       throw std::runtime_error("Unable to parse JSON");
@@ -110,7 +106,7 @@ public:
     auto view = json_value.View();
     position_ = view.GetInt64(kPositionKey);
     eof_ = view.GetBool(kEofKey);
-    file_path_ = view.GetString(kFilePathKey).c_str();
+    file_path_ = view.GetString(kFilePathKey).c_str();  // NOLINT(readability-redundant-string-cstr)
   }
 
   /**
@@ -126,7 +122,7 @@ public:
   /**
    * Set to true if this is the last token for the file
    */
-  bool eof_;
+  bool eof_{};
 };
 
 inline bool operator==(const FileTokenInfo& lhs, const FileTokenInfo& rhs){
@@ -138,13 +134,13 @@ inline bool operator!=(const FileTokenInfo& lhs, const FileTokenInfo& rhs){ retu
 class DataManagerStrategy : public Service {
 public:
   DataManagerStrategy() = default;
-  virtual ~DataManagerStrategy() = default;
+  ~DataManagerStrategy() override = default;
 
-  virtual bool isDataAvailable() = 0;
+  virtual bool IsDataAvailable() = 0;
 
-  virtual DataToken read(std::string &data) = 0;
+  virtual DataToken Read(std::string &data) = 0;
 
-  virtual void write(const std::string &data) = 0;
+  virtual void Write(const std::string &data) = 0;
 
   /**
    * Mark a token as 'done' so the DataManager knows the piece of
@@ -152,7 +148,7 @@ public:
    * @param token
    * @throws std::runtime_error for token not found
    */
-  virtual void resolve(const DataToken &token, bool is_success) = 0;
+  virtual void Resolve(const DataToken &token, bool is_success) = 0;
 };
 
 /**
@@ -163,20 +159,20 @@ public:
 
   TokenStore() = default;
 
-  explicit TokenStore(const TokenStoreOptions &options);
+  explicit TokenStore(TokenStoreOptions options);
 
   /**
    * Checks if a token is availa for a specific file
    * @param file_name to lookup
    * @return true if a staged token is available to read for that file
    */
-  bool isTokenAvailable(const std::string &file_name) const;
+  bool IsTokenAvailable(const std::string &file_name) const;
 
   /**
    * @param file_name to lookup
    * @return the file token for that file
    */
-  FileTokenInfo popAvailableToken(const std::string &file_name);
+  FileTokenInfo PopAvailableToken(const std::string &file_name);
 
   /**
    * Create a token with the file name, stream position, and whether or not this is the last token in the file.
@@ -186,7 +182,7 @@ public:
    * @param is_eof
    * @return
    */
-  DataToken createToken(const std::string &file_name, const long & streampos, bool is_eof);
+  DataToken CreateToken(const std::string &file_name, const long & streampos, bool is_eof);
 
   /**
    * Mark a token as failed so the FileManagerStrategy knows to keep the 
@@ -196,7 +192,7 @@ public:
    * @return token info that was failed
    * @throws std::runtime_error if token not found
    */
-  FileTokenInfo fail(const DataToken &token);
+  FileTokenInfo Fail(const DataToken &token);
 
   /**
    * Resolve a token, marking it as complete so the TokenStore can forget 
@@ -205,29 +201,29 @@ public:
    * @return token info which was resolved
    * @throws std::runtime_error if token not found
    */
-  FileTokenInfo resolve(const DataToken &token);
+  FileTokenInfo Resolve(const DataToken &token);
 
   /**
    * Backup the first unacked token and all failed tokens into a vector.
    * @return vector to tokens
    */
-  std::vector<FileTokenInfo> backup();
+  std::vector<FileTokenInfo> Backup();
 
   /**
    * Backup the token store to a file on disk
    */
-  void backupToDisk();
+  void BackupToDisk();
 
   /**
    * Restore tokens from a vector
    * @param std::vector<FileTokenInfo>
    */
-  void restore(const std::vector<FileTokenInfo> &file_tokens);
+  void Restore(const std::vector<FileTokenInfo> &file_tokens);
 
   /**
    * Restore the token store from a file saved to disk
    */
-  void restoreFromDisk();
+  void RestoreFromDisk();
 
 
 
@@ -236,13 +232,13 @@ private:
    * Ensure that all options are valid. Also sanitizes options 
    * that are slightly incorrect. 
    */
-  void validateOptions();
+  void ValidateOptions();
   
   /** 
    * Creates the directory where the token store is backed up 
    * to upon shutdown. 
    */
-  void initializeBackupDirectory();
+  void InitializeBackupDirectory();
 
   /**
    * A map of tokens to File Path and Position that the token corrosponds to
@@ -274,7 +270,7 @@ private:
   /**
    * A random number generator, used to generate tokens (which are just uint64's)
    */
-  std::random_device rand_device;
+  std::random_device rand_device_;
 };
 
 /**
@@ -284,7 +280,7 @@ class FileManagerStrategy : public DataManagerStrategy {
 public:
   explicit FileManagerStrategy(const FileManagerStrategyOptions &options);
 
-  ~FileManagerStrategy() = default;
+  ~FileManagerStrategy() override = default;
 
   /**
    * Starts the FileManagerStrategy, this does any initialization I/O tasks required.
@@ -293,13 +289,13 @@ public:
    * token store, and ensures there is a new file ready to write to if uploads fail. 
    * @return bool whether it started successfully or not
    */
-  bool start() override;
+  bool Start() override;
 
   /**
    * Returns true if there is offline data on disk awaiting to be uploaded, false otherwise. 
    * @return bool if there is data available
    */
-  bool isDataAvailable() override;
+  bool IsDataAvailable() override;
 
   /**
    * Reads a line of data from file storage. The most recent data in storage is read first. 
@@ -308,13 +304,13 @@ public:
    * @param std::string a string of data which is read from storage
    * @return DataToken that should be passed to resolve() when done
    */
-  DataToken read(std::string &data) override;
+  DataToken Read(std::string &data) override;
 
   /**
    * Write a line of data to to file storage.
    * @param std::string a string of data to write to storage
    */
-  void write(const std::string &data) override;
+  void Write(const std::string &data) override;
 
   /** 
    * Resolves a DataToken. If the data associated with the token was successfully sent 
@@ -324,7 +320,7 @@ public:
    * @param DataToken the token to be resolved
    * @param is_success whether the data was successfully sent or not
    */
-  void resolve(const DataToken &token, bool is_success) override;
+  void Resolve(const DataToken &token, bool is_success) override;
 
   /**
    * Saves all in flight tokens and information out to disk so that on startup the 
@@ -332,7 +328,7 @@ public:
    * to previously. 
    * @return bool whether it shutdown successfully
    */
-  bool shutdown() override;
+  bool Shutdown() override;
 
 protected: // functions exposed for testing
   /**
@@ -341,13 +337,13 @@ protected: // functions exposed for testing
    * @return a path to the file to be read
    * @throws std::runtime_error If there are no files available to read
    */
-  std::string getFileToRead();
+  std::string GetFileToRead();
 
   /**
    * Returns the active write file. Getter used for testing.
    * @return the file the system is actively writing to
    */
-  std::string getActiveWriteFile() {
+  std::string GetActiveWriteFile() {
     return active_write_file_;
   }
 
@@ -356,43 +352,43 @@ private:
    * Validates options that were passed to the constructor of this class. Also
    * sanitizes any paths or slightly incorrect options.
    */
-  void validateOptions();
+  void ValidateOptions();
 
   /**
    * Initializes the folder that offline data will be saved to, creating it if 
    * it doesn't already exist.
    */ 
-  void initializeStorage();
+  void InitializeStorage();
 
   /**
    * Creates the TokenStore and runs its initialize method
    */
-  void initializeTokenStore();
+  void InitializeTokenStore();
 
   /**
    * Finds any offline storage files on disk that are awaiting upload.
    */
-  void discoverStoredFiles();
+  void DiscoverStoredFiles();
 
   /**
    * Delete a file at this path. Used when all data from a file has been uploaded 
    * successfully or when the offline file storage has reached storage_limit_in_kb
    * @param file_path path to the file to be deleted
    */
-  void deleteFile(const std::string &file_path);
+  void DeleteFile(const std::string &file_path);
 
   /**
    * Checks if the active_write_file_ size is equal to or greater than 
    * maximum_file_size_in_kb in size. If it is then it calls rotateWriteFile. 
    * @param new_data_size the size of the active_write_file in bytes
    */
-  void checkIfWriteFileShouldRotate(const uintmax_t &new_data_size);
+  void CheckIfWriteFileShouldRotate(const uintmax_t &new_data_size);
 
   /** 
    * Moves the active_write_file into stored_files list and creates a new file
    * setting the active_write_file_ to that new file. 
    */
-  void rotateWriteFile();
+  void RotateWriteFile();
 
   /**
    * Checks if all the space taken up by offline storage exceeds the setting 
@@ -400,18 +396,18 @@ private:
    * file from disk.  
    * @param new_data_size the size of all files on disk in bytes
    */
-  void checkIfStorageLimitHasBeenReached(const uintmax_t &new_data_size);
+  void CheckIfStorageLimitHasBeenReached(const uintmax_t &new_data_size);
 
   /**
    * Deletes the oldest file in offline storage. Cannot delete the active_write_file_
    */
-  void deleteOldestFile();
+  void DeleteOldestFile();
 
   /**
    * Adds a file path to the stored_files_ list 
    * @param file_path the path to the file
    */
-  void addFilePathToStorage(const std::experimental::filesystem::path &file_path);
+  void AddFilePathToStorage(const std::experimental::filesystem::path &file_path);
 
   /**
    * Stored files to read from in order from most recent to oldest.
@@ -421,7 +417,7 @@ private:
   /**
    * Disk space used by all stored files. Does not include active_write_file_size_.
    */
-  std::atomic<size_t> stored_files_size_;
+  std::atomic<size_t> stored_files_size_{};
 
   /**
    * Path to the file we're currently writing to. This file cannot be read from or deleted. 
@@ -431,7 +427,7 @@ private:
   /** 
    * The size of the active_write_file. Stored here to minimize disk reads. 
    */
-  std::atomic<size_t> active_write_file_size_;
+  std::atomic<size_t> active_write_file_size_{};
 
   /** 
    * A lock on the active write file, to ensure that when it's rotated nothing is writing 
@@ -466,7 +462,7 @@ private:
    * Size of each batch when reading from a file.
    * The Size corresponds to the number of lines read from the file
    */
-  uint8_t batch_size = 1;
+  uint8_t batch_size_ = 1;
 
   /**
    * Stores which tokens to read from.

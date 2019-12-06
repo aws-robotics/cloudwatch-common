@@ -43,7 +43,7 @@ public:
   /**
    *  @brief Creates a new LogBatcher
    *  Creates a new LogBatcher that will group/buffer logs. Note: logs are only automatically published if the
-   *  size is set, otherwise the publishBatchedData is necesary to push data to be published.
+   *  size is set, otherwise the PublishBatchedData is necesary to push data to be published.
    *
    *  @throws invalid argument if publish_trigger_size is strictly greater than max_allowable_batch_size
    *  @param size of the batched data that will trigger a publish
@@ -54,7 +54,7 @@ public:
   /**
    *  @brief Tears down a LogBatcher object
    */
-  virtual ~LogBatcher();
+  ~LogBatcher() override;
 
   /**
    *  @brief Services the log manager by performing periodic tasks when called.
@@ -63,13 +63,14 @@ public:
    *
    *  @return true of the data was succesfully published, false otherwise
    */
-  virtual bool publishBatchedData() override;
+  bool PublishBatchedData() override;
 
   /**
    * Override default behavior to attempt to write to file to disk when emptying the collection.
    */
-  virtual void emptyCollection() override;
-  virtual bool start() override;
+  void EmptyCollection() override;
+
+  bool Start() override;
 
   /**
    * Set the log file manager, used for task publishing failures (write to disk if unable to send to CloudWatch).
@@ -77,7 +78,7 @@ public:
    * @throws invalid argument if the input is null
    * @param log_file_manager
    */
-  virtual void setLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogCollection>> log_file_manager);
+  virtual void SetLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogCollection>> log_file_manager);
 
 private:
   std::shared_ptr<Aws::FileManagement::FileManager<LogCollection>> log_file_manager_;

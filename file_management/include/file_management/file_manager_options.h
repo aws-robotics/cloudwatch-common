@@ -28,6 +28,20 @@ struct TokenStoreOptions {
 };
 
 struct FileManagerStrategyOptions {
+  FileManagerStrategyOptions() = default;
+
+  FileManagerStrategyOptions(
+    std::string _storage_directory,
+    std::string _file_prefix,
+    std::string _file_extension,
+    size_t _maximum_file_size,
+    size_t _storage_limit)
+    : storage_directory(std::move(_storage_directory)),
+      file_prefix(std::move(_file_prefix)),
+      file_extension(std::move(_file_extension)),
+      maximum_file_size_in_kb(_maximum_file_size),
+      storage_limit_in_kb(_storage_limit) {}
+
   /**
    * The path to the folder where all files are stored. Can be absolute or relative
    */
@@ -44,12 +58,12 @@ struct FileManagerStrategyOptions {
    * The maximum size of any single file in storage.
    * After this limit is reached the file will be rotated.
    */
-  size_t maximum_file_size_in_kb;
+  size_t maximum_file_size_in_kb{};
   /**
    * The maximum size of all files on disk.
    * After this limit is reached files will start to be deleted, oldest first.
    */
-  size_t storage_limit_in_kb;
+  size_t storage_limit_in_kb{};
 };
 
 static const FileManagerStrategyOptions kDefaultFileManagerStrategyOptions{"~/.ros/cwlogs", "cwlog", ".log", 1024, 1024*1024};

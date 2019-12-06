@@ -19,20 +19,20 @@
 
 #include <dataflow_lite/utils/observable_object.h>
 
-const int INITIAL_VALUE = 0;
+const int kInitialValue = 0;
 
 class ObservableObjectTest : public ::testing::Test {
 public:
     void SetUp() override
     {
-      testIntObservable = std::make_shared<ObservableObject<int>>(INITIAL_VALUE);
+      testIntObservable = std::make_shared<ObservableObject<int>>(kInitialValue);
     }
 
     void TearDown() override
     {}
 
 protected:
-  std::shared_ptr<ObservableObject<int>> testIntObservable;
+  std::shared_ptr<ObservableObject<int>> testIntObservable_;
 };
 
 TEST_F(ObservableObjectTest, Sanity) {
@@ -40,18 +40,18 @@ TEST_F(ObservableObjectTest, Sanity) {
 }
 
 TEST_F(ObservableObjectTest, TestInit) {
-  EXPECT_EQ(INITIAL_VALUE, testIntObservable->getValue());
+  EXPECT_EQ(kInitialValue, testIntObservable->getValue());
 }
 
 TEST_F(ObservableObjectTest, TestSet) {
-  EXPECT_EQ(INITIAL_VALUE, testIntObservable->getValue());
+  EXPECT_EQ(kInitialValue, testIntObservable->getValue());
   int first_set = 42;
   testIntObservable->setValue(first_set);
   EXPECT_EQ(first_set, testIntObservable->getValue());
 }
 
 TEST_F(ObservableObjectTest, TestListener) {
-  EXPECT_EQ(INITIAL_VALUE, testIntObservable->getValue());
+  EXPECT_EQ(kInitialValue, testIntObservable->getValue());
   int first_set = 42;
   testIntObservable->setValue(first_set);
   EXPECT_EQ(first_set, testIntObservable->getValue());
@@ -70,7 +70,7 @@ TEST_F(ObservableObjectTest, TestListener) {
 
   // test clear
 
-  testIntObservable->clearListeners();
+  testIntObservable->ClearListeners();
   EXPECT_EQ(0u, testIntObservable->getNumberOfListeners());
 
   int third_set = 1999;
@@ -88,7 +88,7 @@ TEST_F(ObservableObjectTest, TestFaultyListener) {
       INVALID = 999999999
   };
 
-  EXPECT_EQ(INITIAL_VALUE, testIntObservable->getValue());
+  EXPECT_EQ(kInitialValue, testIntObservable->getValue());
   int first_set = VALID_2;
   testIntObservable->setValue(first_set);
   EXPECT_EQ(first_set, testIntObservable->getValue());

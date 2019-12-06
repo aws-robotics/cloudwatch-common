@@ -36,7 +36,7 @@ template <typename T>
 class FileObject {
 public:
   T batch_data;
-  size_t batch_size;
+  size_t batch_size{};
   std::list<DataToken> data_tokens;
 };
 
@@ -50,13 +50,13 @@ public:
   * @param batch_size to read
   * @return a FileObject containing the data read plus some metadata about the file read
   */
-  virtual FileObject<T> readBatch(size_t batch_size) = 0;
+  virtual FileObject<T> ReadBatch(size_t batch_size) = 0;
 
   /**
    * Return if data is available to read.
    * @return
    */
-  virtual bool isDataAvailableToRead() = 0;
+  virtual bool IsDataAvailableToRead() = 0;
 
   /**
    * Handle an upload complete status.
@@ -64,11 +64,11 @@ public:
    * @param upload_status the status of an attempted upload of data
    * @param log_messages the data which was attempted to be uploaded
    */
-  virtual void fileUploadCompleteStatus(
+  virtual void FileUploadCompleteStatus(
     const Aws::DataFlow::UploadStatus &upload_status,
     const FileObject<T> &log_messages) = 0;
 
-  virtual void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
+  virtual void SetStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
 };
 
 /**
@@ -93,7 +93,7 @@ public:
    *
    * @param options for the FileManagerStrategy
    */
-  FileManager(const FileManagerStrategyOptions &options) {
+  explicit FileManager(const FileManagerStrategyOptions &options) {
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }
 
@@ -110,23 +110,23 @@ public:
     }
   }
 
-  virtual bool start() override {
+  bool Start() override {
     bool started = true;
     if(file_manager_strategy_) {
-      started &= file_manager_strategy_->start();
-      if (file_manager_strategy_->isDataAvailable()) {
-        file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
+      started &= file_manager_strategy_->Start();
+      if (file_manager_strategy_->IsDataAvailable()) {
+        file_status_monitor_->SetStatus(Aws::DataFlow::Status::AVAILABLE);
       }
     }
-    started &= Service::start();
+    started &= Service::Start();
     return started;
   }
 
-  virtual bool shutdown() override {
-    bool is_shutdown = Service::shutdown();
+  bool Shutdown() override {
+    bool is_shutdown = Service::Shutdown();
     if(file_manager_strategy_) {
-      file_status_monitor_->setStatus(Aws::DataFlow::Status::UNAVAILABLE);
-      is_shutdown &= file_manager_strategy_->shutdown();
+      file_status_monitor_->SetStatus(Aws::DataFlow::Status::UNAVAILABLE);
+      is_shutdown &= file_manager_strategy_->Shutdown();
     }
     return is_shutdown;
   }
@@ -139,12 +139,11 @@ public:
    * @param data [out] to fill with info
    * @return FileInfo meta info
    */
-  inline DataToken read(std::string &data) {
-    DataToken token = file_manager_strategy_->read(data);
-    if (!file_manager_strategy_->isDataAvailable()) {
-      AWS_LOG_INFO(__func__,
-                   "Data is no longer available to read.");
-      file_status_monitor_->setStatus(Aws::DataFlow::Status::UNAVAILABLE);
+  inline DataToken Read(std::string &data) {
+    DataToken token = file_manager_strategy_->Read(data);
+    if (!file_manager_strategy_->IsDataAvailable()) {
+      AWS_LOG_INFO(__func__, "Data is no longer available to read.");
+      file_status_monitor_->SetStatus(Aws::DataFlow::Status::UNAVAILABLE);
     }
     return token;
   }
@@ -153,7 +152,7 @@ public:
    * Write data to the appropriate file.
    * @param data to write.
    */
-  virtual void write(const T & data) = 0;
+  virtual void Write(const T & data) = 0;
 
 /**
  * Handle an upload complete status.
@@ -161,7 +160,7 @@ public:
  * @param upload_status the status of an attempted upload of data
  * @param log_messages the data which was attempted to be uploaded
  */
-  virtual void fileUploadCompleteStatus(
+  void FileUploadCompleteStatus(
       const Aws::DataFlow::UploadStatus& upload_status,
       const FileObject<T> &log_messages) override {
     if (Aws::DataFlow::UploadStatus::SUCCESS == upload_status) {
@@ -176,14 +175,12 @@ public:
       // this may block, file IO can be expensive
       try {
 
-        file_manager_strategy_->resolve(token, upload_status == Aws::DataFlow::UploadStatus::SUCCESS);
+        file_manager_strategy_->Resolve(token, upload_status == Aws::DataFlow::UploadStatus::SUCCESS);
         if (upload_status != Aws::DataFlow::UploadStatus::SUCCESS) {
-          file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
+          file_status_monitor_->SetStatus(Aws::DataFlow::Status::AVAILABLE);
         }
-      } catch(std::runtime_error& exception) {
-        AWS_LOG_WARN(__func__,
-                     "caught runtime_error attempting to resolve token %i",
-                     token);
+      } catch(std::runtime_error & exception) {
+        AWS_LOG_WARN(__func__, "caught runtime_error attempting to resolve token %i", token);
       }
     }
   }
@@ -192,7 +189,7 @@ public:
    * Add a file status monitor to notify observers when there
    * @param status_monitor
    */
-  void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
+  void SetStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
     file_status_monitor_ = status_monitor;
   }
 
@@ -201,10 +198,10 @@ public:
    *
    * @return
    */
-  bool isDataAvailableToRead() override {
+  bool IsDataAvailableToRead() override {
 
     if (file_status_monitor_) {
-      return file_status_monitor_->getStatus() == Aws::DataFlow::Status::AVAILABLE;
+      return file_status_monitor_->GetStatus() == Aws::DataFlow::Status::AVAILABLE;
     }
     return false;
   }

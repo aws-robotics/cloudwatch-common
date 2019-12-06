@@ -29,7 +29,7 @@ template <typename T>
 class QueueDemux {
 public:
   virtual ~QueueDemux() = default;
-  virtual void addSource(std::shared_ptr<IObservedQueue < T>>, PriorityOptions) = 0;
+  virtual void AddSource(std::shared_ptr<IObservedQueue < T>>, PriorityOptions) = 0;
 };
 
 /**
@@ -46,15 +46,15 @@ class QueueMonitor :
 {
 public:
   QueueMonitor() = default;
-  virtual ~QueueMonitor() = default;
+  ~QueueMonitor() override = default;
 
-  inline void addSource(
+  inline void AddSource(
     std::shared_ptr<IObservedQueue < T>>observed_queue,
     PriorityOptions priority_options) override
   {
     auto status_monitor = std::make_shared<StatusMonitor>();
-    addStatusMonitor(status_monitor);
-    observed_queue->setStatusMonitor(status_monitor);
+    AddStatusMonitor(status_monitor);
+    observed_queue->SetStatusMonitor(status_monitor);
     priority_vector_.push_back(QueuePriorityPair(observed_queue, priority_options));
     std::sort(priority_vector_.begin(), priority_vector_.end(), std::greater<QueuePriorityPair>());
   }
@@ -64,15 +64,15 @@ public:
    *
    * @return the dequeue'd data
    */
-  inline bool dequeue(
+  inline bool Dequeue(
     T& data,
     const std::chrono::microseconds &duration) override
 {
-    ThreadMonitor::waitForWork(duration);
+    ThreadMonitor::WaitForWork(duration);
     bool is_dequeued = false;
     for (auto &queue : priority_vector_)
     {
-      is_dequeued = queue.observed_queue->dequeue(data, std::chrono::microseconds(0));
+      is_dequeued = queue.observed_queue->Dequeue(data, std::chrono::microseconds(0));
       if (is_dequeued)
       {
         break;
@@ -85,7 +85,7 @@ protected:
   /**
    * @return True if any of the status monitors are enabled.
    */
-  inline bool hasWork() override {
+  inline bool HasWork() override {
     return static_cast<bool>(mask_);
   }
 

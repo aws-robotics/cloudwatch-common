@@ -36,20 +36,20 @@ public:
      *
      * @param initialValue
      */
-    ObservableObject<T>(const T initialValue) {
+    explicit ObservableObject<T>(const T initialValue) {
       value_.store(initialValue);
     }
     /**
      *
      */
     virtual ~ObservableObject<T>() {
-      clearListeners();
+      ClearListeners();
     }
     /**
      * Get the current value
      * @return the current value
      */
-    virtual T getValue() {
+    virtual T GetValue() {
       return value_.load();
     }
 
@@ -57,7 +57,7 @@ public:
      * Set the current value
      * @param v the value to set
      */
-    virtual void setValue(const T &v) {
+    virtual void SetValue(const T &v) {
 
       // todo: we should set the value iff the value changed
 
@@ -66,7 +66,7 @@ public:
       // todo if validated then broadcast
       {
         std::lock_guard<std::recursive_mutex> lk(listener_mutex_);
-        broadcastToListeners(v); // todo flag to broadcast on a new thread (if so desired)
+        BroadcastToListeners(v); // todo flag to broadcast on a new thread (if so desired)
       }
     }
     /**
@@ -75,7 +75,7 @@ public:
      *
      * @param listener
      */
-    virtual bool addListener(const std::function<void(const T&)> & listener) {
+    virtual bool AddListener(const std::function<void(const T&)> & listener) {
       std::lock_guard<std::recursive_mutex> lk(listener_mutex_);
 
       try {
@@ -93,7 +93,7 @@ public:
     /**
      * Clear all active listeners
      */
-    virtual void clearListeners() {
+    virtual void ClearListeners() {
       std::lock_guard<std::recursive_mutex> lk(listener_mutex_);
       listeners_.clear();
     }
@@ -102,7 +102,7 @@ public:
      * Get the current number of listeners
      * @return
      */
-    virtual size_t getNumberOfListeners() {
+    virtual size_t GetNumberOfListeners() {
       return listeners_.size();
     }
 
@@ -114,7 +114,7 @@ protected:
      *
      * @param currentValue
      */
-    virtual void broadcastToListeners(const T &currentValue) {
+    virtual void BroadcastToListeners(const T &currentValue) {
       std::lock_guard<std::recursive_mutex> lk(listener_mutex_);
 
       for (auto i = listeners_.begin(); i != listeners_.end();) {

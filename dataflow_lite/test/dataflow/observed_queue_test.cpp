@@ -25,7 +25,7 @@
 using namespace Aws::DataFlow;
 
 
-void test_enqueue_dequeue(IObservedQueue<std::string> &observed_queue) {
+void TestEnqueueDequeue(IObservedQueue<std::string> &observed_queue) {
   auto status_monitor = std::make_shared<StatusMonitor>();
   observed_queue.setStatusMonitor(status_monitor);
 
@@ -45,17 +45,17 @@ TEST(observed_queue_test, Sanity) {
 
 TEST(observed_queue_test, enqueue_dequeue_test) {
   ObservedQueue<std::string> observed_queue;
-  test_enqueue_dequeue(observed_queue);
+  TestEnqueueDequeue(observed_queue);
 }
 
 TEST(observed_queue_test, blocking_enqueue_dequeue_test) {
   ObservedBlockingQueue<std::string> observed_queue(1);
-  test_enqueue_dequeue(observed_queue);
+  TestEnqueueDequeue(observed_queue);
 }
 
 TEST(observed_queue_test, synchronized_enqueue_dequeue_test) {
   ObservedSynchronizedQueue<std::string> observed_queue;
-  test_enqueue_dequeue(observed_queue);
+  TestEnqueueDequeue(observed_queue);
 }
 
 TEST(observed_queue_test, enqueue_blocked_dequeue_test) {

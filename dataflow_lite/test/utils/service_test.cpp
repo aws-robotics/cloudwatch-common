@@ -32,7 +32,7 @@ public:
       test_service.reset();
     }
 protected:
-    std::shared_ptr<Service> test_service;
+    std::shared_ptr<Service> test_service_;
 };
 
 TEST_F(ServiceTest, Sanity) {
@@ -44,8 +44,8 @@ TEST_F(ServiceTest, Sanity) {
  */
 TEST_F(ServiceTest, TestLifecycle) {
   EXPECT_EQ(ServiceState::CREATED, test_service->getState());
-  EXPECT_TRUE(test_service->start());
+  EXPECT_TRUE(test_service->Start());
   EXPECT_EQ(ServiceState::STARTED, test_service->getState());
-  EXPECT_TRUE(test_service->shutdown());
+  EXPECT_TRUE(test_service->Shutdown());
   EXPECT_EQ(ServiceState::SHUTDOWN, test_service->getState());
 }

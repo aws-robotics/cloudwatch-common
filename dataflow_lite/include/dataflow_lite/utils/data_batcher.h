@@ -50,23 +50,23 @@ public:
    * @param trigger_size if this limit is reached then the queue is emptied via the publish method
    * @param try_enqueue_duration maximum amount of time to attempt to empty queue during the publish method
    */
-  DataBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
+  explicit DataBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
               size_t trigger_size = DataBatcher::kDefaultTriggerSize,
               std::chrono::microseconds try_enqueue_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(2))) {
 
-    validateConfigurableSizes(max_allowable_batch_size, trigger_size);
+    ValidateConfigurableSizes(max_allowable_batch_size, trigger_size);
 
     this->max_allowable_batch_size_.store(max_allowable_batch_size);
     this->trigger_batch_size_.store(trigger_size);
     this->try_enqueue_duration_ = try_enqueue_duration;
 
-    resetBatchedData();
+    ResetBatchedData();
   }
 
   /**
    * Destruct a DataBatcher instance
    */
-  ~DataBatcher() = default;
+  ~DataBatcher() override = default;
 
   /**
    * Batch an item.
@@ -74,22 +74,22 @@ public:
    * @param data_to_batch
    * @return true if the data was accepted, false if internal size limit was exceeded
    */
-  virtual bool batchData(const T &data_to_batch) {
-    std::lock_guard<std::recursive_mutex> lk(mtx);
+  virtual bool BatchData(const T &data_to_batch) {
+    std::lock_guard<std::recursive_mutex> lk(mtx_);
 
     this->batched_data_->push_back(data_to_batch);
 
     // check if we have exceeded the allowed bounds
-    auto allowed_max = getMaxAllowableBatchSize();
-    if (getCurrentBatchSize() > allowed_max) {
-      emptyCollection();
+    auto allowed_max = GetMaxAllowableBatchSize();
+    if (GetCurrentBatchSize() > allowed_max) {
+      EmptyCollection();
       return false;
     }
 
     // publish if the size has been configured
-    auto mbs = this->getTriggerBatchSize();
+    auto mbs = this->GetTriggerBatchSize();
     if (mbs != kDefaultTriggerSize && this->batched_data_->size() >= mbs) {
-      publishBatchedData(); // don't return publisher success / fail here
+      PublishBatchedData(); // don't return publisher success / fail here
     }
 
     return true;
@@ -99,8 +99,8 @@ public:
    * Return the number of currently batched items.
    * @return
    */
-  size_t getCurrentBatchSize() {
-    std::lock_guard<std::recursive_mutex> lk(mtx);
+  size_t GetCurrentBatchSize() {
+    std::lock_guard<std::recursive_mutex> lk(mtx_);
 
     return this->batched_data_->size();
   }
@@ -108,8 +108,8 @@ public:
   /**
    * Reset the batched data shared pointer.
    */
-  virtual void resetBatchedData() {
-    std::lock_guard<std::recursive_mutex> lk(mtx);
+  virtual void ResetBatchedData() {
+    std::lock_guard<std::recursive_mutex> lk(mtx_);
 
     this->batched_data_ = std::make_shared<std::list<T>>();
   }
@@ -119,8 +119,8 @@ public:
    * limit. Note: this value must be strictly less than the max_allowable_batch_size_.
    * @param new_value
    */
-  void setTriggerBatchSize(size_t new_value) {
-    validateConfigurableSizes(this->max_allowable_batch_size_, new_value);
+  void SetTriggerBatchSize(size_t new_value) {
+    ValidateConfigurableSizes(this->max_allowable_batch_size_, new_value);
 
     this->trigger_batch_size_.store(new_value);
   }
@@ -131,7 +131,7 @@ public:
    *
    * @return
    */
-  size_t getTriggerBatchSize() {
+  size_t GetTriggerBatchSize() {
     return this->trigger_batch_size_.load();
 
   }
@@ -142,7 +142,7 @@ public:
    *
    * @return
    */
-  size_t getMaxAllowableBatchSize() {
+  size_t GetMaxAllowableBatchSize() {
     return this->max_allowable_batch_size_.load();
   }
 
@@ -152,9 +152,9 @@ public:
    *
    * @param max_allowable_batch_size
    */
-  void setMaxAllowableBatchSize(int new_value) {
+  void SetMaxAllowableBatchSize(int new_value) {
 
-    validateConfigurableSizes(new_value, this->trigger_batch_size_);
+    ValidateConfigurableSizes(new_value, this->trigger_batch_size_);
 
     this->max_allowable_batch_size_.store(new_value);
   }
@@ -163,7 +163,7 @@ public:
    * Reset the trigger batch size to the default value, which means the mechanism is no longer set. Publish will
    * need to be called manually.
    */
-  void resetTriggerBatchSize() {
+  void ResetTriggerBatchSize() {
     this->trigger_batch_size_.store(kDefaultTriggerSize);
   }
 
@@ -172,7 +172,7 @@ public:
    *
    * @param duration
    */
-  void setTryEnqueueDuration(std::chrono::microseconds duration) {
+  void SetTryEnqueueDuration(std::chrono::microseconds duration) {
     this->try_enqueue_duration_.store(duration);
   }
 
@@ -181,16 +181,16 @@ public:
    *
    * @return
    */
-  std::chrono::microseconds getTryEnqueueDuration() {
+  std::chrono::microseconds GetTryEnqueueDuration() {
     return this->try_enqueue_duration_.load();
   }
 
   /**
-   * When the getTriggerBatchSize is met this method will be called.
+   * When the GetTriggerBatchSize is met this method will be called.
    *
    * @return
    */
-  virtual bool publishBatchedData() = 0;
+  virtual bool PublishBatchedData() = 0;
 
   /**
    *
@@ -198,7 +198,7 @@ public:
    * @param batch_max_queue_size
    * @param batch_trigger_publish_size
    */
-  static void validateConfigurableSizes(size_t batch_max_queue_size, size_t batch_trigger_publish_size) {
+  static void ValidateConfigurableSizes(size_t batch_max_queue_size, size_t batch_trigger_publish_size) {
 
     if (0 == batch_max_queue_size || 0 == batch_trigger_publish_size) {
       throw std::invalid_argument("0 is not a valid size");
@@ -211,12 +211,12 @@ public:
 
   /**
    * Shutdown the batcher: this blocks until publish has completed in order to attempt to empty any unpublished data.
-   * @return the result of Service::shutdown()
+   * @return the result of Service::Shutdown()
    */
-  bool shutdown() {
-    bool is_shutdown = Service::shutdown();
-    std::lock_guard<std::recursive_mutex> lk(mtx);
-    this->emptyCollection();  // attempt to write to disk before discarding
+  bool Shutdown() override {
+    bool is_shutdown = Service::Shutdown();
+    std::lock_guard<std::recursive_mutex> lk(mtx_);
+    this->EmptyCollection();  // attempt to write to disk before discarding
     return is_shutdown;
   }
 
@@ -227,20 +227,20 @@ protected:
    * currently batched data. If other behavior is desired to empty the collection implementing classes should override.
    *
    */
-  virtual void emptyCollection() {
-    std::lock_guard<std::recursive_mutex> lk(mtx);
+  virtual void EmptyCollection() {
+    std::lock_guard<std::recursive_mutex> lk(mtx_);
     this->batched_data_->clear();
   }
 
   std::shared_ptr<std::list<T>> batched_data_;
-  mutable std::recursive_mutex mtx;
+  mutable std::recursive_mutex mtx_;
 
 private:
     /**
      * Size used for the internal storage
      */
-    std::atomic<size_t> max_allowable_batch_size_;
-    std::atomic<size_t> trigger_batch_size_;
-    std::atomic<std::chrono::microseconds> try_enqueue_duration_;
+    std::atomic<size_t> max_allowable_batch_size_{};
+    std::atomic<size_t> trigger_batch_size_{};
+    std::atomic<std::chrono::microseconds> try_enqueue_duration_{};
 };
 

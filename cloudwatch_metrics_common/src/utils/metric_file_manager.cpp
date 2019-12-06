@@ -30,7 +30,7 @@ namespace Aws {
 namespace CloudWatchMetrics {
 namespace Utils {
 
-FileObject<MetricDatumCollection> MetricFileManager::readBatch(
+FileObject<MetricDatumCollection> MetricFileManager::ReadBatch(
     size_t batch_size) {
   /* We must sort the metric data chronologically because it is not guaranteed
      to be ordered chronologically in the file, but CloudWatch requires all
@@ -46,15 +46,15 @@ FileObject<MetricDatumCollection> MetricFileManager::readBatch(
 
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line;
-    if (!file_manager_strategy_->isDataAvailable()) {
+    if (!file_manager_strategy_->IsDataAvailable()) {
       AWS_LOG_DEBUG(__func__, "No more metric data available on disk");
       break;
     }
-    data_token = read(line);
-    Aws::String aws_line(line.c_str());
+    data_token = Read(line);
+    Aws::String aws_line(line.c_str()); // NOLINT(readability-redundant-string-cstr)
     MetricDatum metric_datum;
     try {
-      metric_datum = Aws::CloudWatchMetrics::Utils::deserializeMetricDatum(aws_line);
+      metric_datum = Aws::CloudWatchMetrics::Utils::DeserializeMetricDatum(aws_line);
     } catch (std::invalid_argument &e) {
       AWS_LOG_ERROR(__func__, e.what());
       continue;
@@ -71,18 +71,18 @@ FileObject<MetricDatumCollection> MetricFileManager::readBatch(
   return file_object;
 }
 
-void MetricFileManager::write(const MetricDatumCollection &data) {
+void MetricFileManager::Write(const MetricDatumCollection &data) {
   for (const MetricDatum &model: data) {
-    auto metric_serial = Aws::CloudWatchMetrics::Utils::serializeMetricDatum(model);
-    file_manager_strategy_->write(metric_serial.c_str());
+    auto metric_serial = Aws::CloudWatchMetrics::Utils::SerializeMetricDatum(model);
+    file_manager_strategy_->Write(metric_serial.c_str()); // NOLINT(readability-redundant-string-cstr)
   }
   if (FileManager::file_status_monitor_) {
     AWS_LOG_DEBUG(__func__,
                  "Set file status available");
-    FileManager::file_status_monitor_->setStatus(Aws::DataFlow::Status::AVAILABLE);
+    FileManager::file_status_monitor_->SetStatus(Aws::DataFlow::Status::AVAILABLE);
   }
 }
 
 }  // namespace Utils
-}  // namespace Cloudwatchmetrics
+}  // namespace CloudWatchMetrics
 }  // namespace Aws

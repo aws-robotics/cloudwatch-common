@@ -20,6 +20,7 @@
 #include <file_management/file_upload/file_manager.h>
 #include <aws/core/utils/logging/LogMacros.h>
 #include <iomanip>
+#include <utility>
 #include "file_management/file_upload/file_manager_strategy.h"
 
 #define KB_TO_BYTES(x) ((size_t) (x) << 10)
@@ -31,17 +32,17 @@ namespace FileManagement {
 
 static const std::string kTokenStoreFile("token_store.info");
 
-void sanitizePath(std::string & path) {
+void SanitizePath(std::string & path) {
   if (path.back() != '/') {
     path += '/';
   }
   if (path.front() == '~') {
     char * home = getenv("HOME");
-    if (NULL == home) {
+    if (nullptr == home) {
       AWS_LOG_WARN(__func__, "No HOME environment variable set. Attempting to use ROS_HOME instead.");
       home = getenv("ROS_HOME");
     }
-    if (NULL != home) {
+    if (nullptr != home) {
       path.replace(0, 1, home);
     } else {
       throw std::runtime_error("The storage directory path uses '~' but no HOME environment variable set.");
@@ -49,16 +50,16 @@ void sanitizePath(std::string & path) {
   }
 }
 
-TokenStore::TokenStore(const TokenStoreOptions &options) : options_{options}{
-  validateOptions();
-  initializeBackupDirectory();
+TokenStore::TokenStore(TokenStoreOptions options) : options_{std::move(options)} {
+  ValidateOptions();
+  InitializeBackupDirectory();
 }
 
-void TokenStore::validateOptions() {
-  sanitizePath(options_.backup_directory);
+void TokenStore::ValidateOptions() {
+  SanitizePath(options_.backup_directory);
 }
 
-void TokenStore::initializeBackupDirectory() {
+void TokenStore::InitializeBackupDirectory() {
   auto backup_directory = std::experimental::filesystem::path(options_.backup_directory);
   if (!std::experimental::filesystem::exists(backup_directory)) {
     AWS_LOG_INFO(__func__, "TokenStore backup directory %s does not exist, creating.", backup_directory.c_str());
@@ -66,17 +67,17 @@ void TokenStore::initializeBackupDirectory() {
   }
 }
 
-bool TokenStore::isTokenAvailable(const std::string &file_name) const {
+bool TokenStore::IsTokenAvailable(const std::string &file_name) const {
   return !(staged_tokens_.find(file_name) == staged_tokens_.end());
 }
 
-FileTokenInfo TokenStore::popAvailableToken(const std::string &file_name) {
+FileTokenInfo TokenStore::PopAvailableToken(const std::string &file_name) {
   auto file_token_info = staged_tokens_[file_name];
   staged_tokens_.erase(file_name);
   return file_token_info;
 }
 
-void printCache(std::unordered_map<DataToken, FileTokenInfo> token_store,
+void PrintCache(std::unordered_map<DataToken, FileTokenInfo> token_store,
   std::unordered_map<std::string, std::list<DataToken>> file_tokens,
   std::unordered_map<std::string, FileTokenInfo> staged_tokens_) {
   {
@@ -107,10 +108,9 @@ void printCache(std::unordered_map<DataToken, FileTokenInfo> token_store,
                "Cache Info: staged_tokens \n %s", ss.str().c_str());
 }
 
-DataToken TokenStore::createToken(const std::string &file_name, const long & streampos, bool is_eof) {
-  AWS_LOG_DEBUG(__func__,
-               "Creating token");
-  std::mt19937_64 rand( rand_device() );
+DataToken TokenStore::CreateToken(const std::string &file_name, const long & streampos, bool is_eof) {
+  AWS_LOG_DEBUG(__func__, "Creating token");
+  std::mt19937_64 rand( rand_device_() );
   DataToken token = rand();
   token_store_.emplace(token, FileTokenInfo(file_name, streampos, is_eof));
   if (file_tokens_.find(file_name) == file_tokens_.end()) {
@@ -120,7 +120,7 @@ DataToken TokenStore::createToken(const std::string &file_name, const long & str
   return token;
 }
 
-FileTokenInfo TokenStore::fail(const DataToken &token) {
+FileTokenInfo TokenStore::Fail(const DataToken &token) {
   AWS_LOG_DEBUG(__func__, "Marking token %i as failed (data did not upload successfully)", token);
   if (token_store_.find(token) == token_store_.end()) {
     throw std::runtime_error("DataToken not found");
@@ -135,7 +135,7 @@ FileTokenInfo TokenStore::fail(const DataToken &token) {
   return token_info;
 }
 
-FileTokenInfo TokenStore::resolve(const DataToken &token) {
+FileTokenInfo TokenStore::Resolve(const DataToken &token) {
   AWS_LOG_DEBUG(__func__,
                "Resolving token %i", token);
 
@@ -160,7 +160,7 @@ FileTokenInfo TokenStore::resolve(const DataToken &token) {
   return token_info;
 }
 
-std::vector<FileTokenInfo> TokenStore::backup() {
+std::vector<FileTokenInfo> TokenStore::Backup() {
   auto vector_size = file_tokens_.size() + staged_tokens_.size();
   std::vector<FileTokenInfo> token_backup(vector_size);
   auto it = token_backup.begin();
@@ -173,9 +173,9 @@ std::vector<FileTokenInfo> TokenStore::backup() {
   return token_backup;
 }
 
-void TokenStore::backupToDisk() {
+void TokenStore::BackupToDisk() {
   auto file_path = std::experimental::filesystem::path(options_.backup_directory + kTokenStoreFile);
-  std::vector<FileTokenInfo> token_store_backup = backup();
+  std::vector<FileTokenInfo> token_store_backup = Backup();
   if (std::experimental::filesystem::exists(file_path)) {
     std::experimental::filesystem::remove(file_path);
   }
@@ -186,18 +186,18 @@ void TokenStore::backupToDisk() {
     return;
   }
   for (const FileTokenInfo &token_info : token_store_backup) {
-    token_store_file << token_info.serialize() << std::endl;
+    token_store_file << token_info.Serialize() << std::endl;
   }
   token_store_file.close();
 }
 
-void TokenStore::restore(const std::vector<FileTokenInfo> &file_tokens) {
+void TokenStore::Restore(const std::vector<FileTokenInfo> &file_tokens) {
   for (auto& file_token: file_tokens) {
     staged_tokens_[file_token.file_path_] = file_token;
   }
 }
 
-void TokenStore::restoreFromDisk() {
+void TokenStore::RestoreFromDisk() {
   // read through each line.
   // For each line the first 4 bytes are position, next byte is eof, the remainder are a string of file path
   // Will this change depending on OS / platform? Will that matter? Should I use another serialization library.
@@ -214,7 +214,7 @@ void TokenStore::restoreFromDisk() {
     if (!line.empty()) {
       FileTokenInfo token_info;
       try {
-        token_info.deserialize(line);
+        token_info.Deserialize(line);
       } catch (std::runtime_error e) {
         AWS_LOG_ERROR(__func__, "Unable to parse token backup line: %s. Skipping.", line.c_str());
         continue;
@@ -223,7 +223,7 @@ void TokenStore::restoreFromDisk() {
     }
   }
   token_store_read_stream.close();
-  restore(file_tokens);
+  Restore(file_tokens);
   std::experimental::filesystem::remove(file_path);
 }
 
@@ -232,22 +232,22 @@ FileManagerStrategy::FileManagerStrategy(const FileManagerStrategyOptions &optio
   stored_files_size_ = 0;
   active_write_file_size_ = 0;
   options_ = options;
-  validateOptions();
+  ValidateOptions();
 }
 
-bool FileManagerStrategy::start() {
-  initializeStorage();
-  initializeTokenStore();
-  discoverStoredFiles();
-  rotateWriteFile();
-  return Service::start();
+bool FileManagerStrategy::Start() {
+  InitializeStorage();
+  InitializeTokenStore();
+  DiscoverStoredFiles();
+  RotateWriteFile();
+  return Service::Start();
 }
 
-void FileManagerStrategy::validateOptions() {
-  sanitizePath(options_.storage_directory);
+void FileManagerStrategy::ValidateOptions() {
+  SanitizePath(options_.storage_directory);
 }
 
-void FileManagerStrategy::initializeStorage() {
+void FileManagerStrategy::InitializeStorage() {
   AWS_LOG_DEBUG(__func__, "Initializing offline file storage in directory %s", options_.storage_directory.c_str());
   auto storage = std::experimental::filesystem::path(options_.storage_directory);
   if (!std::experimental::filesystem::exists(storage)) {
@@ -257,14 +257,14 @@ void FileManagerStrategy::initializeStorage() {
   }
 }
 
-void FileManagerStrategy::initializeTokenStore() {
+void FileManagerStrategy::InitializeTokenStore() {
   AWS_LOG_DEBUG(__func__, "Initializing token store in directory %s", options_.storage_directory.c_str());
   TokenStoreOptions options{options_.storage_directory};
   token_store_ = std::make_unique<TokenStore>(options);
-  token_store_->restoreFromDisk();
+  token_store_->RestoreFromDisk();
 }
 
-bool FileManagerStrategy::isDataAvailable() {
+bool FileManagerStrategy::IsDataAvailable() {
   AWS_LOG_DEBUG(__func__,
                "Is Data Available: %s, %s %s",
                !active_read_file_.empty() ? "true" : "false",
@@ -273,10 +273,10 @@ bool FileManagerStrategy::isDataAvailable() {
   return !active_read_file_.empty() || !stored_files_.empty() || active_write_file_size_ > 0;
 }
 
-void FileManagerStrategy::write(const std::string &data) {
+void FileManagerStrategy::Write(const std::string &data) {
   try {
-    checkIfWriteFileShouldRotate(data.size());
-    checkIfStorageLimitHasBeenReached(data.size());
+    CheckIfWriteFileShouldRotate(data.size());
+    CheckIfStorageLimitHasBeenReached(data.size());
 
     std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
     std::ofstream log_file;
@@ -293,10 +293,10 @@ void FileManagerStrategy::write(const std::string &data) {
   }
 }
 
-DataToken FileManagerStrategy::read(std::string &data) {
+DataToken FileManagerStrategy::Read(std::string &data) {
   std::lock_guard<std::mutex> read_lock(active_read_file_mutex_);
   if (active_read_file_.empty()) {
-    active_read_file_ = getFileToRead();
+    active_read_file_ = GetFileToRead();
     // if the file is still empty, return an empty token.
     if (active_read_file_.empty()) {
       return 0;
@@ -305,8 +305,8 @@ DataToken FileManagerStrategy::read(std::string &data) {
   }
   AWS_LOG_DEBUG(__func__, "Reading from active log file: %s", active_read_file_.c_str());
   DataToken token;
-  if (token_store_->isTokenAvailable(active_read_file_)) {
-    FileTokenInfo file_token = token_store_->popAvailableToken(active_read_file_);
+  if (token_store_->IsTokenAvailable(active_read_file_)) {
+    FileTokenInfo file_token = token_store_->PopAvailableToken(active_read_file_);
     active_read_file_stream_->seekg(file_token.position_);
   }
   long position = active_read_file_stream_->tellg();
@@ -314,7 +314,7 @@ DataToken FileManagerStrategy::read(std::string &data) {
   active_read_file_stream_->seekg(position, std::ifstream::beg);
   std::getline(*active_read_file_stream_, data);
   long next_position = active_read_file_stream_->tellg();
-  token = token_store_->createToken(active_read_file_, position, next_position >= file_size);
+  token = token_store_->CreateToken(active_read_file_, position, next_position >= file_size);
 
   if (next_position >= file_size) {
     auto file_loc = std::find(stored_files_.begin(), stored_files_.end(), active_read_file_);
@@ -328,12 +328,12 @@ DataToken FileManagerStrategy::read(std::string &data) {
   return token;
 }
 
-void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
+void FileManagerStrategy::Resolve(const DataToken &token, bool is_success) {
   if (is_success) {
     try {
-      auto file_info = token_store_->resolve(token);
+      auto file_info = token_store_->Resolve(token);
       if (file_info.eof_) {
-        deleteFile(file_info.file_path_);
+        DeleteFile(file_info.file_path_);
       }
     } catch(std::runtime_error& exception) {
       AWS_LOG_WARN(__func__,
@@ -342,7 +342,7 @@ void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
     }
   } else {
     try {
-      auto file_info = token_store_->fail(token);
+      auto file_info = token_store_->Fail(token);
       if (file_info.eof_) {
         AWS_LOG_DEBUG(__func__,
                       "Failed last token %d, pushing file to stored: %s", token, file_info.file_path_.c_str());
@@ -356,14 +356,14 @@ void FileManagerStrategy::resolve(const DataToken &token, bool is_success) {
   }
 }
 
-bool FileManagerStrategy::shutdown() {
-  bool b = Service::shutdown();
-  token_store_->backupToDisk();
+bool FileManagerStrategy::Shutdown() {
+  bool b = Service::Shutdown();
+  token_store_->BackupToDisk();
   return b;
 }
 
 
-void FileManagerStrategy::discoverStoredFiles() {
+void FileManagerStrategy::DiscoverStoredFiles() {
   for (const auto &entry : fs::directory_iterator(options_.storage_directory)) {
     const fs::path &path = entry.path();
     std::regex name_expr(
@@ -371,19 +371,19 @@ void FileManagerStrategy::discoverStoredFiles() {
       "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{1}" +
       options_.file_extension);
     if (std::regex_match(path.filename().string(), name_expr)) {
-      addFilePathToStorage(path);
+      AddFilePathToStorage(path);
     }
   }
 }
 
-void FileManagerStrategy::deleteFile(const std::string &file_path) {
+void FileManagerStrategy::DeleteFile(const std::string &file_path) {
   AWS_LOG_DEBUG(__func__, "Deleting file: %s", file_path.c_str());
   const uintmax_t file_size = fs::file_size(file_path);
   fs::remove(file_path);
   stored_files_size_ -= file_size;
 }
 
-std::string FileManagerStrategy::getFileToRead() {
+std::string FileManagerStrategy::GetFileToRead() {
   // if we have stored files, pop from the end of the list and return that filename
   // if we do not have stored files, and the active file has data, switch active file and return the existing active file.
   if (!stored_files_.empty()) {
@@ -396,19 +396,19 @@ std::string FileManagerStrategy::getFileToRead() {
   std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
   if (active_write_file_size_ > 0) {
     const std::string file_path = active_write_file_;
-    rotateWriteFile();
+    RotateWriteFile();
     return file_path;
   }
 
   throw std::runtime_error("No files available for reading");
 }
 
-void FileManagerStrategy::addFilePathToStorage(const fs::path &file_path) {
+void FileManagerStrategy::AddFilePathToStorage(const fs::path &file_path) {
   stored_files_.push_back(file_path);
   stored_files_size_ += fs::file_size(file_path);
 }
 
-void FileManagerStrategy::rotateWriteFile() {
+void FileManagerStrategy::RotateWriteFile() {
   AWS_LOG_DEBUG(__func__, "Rotating offline storage file");
   using std::chrono::system_clock;
   time_t tt = system_clock::to_time_t (system_clock::now());
@@ -435,26 +435,26 @@ void FileManagerStrategy::rotateWriteFile() {
   active_write_file_size_ = 0;
 }
 
-void FileManagerStrategy::checkIfWriteFileShouldRotate(const uintmax_t &new_data_size) {
+void FileManagerStrategy::CheckIfWriteFileShouldRotate(const uintmax_t &new_data_size) {
   std::lock_guard<std::mutex> write_lock(active_write_file_mutex_);
   const uintmax_t new_file_size = active_write_file_size_ + new_data_size;
   const uintmax_t max_file_size_in_bytes = KB_TO_BYTES(options_.maximum_file_size_in_kb);
   if (new_file_size > max_file_size_in_bytes) {
     AWS_LOG_DEBUG(__func__, "New file size %d is larger than max file size %d", new_file_size, max_file_size_in_bytes);
-    rotateWriteFile();
+    RotateWriteFile();
   }
 }
 
-void FileManagerStrategy::checkIfStorageLimitHasBeenReached(const uintmax_t &new_data_size) {
+void FileManagerStrategy::CheckIfStorageLimitHasBeenReached(const uintmax_t &new_data_size) {
   const uintmax_t new_storage_size = stored_files_size_ + active_write_file_size_ + new_data_size;
   const uintmax_t max_storage_size_in_bytes = KB_TO_BYTES(options_.storage_limit_in_kb);
   if (new_storage_size > max_storage_size_in_bytes) {
     AWS_LOG_WARN(__func__, "Maximum offline storage limit has been reached. Deleting oldest log file.");
-    deleteOldestFile();
+    DeleteOldestFile();
   }
 }
 
-void FileManagerStrategy::deleteOldestFile() {
+void FileManagerStrategy::DeleteOldestFile() {
   if (!stored_files_.empty()) {
     std::lock_guard<std::mutex> read_lock(active_read_file_mutex_);
     stored_files_.sort();
@@ -465,7 +465,7 @@ void FileManagerStrategy::deleteOldestFile() {
     }
     stored_files_.pop_front();
     AWS_LOG_INFO(__func__, "Deleting oldest file: %s", oldest_file.c_str());
-    deleteFile(oldest_file);
+    DeleteFile(oldest_file);
   }
 }
 

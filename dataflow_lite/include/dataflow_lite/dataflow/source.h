@@ -23,7 +23,7 @@ template<typename T>
 class Source {
  public:
   virtual ~Source() = default;
-  virtual bool dequeue(T&, const std::chrono::microseconds &duration) = 0;
+  virtual bool Dequeue(T&, const std::chrono::microseconds &duration) = 0;
 };
 
 }  // namespace DataFlow

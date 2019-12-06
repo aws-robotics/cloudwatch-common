@@ -39,31 +39,30 @@ namespace CloudWatchMetrics {
 class MetricPublisher : public Publisher<MetricDatumCollection>
 {
 public:
-
-
   MetricPublisher(const std::string & metrics_namespace, const Aws::Client::ClientConfiguration & client_config);
   MetricPublisher(const std::string & metrics_namespace,
-    const std::shared_ptr<Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade> cloudwatch_metrics_facade);
+    const std::shared_ptr<Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade>& cloudwatch_metrics_facade);
 
   /**
    *  @brief Tears down the MetricPublisher object
    */
-  virtual ~MetricPublisher() = default;
+  ~MetricPublisher() override = default;
 
-  virtual bool shutdown() override;
+  bool Shutdown() override;
+
   /**
    * Create the cloudwatch facade
    *
    * @return
    */
-  virtual bool start() override;
+  bool Start() override;
   /**
    * Attempt to publish the input data.
    *
    * @param data input to publish to CloudWatch
    * @return the resulting Aws::DataFlow::UploadStatus from the publish attempt
    */
-  Aws::DataFlow::UploadStatus publishData(MetricDatumCollection &data) override;
+  Aws::DataFlow::UploadStatus PublishData(MetricDatumCollection &data) override;
 
 private:
 

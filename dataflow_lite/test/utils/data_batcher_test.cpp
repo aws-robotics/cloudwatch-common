@@ -27,21 +27,21 @@
 class TestBatcher : public DataBatcher<int> {
 public:
 
-  TestBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
+  explicit TestBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
           size_t publish_trigger_size = DataBatcher::kDefaultTriggerSize) : DataBatcher(max_allowable_batch_size, publish_trigger_size) {
     pub_called = 0;
   }
 
-  bool start() override {
+  bool Start() override {
     return true;
   }
 
-  bool shutdown() override {
+  bool Shutdown() override {
     this->resetBatchedData();
     return true;
   }
 
-  bool publishBatchedData() override {
+  bool PublishBatchedData() override {
     std::lock_guard<std::recursive_mutex> lk(mtx);
     pub_called++;
     this->resetBatchedData();
@@ -58,16 +58,16 @@ public:
     void SetUp() override
     {
       test_batcher = std::make_shared<TestBatcher>();
-      test_batcher->start();
+      test_batcher->Start();
     }
 
     void TearDown() override
     {
-      test_batcher->shutdown();
+      test_batcher->Shutdown();
     }
 
 protected:
-    std::shared_ptr<TestBatcher> test_batcher;
+    std::shared_ptr<TestBatcher> test_batcher_;
 };
 
 TEST_F(DataBatcherTest, Sanity) {
@@ -88,11 +88,11 @@ TEST_F(DataBatcherTest, TestMaxSizeClear) {
   EXPECT_EQ(new_max, test_batcher->getMaxAllowableBatchSize());
 
   for(size_t i=0; i<new_max; i++) {
-    test_batcher->batchData(i);
+    test_batcher->BatchData(i);
     EXPECT_EQ(i+1, test_batcher->getCurrentBatchSize());
   }
 
-  test_batcher->batchData(42);
+  test_batcher->BatchData(42);
   EXPECT_EQ(0u, test_batcher->getCurrentBatchSize());
   EXPECT_EQ(0, test_batcher->pub_called);
 }
@@ -104,24 +104,24 @@ TEST_F(DataBatcherTest, TestPublishTrigger) {
   EXPECT_EQ(new_max, test_batcher->getTriggerBatchSize());
 
   for(size_t i=0; i<new_max-1; i++) {
-  test_batcher->batchData(i);
+  test_batcher->BatchData(i);
   EXPECT_EQ(i+1, test_batcher->getCurrentBatchSize());
   }
 
-  test_batcher->batchData(42);
+  test_batcher->BatchData(42);
   EXPECT_EQ(0u, test_batcher->getCurrentBatchSize());
   EXPECT_EQ(1, test_batcher->pub_called);
 }
 
 TEST_F(DataBatcherTest, TestValidateArguments) {
 
-  EXPECT_THROW(TestBatcher::validateConfigurableSizes(0, 0), std::invalid_argument);
-  EXPECT_THROW(TestBatcher::validateConfigurableSizes(1, 0), std::invalid_argument);
-  EXPECT_THROW(TestBatcher::validateConfigurableSizes(0, 1), std::invalid_argument);
-  EXPECT_THROW(TestBatcher::validateConfigurableSizes(1, 1), std::invalid_argument);
-  EXPECT_THROW(TestBatcher::validateConfigurableSizes(1, 2), std::invalid_argument);
+  EXPECT_THROW(TestBatcher::ValidateConfigurableSizes(0, 0), std::invalid_argument);
+  EXPECT_THROW(TestBatcher::ValidateConfigurableSizes(1, 0), std::invalid_argument);
+  EXPECT_THROW(TestBatcher::ValidateConfigurableSizes(0, 1), std::invalid_argument);
+  EXPECT_THROW(TestBatcher::ValidateConfigurableSizes(1, 1), std::invalid_argument);
+  EXPECT_THROW(TestBatcher::ValidateConfigurableSizes(1, 2), std::invalid_argument);
 
-  EXPECT_NO_THROW(TestBatcher::validateConfigurableSizes(2, 1));
+  EXPECT_NO_THROW(TestBatcher::ValidateConfigurableSizes(2, 1));
 }
 
 TEST_F(DataBatcherTest, TestBatcherArguments) {

@@ -37,7 +37,7 @@ public:
    * @param cloudwatch_options
    * @return
    */
-  virtual std::shared_ptr<MetricService> createMetricService(
+  virtual std::shared_ptr<MetricService> CreateMetricService(
           const std::string & metrics_namespace,
           const Aws::Client::ClientConfiguration & client_config,
           const Aws::SDKOptions & sdk_options,

@@ -49,15 +49,15 @@ class FileUploadTask : public Aws::DataFlow::Task<T> {
     this->upload_status_function_ = upload_status_function;
   }
 
-  virtual ~FileUploadTask() = default;
+  ~FileUploadTask() override = default;
 
-  void onComplete(const Aws::DataFlow::UploadStatus &status) override {
+  void OnComplete(const Aws::DataFlow::UploadStatus &status) override {
     if (upload_status_function_) {
       upload_status_function_(status, batch_data_);
     }
   }
 
-  T& getBatchData() override {
+  T& GetBatchData() override {
     return batch_data_.batch_data;
   }
 
@@ -82,16 +82,16 @@ class FileUploadTaskAsync : public Aws::DataFlow::Task<T> {
 
   virtual ~FileUploadTaskAsync() = default;
 
-  void onComplete(const Aws::DataFlow::UploadStatus &status) override {
+  void OnComplete(const Aws::DataFlow::UploadStatus &status) override {
     file_upload_promise_.set_value(
         std::pair<FileObject<T>, Aws::DataFlow::UploadStatus>{batch_data_, status});
   }
 
-  inline std::future<std::pair<FileObject<T>, Aws::DataFlow::UploadStatus>> getResult() {
+  inline std::future<std::pair<FileObject<T>, Aws::DataFlow::UploadStatus>> GetResult() {
     return file_upload_promise_.get_future();
   }
 
-  T& getBatchData() override {
+  T& GetBatchData() override {
     return batch_data_.batch_data;
   }
 

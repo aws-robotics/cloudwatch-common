@@ -39,7 +39,7 @@ class LogFileManager :
    */
   LogFileManager()  = default;
 
-  LogFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
+  explicit LogFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
     : FileManager(options) {
   }
 
@@ -51,11 +51,11 @@ class LogFileManager :
 
   ~LogFileManager() override = default;
 
-  void write(const LogCollection & data) override;
+  void Write(const LogCollection & data) override;
 
-  FileObject<LogCollection> readBatch(size_t batch_size) override;
+  FileObject<LogCollection> ReadBatch(size_t batch_size) override;
 };
 
 }  // namespace Utils
-}  // namespace CloudwatchLogs
+}  // namespace CloudWatchLogs
 }  // namespace Aws

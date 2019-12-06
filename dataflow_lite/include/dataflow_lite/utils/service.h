@@ -34,7 +34,7 @@ enum ServiceState {
 /**
  * Map used to pretty print the ServiceState enum.
  */
-static std::map<ServiceState, std::string> SERVICE_STATE_NAME_MAP = {{CREATED, "CREATED"}, {STARTED, "STARTED"},
+static std::map<ServiceState, std::string> g_SERVICE_STATE_NAME_MAP = {{CREATED, "CREATED"}, {STARTED, "STARTED"},
                                                                      {SHUTDOWN,"SHUTDOWN"}};
 
 /**
@@ -49,39 +49,39 @@ public:
     /**
      * Called to start doing work. The format overriding classes should use is the following:
      *
-     *   virtual bool start() {
+     *   virtual bool Start() {
      *       // do specific start logic here
      *
      *       // ensure the service state has been set to started
-     *       bool b = Service::start();
+     *       bool b = Service::Start();
      *
-     *       // return the result of Service::start() or something else if desired
+     *       // return the result of Service::Start() or something else if desired
      *       return b;
      *   }
      *
      * @return
      */
-    virtual bool start() {
-      state_.setValue(STARTED);
+    virtual bool Start() {
+      state_.SetValue(STARTED);
       return true;
     }
 
     /**
      * Cleanup. Should be called before destruction. The format overriding classes should use is the following:
      *
-     *   virtual bool shutdown() {
+     *   virtual bool Shutdown() {
      *       //  immediately set the shutdown state
-     *       bool b = Service::shutdown();
+     *       bool b = Service::Shutdown();
      *
      *       // do specific shutdown logic here
      *
-     *       // return the result of Service::shutdown() or something else if desired
+     *       // return the result of Service::Shutdown() or something else if desired
      *       return b;
      *   }
      * @return
      */
-    virtual bool shutdown() {
-      state_.setValue(SHUTDOWN);
+    virtual bool Shutdown() {
+      state_.SetValue(SHUTDOWN);
       return true;
     }
 
@@ -89,17 +89,17 @@ public:
      * Return a descriptive string describing the service and it's state.
      * @return
      */
-    virtual std::string getStatusString() {
+    virtual std::string GetStatusString() {
       // a more descriptive name (tag supplied on construction) would be ideal
-      return typeid(this).name() + std::string(", state=") + SERVICE_STATE_NAME_MAP[getState()];
+      return typeid(this).name() + std::string(", state=") + g_SERVICE_STATE_NAME_MAP[GetState()];
     }
 
     /**
      * Return the current ServiceState if this service.
      * @return ServiceState
      */
-    ServiceState getState() {
-      return state_.getValue();
+    ServiceState GetState() {
+      return state_.GetValue();
     }
 
 protected:
@@ -108,8 +108,8 @@ protected:
      *
      * @param new_state
      */
-    void setState(ServiceState new_state) {
-      state_.setValue(new_state);
+    void SetState(ServiceState new_state) {
+      state_.SetValue(new_state);
     }
 
 private:
@@ -131,15 +131,15 @@ public:
     RunnableService() {
       should_run_.store(false);
     }
-    virtual ~RunnableService() = default;
+    ~RunnableService() override = default;
 
     /**
      * Starts the worker thread. Should be overridden if other actions are necessary to start.
      * @return
      */
-    virtual bool start() override {
-      bool started = startWorkerThread();
-      started &= Service::start();
+    bool Start() override {
+      bool started = StartWorkerThread();
+      started &= Service::Start();
       return started;
     }
 
@@ -147,9 +147,9 @@ public:
      * Stops the worker thread. Should be overridden if other actions are necessary to stop.
      * @return
      */
-    virtual bool shutdown() override {
-      bool is_shutdown = Service::shutdown();
-      is_shutdown &= stopWorkerThread();
+    bool Shutdown() override {
+      bool is_shutdown = Service::Shutdown();
+      is_shutdown &= StopWorkerThread();
       return is_shutdown;
     }
 
@@ -157,14 +157,14 @@ public:
      * Return if the RunnableService work thread is active
      * @return true if the work thread is active / running, false otherwise
      */
-    virtual bool isRunning() {
-      return Service::getState() == ServiceState::STARTED && should_run_.load();
+    virtual bool IsRunning() {
+      return Service::GetState() == ServiceState::STARTED && should_run_.load();
     }
 
     /**
      * Wait for the work thread shutdown
      */
-    void waitForShutdown() {
+    void WaitForShutdown() {
       std::unique_lock <std::mutex> lck(this->mtx_);
       if (runnable_thread_.joinable()) {
         cv_.wait(lck); // todo guard against spurious wakeup, or could do while
@@ -175,7 +175,7 @@ public:
      * Wait for the work thread shutdown
      * @param millis time to wait
      */
-    void waitForShutdown(std::chrono::milliseconds millis) {
+    void WaitForShutdown(std::chrono::milliseconds millis) {
       std::unique_lock <std::mutex> lck(this->mtx_);
       if (runnable_thread_.joinable()) {
         cv_.wait_for(lck, millis); // todo guard against spurious wakeup
@@ -185,7 +185,7 @@ public:
     /**
      * Join the running thread if available.
      */
-    void join() {
+    void Join() {
       if (runnable_thread_.joinable()) {
         runnable_thread_.join();
       }
@@ -195,8 +195,8 @@ public:
      * Return a descriptive string describing the service and it's state.
      * @return
      */
-    virtual std::string getStatusString() override {
-      return Service::getStatusString() + std::string(", isRunning=") + (isRunning()
+    std::string GetStatusString() override {
+      return Service::GetStatusString() + std::string(", IsRunning=") + (IsRunning()
         ? std::string("True") : std::string("False"));
     }
 
@@ -206,10 +206,10 @@ protected:
    * Start the worker thread if not already running.
    * @return true if the worker thread was started, false if already running
    */
-  virtual bool startWorkerThread() {
+  virtual bool StartWorkerThread() {
     if(!runnable_thread_.joinable()) {
       should_run_.store(true);
-      runnable_thread_ = std::thread(&RunnableService::run, this);
+      runnable_thread_ = std::thread(&RunnableService::Run, this);
       return true;
     }
     return false;
@@ -219,7 +219,7 @@ protected:
    * Set the should_run_ flag to false for the worker thread to exit
    * @return
    */
-  virtual bool stopWorkerThread() {
+  virtual bool StopWorkerThread() {
     if(should_run_.load()) {
       should_run_.store(false);
       return true;
@@ -230,9 +230,9 @@ protected:
   /**
    * Calls the abstract work method and notifies when shutdown was called.
    */
-  virtual void run() {
-    while(should_run_.load() && ServiceState::STARTED == Service::getState()) {
-      work();
+  virtual void Run() {
+    while(should_run_.load() && ServiceState::STARTED == Service::GetState()) {
+      Work();
     }
     // done, notify anyone waiting
     std::unique_lock <std::mutex> lck(this->mtx_);
@@ -242,11 +242,11 @@ protected:
   /**
    * Implement this method to do work. Note: this method is assumed to NOT block, otherwise shutdown does nothing.
    */
-  virtual void work() = 0;
+  virtual void Work() = 0;
 
 private:
   std::thread runnable_thread_;
-  std::atomic<bool> should_run_;
+  std::atomic<bool> should_run_{};
   std::condition_variable cv_;
   mutable std::mutex mtx_;
 };

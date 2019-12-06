@@ -28,15 +28,15 @@ class SimpleTestPublisher : public Publisher<std::string>
 public:
 
   SimpleTestPublisher() {should_succeed_ = true;}
-  ~SimpleTestPublisher() = default;
+  ~SimpleTestPublisher() override = default;
 
-  virtual Aws::DataFlow::UploadStatus publishData(std::string &data) override {
+  Aws::DataFlow::UploadStatus PublishData(std::string &data) override {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     last_data = data;
     return  should_succeed_ ? Aws::DataFlow::UploadStatus::SUCCESS : Aws::DataFlow::UploadStatus::FAIL;
   }
 
-  void setShouldSucceed(bool nv) {
+  void SetShouldSucceed(bool nv) {
     should_succeed_ = nv;
   }
 
@@ -66,7 +66,7 @@ public:
       test_publisher.reset();
     }
 protected:
-    std::shared_ptr<SimpleTestPublisher> test_publisher;
+    std::shared_ptr<SimpleTestPublisher> test_publisher_;
 };
 
 /**
@@ -98,7 +98,7 @@ TEST_F(PublisherTest, TestPublishSuccessWhenStarted) {
 
   std::string data("They're taking the hobbits to Isengard!");
 
-  bool b = test_publisher->start();
+  bool b = test_publisher->Start();
   EXPECT_TRUE(b);
   EXPECT_TRUE(test_publisher->canPublish());
 
@@ -118,7 +118,7 @@ TEST_F(PublisherTest, TestPublishFailure) {
 
   std::string data("They're taking the hobbits to Isengard!");
 
-  bool b = test_publisher->start();
+  bool b = test_publisher->Start();
   EXPECT_TRUE(b);
   EXPECT_TRUE(test_publisher->canPublish());
 
@@ -150,16 +150,16 @@ TEST_F(PublisherTest, TestPublisherShutdown) {
 
   std::string data("They're taking the hobbits to Isengard!");
 
-  bool b = test_publisher->start();
+  bool b = test_publisher->Start();
   EXPECT_TRUE(b);
   EXPECT_TRUE(test_publisher->canPublish());
   EXPECT_EQ(ServiceState::STARTED, test_publisher->getState());
 
-  std::thread pub_thread(&SimpleTestPublisher::attemptPublish, test_publisher, std::ref(data));
+  std::thread pub_thread(&SimpleTestPublisher::AttemptPublish, test_publisher, std::ref(data));
 
   // let the attemptPublish thread start and hold the lock
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  b = test_publisher->shutdown();
+  b = test_publisher->Shutdown();
 
   EXPECT_TRUE(b);
   EXPECT_EQ(data, test_publisher->last_data);
@@ -173,5 +173,5 @@ TEST_F(PublisherTest, TestPublisherShutdown) {
   EXPECT_LT(std::chrono::milliseconds(0), test_publisher->getLastPublishDuration());
   EXPECT_FALSE(test_publisher->canPublish());
 
-  pub_thread.join();
+  pub_thread.Join();
 }

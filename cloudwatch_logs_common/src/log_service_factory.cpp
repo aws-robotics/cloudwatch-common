@@ -57,13 +57,13 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   };
 
   auto log_file_upload_streamer =
-      Aws::FileManagement::createFileUploadStreamer<LogCollection>(log_file_manager, file_upload_options);
+      Aws::FileManagement::CreateFileUploadStreamer<LogCollection>(log_file_manager, file_upload_options);
 
   // connect publisher state changes to the File Streamer
-  publisher->addPublisherStateListener([upload_streamer = log_file_upload_streamer](const PublisherState& state) {
+  publisher->AddPublisherStateListener([upload_streamer = log_file_upload_streamer](const PublisherState& state) {
     auto status =
       (state == PublisherState::CONNECTED) ? Aws::DataFlow::Status::AVAILABLE : Aws::DataFlow::Status::UNAVAILABLE;
-    upload_streamer->onPublisherStateChange(status);
+    upload_streamer->OnPublisherStateChange(status);
   });
 
   // Create an observed queue to trigger a publish when data is available
@@ -76,16 +76,16 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
     cloudwatch_options.uploader_options.batch_max_queue_size,
     cloudwatch_options.uploader_options.batch_trigger_publish_size
   );
-  log_batcher->setLogFileManager(log_file_manager);
+  log_batcher->SetLogFileManager(log_file_manager);
 
-  log_file_upload_streamer->setSink(file_data_queue);
-  queue_monitor->addSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
+  log_file_upload_streamer->SetSink(file_data_queue);
+  queue_monitor->AddSource(file_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::LOWEST_PRIORITY});
 
-  log_batcher->setSink(stream_data_queue);
-  queue_monitor->addSource(stream_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
+  log_batcher->SetSink(stream_data_queue);
+  queue_monitor->AddSource(stream_data_queue, DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
 
   auto log_service = std::make_shared<LogService>(publisher, log_batcher, log_file_upload_streamer);
-  log_service->setSource(queue_monitor);
+  log_service->SetSource(queue_monitor);
 
   return log_service;  // allow user to start
 }

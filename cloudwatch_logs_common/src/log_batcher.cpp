@@ -42,11 +42,11 @@ LogBatcher::LogBatcher(size_t max_allowable_batch_size,
 
 LogBatcher::~LogBatcher() = default;
 
-bool LogBatcher::publishBatchedData() {
-  std::lock_guard<std::recursive_mutex> lk(mtx);
+bool LogBatcher::PublishBatchedData() {
+  std::lock_guard<std::recursive_mutex> lk(mtx_);
 
   // is there anything to send?
-  if (getCurrentBatchSize() == 0) {
+  if (GetCurrentBatchSize() == 0) {
     AWS_LOGSTREAM_DEBUG(__func__, "LogBatcher: nothing batched to publish");
     return false;
   }
@@ -71,7 +71,7 @@ bool LogBatcher::publishBatchedData() {
           } else if (DataFlow::UploadStatus::SUCCESS != upload_status) {
 
             AWS_LOG_INFO(__func__, "LogBatcher: Task failed to upload: writing logs to file. Status = %d", upload_status);
-            log_file_manager->write(log_messages);
+            log_file_manager->Write(log_messages);
 
           } else {
             AWS_LOG_DEBUG(__func__, "LogBatcher: Task log upload successful");
@@ -81,21 +81,21 @@ bool LogBatcher::publishBatchedData() {
         }
     };
 
-    log_task->setOnCompleteFunction(function);
+    log_task->SetOnCompleteFunction(function);
   }
 
   // dont attempt to queue if not started
-  if(ServiceState::STARTED != this->getState()) {
-    AWS_LOG_WARN(__func__, "current service state is not Started, canceling task: %s", Service::getStatusString().c_str());
-    log_task->cancel();
+  if(ServiceState::STARTED != this->GetState()) {
+    AWS_LOG_WARN(__func__, "current service state is not Started, canceling task: %s", Service::GetStatusString().c_str());
+    log_task->Cancel();
     return false;
   }
 
   bool enqueue_success = false;
 
-  if (getSink()) {
+  if (GetSink()) {
 
-    enqueue_success = getSink()->tryEnqueue(log_task, this->getTryEnqueueDuration());
+    enqueue_success = GetSink()->TryEnqueue(log_task, this->GetTryEnqueueDuration());
 
     if (!enqueue_success) {
       AWS_LOG_WARN(__func__, "Unable to enqueue log data, canceling task");
@@ -107,33 +107,33 @@ bool LogBatcher::publishBatchedData() {
   }
 
   if (!enqueue_success) {
-    log_task->cancel();
+    log_task->Cancel();
   }
-  this->resetBatchedData();
+  this->ResetBatchedData();
   return enqueue_success;
 }
 
-void LogBatcher::emptyCollection() {
-  std::lock_guard<std::recursive_mutex> lck(mtx);
+void LogBatcher::EmptyCollection() {
+  std::lock_guard<std::recursive_mutex> lck(mtx_);
 
   if (this->log_file_manager_) {
     AWS_LOG_INFO(__func__, "Writing data to file");
-    log_file_manager_->write(*this->batched_data_);
+    log_file_manager_->Write(*this->batched_data_);
   } else {
     AWS_LOG_WARN(__func__, "Dropping data");
   }
-  this->resetBatchedData();
+  this->ResetBatchedData();
 }
 
 
-bool LogBatcher::start() {
+bool LogBatcher::Start() {
   if (log_file_manager_ == nullptr) {
     AWS_LOGSTREAM_WARN(__func__, "FileManager not found: data will be dropped on failure.");
   }
-  return Service::start();
+  return Service::Start();
 }
 
-void LogBatcher::setLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogCollection>> log_file_manager)
+void LogBatcher::SetLogFileManager(std::shared_ptr<Aws::FileManagement::FileManager<LogCollection>> log_file_manager)
 {
   if (nullptr == log_file_manager) {
     throw std::invalid_argument("input FileManager cannot be null");

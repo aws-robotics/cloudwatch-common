@@ -23,10 +23,10 @@
 
 using namespace Aws::CloudWatchLogs::Utils;
 
-constexpr char LOG_GROUP_NAME1[] = "TestGroup1";
-constexpr char LOG_GROUP_NAME2[] = "TestGroup2";
-constexpr char LOG_STREAM_NAME1[] = "TestStream1";
-constexpr char LOG_STREAM_NAME2[] = "TestStream2";
+constexpr char kLogGroupName1[] = "TestGroup1";
+constexpr char kLogGroupName2[] = "TestGroup2";
+constexpr char kLogStreamName1[] = "TestStream1";
+constexpr char kLogStreamName2[] = "TestStream2";
 
 class TestCloudWatchFacade : public ::testing::Test
 {
@@ -34,8 +34,8 @@ protected:
   std::list<Aws::CloudWatchLogs::Model::InputLogEvent> logs_list_;
   Aws::SDKOptions options_;
   std::shared_ptr<CloudWatchLogsFacade> facade_;
-  std::shared_ptr<CloudWatchLogsClientMock> mock_client;
-  CloudWatchLogsClientMock* mock_client_p;
+  std::shared_ptr<CloudWatchLogsClientMock> mock_client_;
+  CloudWatchLogsClientMock* mock_client_p_{};
 
   void SetUp() override
   {
@@ -62,50 +62,50 @@ protected:
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_EmptyLogs)
 {
     std::list<Aws::CloudWatchLogs::Model::InputLogEvent> empty_logs_list;
-    Aws::String nextToken;
+    Aws::String next_token;
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_EMPTY_PARAMETER,
-        facade_->SendLogsToCloudWatch(nextToken, "", "", empty_logs_list));
+        facade_->SendLogsToCloudWatch(next_token, "", "", empty_logs_list));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_FailedResponse)
 {
-    Aws::CloudWatchLogs::Model::PutLogEventsOutcome failedOutcome;
+    Aws::CloudWatchLogs::Model::PutLogEventsOutcome failed_outcome;
     EXPECT_CALL(*mock_client_p, PutLogEvents(testing::_))
-        .WillOnce(testing::Return(failedOutcome));
-    Aws::String nextToken;
+        .WillOnce(testing::Return(failed_outcome));
+    Aws::String next_token;
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_FAILED,
-        facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list_));
+        facade_->SendLogsToCloudWatch(next_token, "", "", logs_list_));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_SuccessResponse)
 {
-    Aws::CloudWatchLogs::Model::PutLogEventsResult successResult;
-    Aws::CloudWatchLogs::Model::PutLogEventsOutcome successOutcome(successResult);
+    Aws::CloudWatchLogs::Model::PutLogEventsResult success_result;
+    Aws::CloudWatchLogs::Model::PutLogEventsOutcome success_outcome(success_result);
     EXPECT_CALL(*mock_client_p, PutLogEvents(testing::_))
-        .WillOnce(testing::Return(successOutcome));
-    Aws::String nextToken;
+        .WillOnce(testing::Return(success_outcome));
+    Aws::String next_token;
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
-        facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list_));
+        facade_->SendLogsToCloudWatch(next_token, "", "", logs_list_));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_LongSuccessResponse)
 {
-    Aws::CloudWatchLogs::Model::PutLogEventsResult successResult;
-    Aws::CloudWatchLogs::Model::PutLogEventsOutcome successOutcome(successResult);
+    Aws::CloudWatchLogs::Model::PutLogEventsResult success_result;
+    Aws::CloudWatchLogs::Model::PutLogEventsOutcome success_outcome(success_result);
     EXPECT_CALL(*mock_client_p, PutLogEvents(testing::_))
         .Times(2)
-        .WillRepeatedly(testing::Return(successOutcome));
+        .WillRepeatedly(testing::Return(success_outcome));
 
-    Aws::String nextToken;
+    Aws::String next_token;
     std::list<Aws::CloudWatchLogs::Model::InputLogEvent> logs_list;
     for (int i=0;i<200;i++) {
         logs_list.emplace_back();
     }
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
-        facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list));
+        facade_->SendLogsToCloudWatch(next_token, "", "", logs_list));
 }
 
 
@@ -115,26 +115,26 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_LongSuccessRe
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogGroup_SuccessResponse)
 {
-    Aws::CloudWatchLogs::Model::CreateLogGroupOutcome* successOutcome =
+    Aws::CloudWatchLogs::Model::CreateLogGroupOutcome* success_outcome =
         new Aws::CloudWatchLogs::Model::CreateLogGroupOutcome(Aws::NoResult());
 
     EXPECT_CALL(*mock_client_p, CreateLogGroup(testing::_))
-        .WillOnce(testing::Return(*successOutcome));
+        .WillOnce(testing::Return(*success_outcome));
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
-        facade_->CreateLogGroup(LOG_GROUP_NAME1));
+        facade_->CreateLogGroup(kLogGroupName1));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogGroup_FailedResponse)
 {
-    Aws::CloudWatchLogs::Model::CreateLogGroupOutcome* failedOutcome =
+    auto* failed_outcome =
         new Aws::CloudWatchLogs::Model::CreateLogGroupOutcome();
 
     EXPECT_CALL(*mock_client_p, CreateLogGroup(testing::_))
-        .WillOnce(testing::Return(*failedOutcome));
+        .WillOnce(testing::Return(*failed_outcome));
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_CREATE_LOG_GROUP_FAILED,
-        facade_->CreateLogGroup(LOG_GROUP_NAME1));
+        facade_->CreateLogGroup(kLogGroupName1));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogGroup_AlreadyExists)
@@ -142,14 +142,14 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogGroup_AlreadyExists)
     Aws::Client::AWSError<Aws::CloudWatchLogs::CloudWatchLogsErrors> error
     (Aws::CloudWatchLogs::CloudWatchLogsErrors::RESOURCE_ALREADY_EXISTS, false);
 
-    Aws::CloudWatchLogs::Model::CreateLogGroupOutcome* failedOutcome =
+    auto* failed_outcome =
         new Aws::CloudWatchLogs::Model::CreateLogGroupOutcome(error);
 
     EXPECT_CALL(*mock_client_p, CreateLogGroup(testing::_))
-        .WillOnce(testing::Return(*failedOutcome));
+        .WillOnce(testing::Return(*failed_outcome));
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_LOG_GROUP_ALREADY_EXISTS,
-        facade_->CreateLogGroup(LOG_GROUP_NAME1));
+        facade_->CreateLogGroup(kLogGroupName1));
 }
 
 /*
@@ -158,41 +158,41 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogGroup_AlreadyExists)
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CheckLogGroupExists_FailedResponse)
 {
-    Aws::CloudWatchLogs::Model::DescribeLogGroupsOutcome failedOutcome;
+    Aws::CloudWatchLogs::Model::DescribeLogGroupsOutcome failed_outcome;
     EXPECT_CALL(*mock_client_p, DescribeLogGroups(testing::_))
-        .WillOnce(testing::Return(failedOutcome));
+        .WillOnce(testing::Return(failed_outcome));
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_FAILED,
-        facade_->CheckLogGroupExists(LOG_GROUP_NAME1));
+        facade_->CheckLogGroupExists(kLogGroupName1));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CheckLogGroupExists_LogGroupExists)
 {
-    Aws::CloudWatchLogs::Model::LogGroup TestGroup;
-    TestGroup.SetLogGroupName(LOG_GROUP_NAME1);
-    Aws::CloudWatchLogs::Model::DescribeLogGroupsResult existsResult;
-    existsResult.AddLogGroups(TestGroup);
-    existsResult.SetNextToken("token");
-    Aws::CloudWatchLogs::Model::DescribeLogGroupsOutcome existsOutcome(existsResult);
+    Aws::CloudWatchLogs::Model::LogGroup test_group;
+    test_group.SetLogGroupName(kLogGroupName1);
+    Aws::CloudWatchLogs::Model::DescribeLogGroupsResult exists_result;
+    exists_result.AddLogGroups(test_group);
+    exists_result.SetNextToken("token");
+    Aws::CloudWatchLogs::Model::DescribeLogGroupsOutcome exists_outcome(exists_result);
     EXPECT_CALL(*mock_client_p, DescribeLogGroups(testing::_))
-        .WillOnce(testing::Return(existsOutcome));
+        .WillOnce(testing::Return(exists_outcome));
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
-        facade_->CheckLogGroupExists(LOG_GROUP_NAME1));
+        facade_->CheckLogGroupExists(kLogGroupName1));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CheckLogGroupExists_LogGroupDoesntExist)
-{   Aws::CloudWatchLogs::Model::LogGroup TestGroup;
-    TestGroup.SetLogGroupName(LOG_GROUP_NAME1);
-    Aws::CloudWatchLogs::Model::DescribeLogGroupsResult doesntExistResult;
-    doesntExistResult.AddLogGroups(TestGroup);
-    doesntExistResult.SetNextToken("");
-    Aws::CloudWatchLogs::Model::DescribeLogGroupsOutcome doesntExistOutcome(doesntExistResult);
+{   Aws::CloudWatchLogs::Model::LogGroup test_group;
+    test_group.SetLogGroupName(kLogGroupName1);
+    Aws::CloudWatchLogs::Model::DescribeLogGroupsResult doesnt_exist_result;
+    doesnt_exist_result.AddLogGroups(test_group);
+    doesnt_exist_result.SetNextToken("");
+    Aws::CloudWatchLogs::Model::DescribeLogGroupsOutcome doesnt_exist_outcome(doesnt_exist_result);
     EXPECT_CALL(*mock_client_p, DescribeLogGroups(testing::_))
-        .WillOnce(testing::Return(doesntExistOutcome));
+        .WillOnce(testing::Return(doesnt_exist_outcome));
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_LOG_GROUP_NOT_FOUND,
-        facade_->CheckLogGroupExists(LOG_GROUP_NAME2));
+        facade_->CheckLogGroupExists(kLogGroupName2));
 }
 
 /*
@@ -201,26 +201,26 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CheckLogGroupExists_LogGroupDoesnt
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_SuccessResponse)
 {
-    Aws::CloudWatchLogs::Model::CreateLogStreamOutcome* successOutcome =
+    Aws::CloudWatchLogs::Model::CreateLogStreamOutcome* success_outcome =
         new Aws::CloudWatchLogs::Model::CreateLogStreamOutcome(Aws::NoResult());
 
     EXPECT_CALL(*mock_client_p, CreateLogStream(testing::_))
-        .WillOnce(testing::Return(*successOutcome));
+        .WillOnce(testing::Return(*success_outcome));
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
-        facade_->CreateLogStream(LOG_GROUP_NAME1, LOG_STREAM_NAME1));
+        facade_->CreateLogStream(kLogGroupName1, kLogStreamName1));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_FailedResponse)
 {
-    Aws::CloudWatchLogs::Model::CreateLogStreamOutcome* failedOutcome =
+    auto* failed_outcome =
         new Aws::CloudWatchLogs::Model::CreateLogStreamOutcome();
 
     EXPECT_CALL(*mock_client_p, CreateLogStream(testing::_))
-        .WillOnce(testing::Return(*failedOutcome));
+        .WillOnce(testing::Return(*failed_outcome));
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_CREATE_LOG_STREAM_FAILED,
-        facade_->CreateLogStream(LOG_GROUP_NAME1, LOG_STREAM_NAME1));
+        facade_->CreateLogStream(kLogGroupName1, kLogStreamName1));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_AlreadyExists)
@@ -228,14 +228,14 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_AlreadyExists)
     Aws::Client::AWSError<Aws::CloudWatchLogs::CloudWatchLogsErrors> error
     (Aws::CloudWatchLogs::CloudWatchLogsErrors::RESOURCE_ALREADY_EXISTS, false);
 
-    Aws::CloudWatchLogs::Model::CreateLogStreamOutcome* failedOutcome =
+    auto* failed_outcome =
         new Aws::CloudWatchLogs::Model::CreateLogStreamOutcome(error);
 
     EXPECT_CALL(*mock_client_p, CreateLogStream(testing::_))
-        .WillOnce(testing::Return(*failedOutcome));
+        .WillOnce(testing::Return(*failed_outcome));
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_LOG_STREAM_ALREADY_EXISTS,
-        facade_->CreateLogStream(LOG_GROUP_NAME1, LOG_STREAM_NAME1));
+        facade_->CreateLogStream(kLogGroupName1, kLogStreamName1));
 }
 
 /*
@@ -244,42 +244,42 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_AlreadyExists)
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CheckLogStreamExists_FailedResponse)
 {
-    Aws::CloudWatchLogs::Model::DescribeLogStreamsOutcome failedOutcome;
+    Aws::CloudWatchLogs::Model::DescribeLogStreamsOutcome failed_outcome;
     Aws::CloudWatchLogs::Model::LogStream * log_stream_object = nullptr;
     EXPECT_CALL(*mock_client_p, DescribeLogStreams(testing::_))
-        .WillOnce(testing::Return(failedOutcome));
+        .WillOnce(testing::Return(failed_outcome));
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_FAILED,
-        facade_->CheckLogStreamExists(LOG_GROUP_NAME1, LOG_STREAM_NAME1, log_stream_object));
+        facade_->CheckLogStreamExists(kLogGroupName1, kLogStreamName1, log_stream_object));
 }
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CheckLogStreamExists_LogStreamExists)
 {
-    Aws::CloudWatchLogs::Model::LogStream TestStream;
-    TestStream.SetLogStreamName(LOG_STREAM_NAME1);
-    Aws::CloudWatchLogs::Model::DescribeLogStreamsResult existsResult;
-    existsResult.AddLogStreams(TestStream);
-    existsResult.SetNextToken("token");
-    Aws::CloudWatchLogs::Model::DescribeLogStreamsOutcome existsOutcome(existsResult);
+    Aws::CloudWatchLogs::Model::LogStream test_stream;
+    test_stream.SetLogStreamName(kLogStreamName1);
+    Aws::CloudWatchLogs::Model::DescribeLogStreamsResult exists_result;
+    exists_result.AddLogStreams(test_stream);
+    exists_result.SetNextToken("token");
+    Aws::CloudWatchLogs::Model::DescribeLogStreamsOutcome exists_outcome(exists_result);
     EXPECT_CALL(*mock_client_p, DescribeLogStreams(testing::_))
-        .WillOnce(testing::Return(existsOutcome));
+        .WillOnce(testing::Return(exists_outcome));
 
-    Aws::CloudWatchLogs::Model::LogStream * log_stream_object = new Aws::CloudWatchLogs::Model::LogStream();
+    auto * log_stream_object = new Aws::CloudWatchLogs::Model::LogStream();
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
-        facade_->CheckLogStreamExists(LOG_GROUP_NAME1, LOG_STREAM_NAME1, log_stream_object));
+        facade_->CheckLogStreamExists(kLogGroupName1, kLogStreamName1, log_stream_object));
 }
 
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CheckLogStreamExists_LogStreamDoesntExist)
-{   Aws::CloudWatchLogs::Model::LogStream TestStream;
-    TestStream.SetLogStreamName(LOG_STREAM_NAME2);
-    Aws::CloudWatchLogs::Model::DescribeLogStreamsResult doesntExistResult;
-    doesntExistResult.AddLogStreams(TestStream);
-    Aws::CloudWatchLogs::Model::DescribeLogStreamsOutcome doesntExistOutcome(doesntExistResult);
+{   Aws::CloudWatchLogs::Model::LogStream test_stream;
+    test_stream.SetLogStreamName(kLogStreamName2);
+    Aws::CloudWatchLogs::Model::DescribeLogStreamsResult doesnt_exist_result;
+    doesnt_exist_result.AddLogStreams(test_stream);
+    Aws::CloudWatchLogs::Model::DescribeLogStreamsOutcome doesnt_exist_outcome(doesnt_exist_result);
     EXPECT_CALL(*mock_client_p, DescribeLogStreams(testing::_))
-        .WillOnce(testing::Return(doesntExistOutcome));
+        .WillOnce(testing::Return(doesnt_exist_outcome));
 
     Aws::CloudWatchLogs::Model::LogStream * log_stream_object = nullptr;
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_LOG_STREAM_NOT_FOUND,
-        facade_->CheckLogStreamExists(LOG_GROUP_NAME1, LOG_STREAM_NAME1, log_stream_object));
+        facade_->CheckLogStreamExists(kLogGroupName1, kLogStreamName1, log_stream_object));
 }

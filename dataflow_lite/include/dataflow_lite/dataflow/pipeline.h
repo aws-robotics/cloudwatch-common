@@ -28,7 +28,7 @@ class InputStage;
 template <typename O>
 class OutputStage {
 public:
-  std::shared_ptr<Sink<O>> getSink() {
+  std::shared_ptr<Sink<O>> GetSink() {
     return sink_;
   }
 
@@ -36,7 +36,7 @@ public:
       class T>
   inline
   typename std::enable_if<std::is_base_of<Sink<O>, T>::value, std::shared_ptr<T>>::type
-  setSink(std::shared_ptr<T> sink) {
+  SetSink(std::shared_ptr<T> sink) {
     sink_ = sink;
     return sink;
   }
@@ -47,10 +47,10 @@ public:
 template <typename I>
 class InputStage {
  public:
-  inline std::shared_ptr<Source<I>> getSource() {
+  inline std::shared_ptr<Source<I>> GetSource() {
     return source_;
   }
-  inline void setSource(std::shared_ptr<Source<I>> source) {
+  inline void SetSource(std::shared_ptr<Source<I>> source) {
     source_ = source;
   }
  private:

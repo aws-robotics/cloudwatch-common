@@ -22,8 +22,8 @@ namespace Aws {
 namespace CloudWatchMetrics {
 namespace Utils {
 
-MetricDatum deserializeMetricDatum(const Aws::String &basic_string);
-Aws::String  serializeMetricDatum(const MetricDatum &datum);
+MetricDatum DeserializeMetricDatum(const Aws::String &basic_string);
+Aws::String  SerializeMetricDatum(const MetricDatum &datum);
 
 }  // namespace Utils
 }  // namespace CloudWatchMetrics

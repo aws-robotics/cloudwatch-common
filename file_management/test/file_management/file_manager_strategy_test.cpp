@@ -32,13 +32,13 @@ using namespace Aws::FileManagement;
 
 class MockFileManagerStrategy : public FileManagerStrategy {
 public:
-  MockFileManagerStrategy(const FileManagerStrategyOptions &options) : FileManagerStrategy(options) {}
+  explicit MockFileManagerStrategy(const FileManagerStrategyOptions &options) : FileManagerStrategy(options) {}
 
-  std::string getFileToRead() {
+  std::string GetFileToRead() {
     return FileManagerStrategy::getFileToRead();
   }
 
-  std::string getActiveWriteFile() {
+  std::string GetActiveWriteFile() {
     return FileManagerStrategy::getActiveWriteFile();
   }
 };
@@ -56,12 +56,12 @@ public:
   }
 
 protected:
-  std::string folder = "log_tests/";
-  std::string prefix = "test";
-  std::string extension = ".log";
-  uint max_file_size = 1024;
-  uint storage_limit = max_file_size * 10;
-  FileManagerStrategyOptions options{folder, prefix, extension, max_file_size, storage_limit};
+  std::string folder_ = "log_tests/";
+  std::string prefix_ = "test";
+  std::string extension_ = ".log";
+  uint max_file_size_ = 1024;
+  uint storage_limit_ = max_file_size * 10;
+  FileManagerStrategyOptions options_{folder, prefix, extension, max_file_size, storage_limit};
 };
 
 
@@ -70,13 +70,13 @@ TEST_F(FileManagerStrategyTest, restart_without_token) {
   const std::string data2 = "test_data_2";
   {
     FileManagerStrategy file_manager_strategy(options);
-    EXPECT_NO_THROW(file_manager_strategy.start());
-    file_manager_strategy.write(data1);
-    file_manager_strategy.write(data2);
+    EXPECT_NO_THROW(file_manager_strategy.Start());
+    file_manager_strategy.Write(data1);
+    file_manager_strategy.Write(data2);
   }
   {
     FileManagerStrategy file_manager_strategy(options);
-    EXPECT_NO_THROW(file_manager_strategy.start());
+    EXPECT_NO_THROW(file_manager_strategy.Start());
     std::string result1, result2;
     file_manager_strategy.read(result1);
     file_manager_strategy.read(result2);
@@ -91,16 +91,16 @@ TEST_F(FileManagerStrategyTest, restart_without_token) {
 //  const std::string data2 = "test_data_2";
 //  {
 //    FileManagerStrategy file_manager_strategy(options);
-//    EXPECT_NO_THROW(file_manager_strategy.start());
-//    file_manager_strategy.write(data1);
-//    file_manager_strategy.write(data2);
+//    EXPECT_NO_THROW(file_manager_strategy.Start());
+//    file_manager_strategy.Write(data1);
+//    file_manager_strategy.Write(data2);
 //    std::string result1;
 //    DataToken token1 = file_manager_strategy.read(result1);
 //    EXPECT_EQ(data1, result1);
 //  }
 //  {
 //    FileManagerStrategy file_manager_strategy(options);
-//    EXPECT_NO_THROW(file_manager_strategy.start());
+//    EXPECT_NO_THROW(file_manager_strategy.Start());
 //    std::string result2;
 //    DataToken token2 = file_manager_strategy.read(result2);
 //    EXPECT_EQ(data2, result2);
@@ -111,9 +111,9 @@ TEST_F(FileManagerStrategyTest, fail_token_restart_from_last_location) {
   const std::string data1 = "test_data_1";
   const std::string data2 = "test_data_2";
   FileManagerStrategy file_manager_strategy(options);
-  EXPECT_NO_THROW(file_manager_strategy.start());
-  file_manager_strategy.write(data1);
-  file_manager_strategy.write(data2);
+  EXPECT_NO_THROW(file_manager_strategy.Start());
+  file_manager_strategy.Write(data1);
+  file_manager_strategy.Write(data2);
   std::string result1;
   DataToken token1 = file_manager_strategy.read(result1);
   EXPECT_EQ(data1, result1);
@@ -128,12 +128,12 @@ TEST_F(FileManagerStrategyTest, fail_token_restart_from_last_location) {
   EXPECT_EQ(data2, result3);
   file_manager_strategy.resolve(token3, false);
   // Token was failed, should be re-read.
-  EXPECT_TRUE(file_manager_strategy.isDataAvailable());
+  EXPECT_TRUE(file_manager_strategy.IsDataAvailable());
   DataToken token4 = file_manager_strategy.read(result4);
   EXPECT_EQ(data2, result4);
-  EXPECT_FALSE(file_manager_strategy.isDataAvailable());
+  EXPECT_FALSE(file_manager_strategy.IsDataAvailable());
   file_manager_strategy.resolve(token4, true);
-  EXPECT_FALSE(file_manager_strategy.isDataAvailable());
+  EXPECT_FALSE(file_manager_strategy.IsDataAvailable());
 }
 
 /**
@@ -141,20 +141,20 @@ TEST_F(FileManagerStrategyTest, fail_token_restart_from_last_location) {
  */
 TEST_F(FileManagerStrategyTest, start_success) {
   FileManagerStrategy file_manager_strategy(options);
-  EXPECT_NO_THROW(file_manager_strategy.start());
+  EXPECT_NO_THROW(file_manager_strategy.Start());
 }
 
 TEST_F(FileManagerStrategyTest, discover_stored_files) {
   const std::string test_data = "test_data";
   {
     FileManagerStrategy file_manager_strategy(options);
-    EXPECT_NO_THROW(file_manager_strategy.start());
-    file_manager_strategy.write(test_data);
+    EXPECT_NO_THROW(file_manager_strategy.Start());
+    file_manager_strategy.Write(test_data);
   }
   {
     FileManagerStrategy file_manager_strategy(options);
-    EXPECT_NO_THROW(file_manager_strategy.start());
-    EXPECT_TRUE(file_manager_strategy.isDataAvailable());
+    EXPECT_NO_THROW(file_manager_strategy.Start());
+    EXPECT_TRUE(file_manager_strategy.IsDataAvailable());
     std::string result;
     DataToken token = file_manager_strategy.read(result);
     EXPECT_EQ(test_data, result);
@@ -168,7 +168,7 @@ TEST_F(FileManagerStrategyTest, get_file_to_read_gets_newest) {
   options.maximum_file_size_in_kb = max_file_size_in_kb;
   {
     MockFileManagerStrategy file_manager_strategy(options);
-    file_manager_strategy.start();
+    file_manager_strategy.Start();
     std::ostringstream ss_25_kb;
     for (int i = 0; i < 1024; i++) {
       ss_25_kb << "This is 25 bytes of data.";
@@ -176,7 +176,7 @@ TEST_F(FileManagerStrategyTest, get_file_to_read_gets_newest) {
     std::string string_25_kb = ss_25_kb.str();
 
     for (int i = 0; i < 5; i++) {
-      file_manager_strategy.write(string_25_kb);
+      file_manager_strategy.Write(string_25_kb);
     }
 
     long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
@@ -204,13 +204,13 @@ TEST_F(FileManagerStrategyTest, rotate_large_files) {
   options.maximum_file_size_in_kb = max_file_size_in_kb;
   {
     FileManagerStrategy file_manager_strategy(options);
-    file_manager_strategy.start();
+    file_manager_strategy.Start();
     std::ostringstream data1ss;
     for (int i = 0; i < 1024; i++) {
       data1ss << "This is some long data that is longer than 10 bytes";
     }
     std::string data1 = data1ss.str();
-    file_manager_strategy.write(data1);
+    file_manager_strategy.Write(data1);
     long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
     EXPECT_EQ(1, file_count);
     std::ostringstream data2ss;
@@ -218,7 +218,7 @@ TEST_F(FileManagerStrategyTest, rotate_large_files) {
       data2ss << "This is some additional data that is also longer than 10 bytes";
     }
     std::string data2 = data2ss.str();
-    file_manager_strategy.write(data2);
+    file_manager_strategy.Write(data2);
     file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
     EXPECT_EQ(2, file_count);
   }
@@ -228,18 +228,18 @@ TEST_F(FileManagerStrategyTest, resolve_token_deletes_file) {
   const std::string test_data = "test_data";
   {
     FileManagerStrategy file_manager_strategy(options);
-    file_manager_strategy.start();
-    EXPECT_FALSE(file_manager_strategy.isDataAvailable());
-    file_manager_strategy.write(test_data);
-    EXPECT_TRUE(file_manager_strategy.isDataAvailable());
+    file_manager_strategy.Start();
+    EXPECT_FALSE(file_manager_strategy.IsDataAvailable());
+    file_manager_strategy.Write(test_data);
+    EXPECT_TRUE(file_manager_strategy.IsDataAvailable());
     std::string result;
     DataToken token = file_manager_strategy.read(result);
     file_manager_strategy.resolve(token, true);
   }
   {
     FileManagerStrategy file_manager_strategy(options);
-    file_manager_strategy.start();
-    EXPECT_FALSE(file_manager_strategy.isDataAvailable());
+    file_manager_strategy.Start();
+    EXPECT_FALSE(file_manager_strategy.IsDataAvailable());
   }
 }
 
@@ -251,18 +251,18 @@ TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
   options.storage_limit_in_kb = storage_limit;
   {
     FileManagerStrategy file_manager_strategy(options);
-    file_manager_strategy.start();
+    file_manager_strategy.Start();
     std::ostringstream ss_25_kb;
     for (int i = 0; i < 1024; i++) {
       ss_25_kb << "This is 25 bytes of data.";
     }
     std::string string_25_kb = ss_25_kb.str();
-    file_manager_strategy.write(string_25_kb);
+    file_manager_strategy.Write(string_25_kb);
     long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
     EXPECT_EQ(1, file_count);
 
     for (int i = 0; i < 5; i++) {
-      file_manager_strategy.write(string_25_kb);
+      file_manager_strategy.Write(string_25_kb);
     }
 
     file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
@@ -277,7 +277,7 @@ TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
     std::sort(file_paths.begin(), file_paths.end());
     const std::string file_to_be_deleted = file_paths[0];
 
-    file_manager_strategy.write(string_25_kb);
+    file_manager_strategy.Write(string_25_kb);
     file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
     EXPECT_EQ(3, file_count);
 
@@ -305,10 +305,10 @@ TEST_F(SanitizePathTest, sanitizePath_home_set) {
   char * original_home = getenv("HOME");
   setenv("HOME", "/home", 1);
 
-  sanitizePath(test_path);
+  SanitizePath(test_path);
 
   // Cleanup before test
-  if (NULL != original_home) {
+  if (nullptr != original_home) {
     setenv("HOME", original_home, 1);
   } else {
     unsetenv("HOME");
@@ -324,13 +324,13 @@ TEST_F(SanitizePathTest, sanitizePath_home_not_set_roshome_set) {
   unsetenv("HOME");
   setenv("ROS_HOME", "/ros_home", 1);
 
-  sanitizePath(test_path);
+  SanitizePath(test_path);
 
   // Cleanup before test
-  if (NULL != original_home) {
+  if (nullptr != original_home) {
     setenv("HOME", original_home, 1);
   }
-  if (NULL != original_ros_home) {
+  if (nullptr != original_ros_home) {
     setenv("ROS_HOME", original_ros_home, 1);
   } else {
     unsetenv("ROS_HOME");
@@ -348,13 +348,13 @@ TEST_F(SanitizePathTest, sanitizePath_home_not_set_roshome_not_set) {
   unsetenv("ROS_HOME");
 
 
-  ASSERT_THROW(sanitizePath(test_path), std::runtime_error);
+  ASSERT_THROW(SanitizePath(test_path), std::runtime_error);
 
   // Cleanup before test
-  if (NULL != original_home) {
+  if (nullptr != original_home) {
     setenv("HOME", original_home, 1);
   }
-  if (NULL != original_ros_home) {
+  if (nullptr != original_ros_home) {
     setenv("ROS_HOME", original_ros_home, 1);
   }
 
@@ -362,6 +362,6 @@ TEST_F(SanitizePathTest, sanitizePath_home_not_set_roshome_not_set) {
 
 TEST_F(SanitizePathTest, sanitizePath_adds_trailing_slash) {
   std::string test_path = "/test/path";
-  sanitizePath(test_path);
+  SanitizePath(test_path);
   EXPECT_STREQ(test_path.c_str(), "/test/path/");
 }

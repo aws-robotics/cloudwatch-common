@@ -37,7 +37,7 @@ static constexpr const char* kValueKey = "value";
 static constexpr const char* kStorageResolutionKey = "storage_resolution";
 static constexpr const char* kUnitKey = "unit";
 
-static const std::vector<Aws::String> required_properties = {
+static const std::vector<Aws::String> kRequiredProperties = {
     kMetricNameKey,
     kTimestampKey
 };
@@ -48,16 +48,16 @@ static const std::vector<Aws::String> required_properties = {
  * @param basic_string - a reference to a JSON string. This should be a single object.
  * @return datum - a MetricDatum created from this string.
  */
-MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
-  Aws::String aws_str(basic_string.c_str());
+MetricDatum DeserializeMetricDatum(const Aws::String &basic_string) {
+  Aws::String aws_str(basic_string);
   JsonValue json_value(aws_str);
   if (!json_value.WasParseSuccessful()) {
     throw std::invalid_argument("Failed to parse metric JSON string");
   }
   auto view = json_value.View();
-  for (const auto property : required_properties) {
+  for (const auto& property : kRequiredProperties) {
     if (!view.KeyExists(property)) {
-      std::string property_name(property.c_str());
+      std::string property_name(property.c_str());  // NOLINT(readability-redundant-string-cstr)
       throw std::invalid_argument("Could not find required property " + property_name + " in JSON string");
     }
   }
@@ -96,10 +96,10 @@ MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
  * @param datum - A single MetricDatum object
  * @return json_string - a JSON representation of the passed in MetricDatum object.
  */
-Aws::String serializeMetricDatum(const MetricDatum &datum) {
+Aws::String SerializeMetricDatum(const MetricDatum &datum) {
   Aws::Utils::Json::JsonValue json_value;
 
-  const Aws::Vector<Aws::CloudWatch::Model::Dimension> dimensions = datum.GetDimensions();
+  const Aws::Vector<Aws::CloudWatch::Model::Dimension>& dimensions = datum.GetDimensions();
   Aws::Utils::Array<JsonValue> dimensions_array = Aws::Utils::Array<JsonValue>(dimensions.size());
   for (size_t i = 0; i < dimensions.size(); ++i) {
     JsonValue dimension_json;
@@ -108,7 +108,7 @@ Aws::String serializeMetricDatum(const MetricDatum &datum) {
         .WithString(kDimensionsValueKey, dimensions[i].GetValue());
   }
 
-  const Aws::Vector<double> values = datum.GetValues();
+  const Aws::Vector<double>& values = datum.GetValues();
   Aws::Utils::Array<JsonValue> values_array = Aws::Utils::Array<JsonValue>(values.size());
   for (size_t i = 0; i < values.size(); ++i) {
     JsonValue val;
@@ -126,5 +126,5 @@ Aws::String serializeMetricDatum(const MetricDatum &datum) {
 }
 
 }  // namespace Utils
-}  // namespace CloudwatchMetrics
+}  // namespace CloudWatchMetrics
 }  // namespace Aws

@@ -25,20 +25,20 @@
 
 using namespace Aws::CloudWatchMetrics;
 
-constexpr int WAIT_TIME =
+constexpr int kWaitTime =
   2000;  // the amount of time (ms) to wait for publisher thread to do its work
 
 class MockCloudWatchFacade : public Utils::CloudWatchMetricsFacade
 {
 public:
   Utils::CloudWatchMetricsStatus send_metrics_ret_val;
-  uint32_t send_metrics_call_count;
+  uint32_t send_metrics_call_count{};
   std::string last_metric_namespace;
   MetricDatumCollection last_metrics;
 
   MockCloudWatchFacade() { reset(); }
 
-  void reset()
+  void Reset()
   {
     this->last_metric_namespace = "";
     this->send_metrics_ret_val = Utils::CloudWatchMetricsStatus::SUCCESS;
@@ -77,12 +77,12 @@ protected:
     metrics_list_.emplace_back();
     metrics_list_.emplace_back();
     EXPECT_FALSE(metrics_list_.empty());
-    EXPECT_TRUE(publisher_->start());
+    EXPECT_TRUE(publisher_->Start());
   }
 
   void TearDown() override
   {
-    EXPECT_TRUE(publisher_->shutdown());
+    EXPECT_TRUE(publisher_->Shutdown());
   }
 };
 

@@ -37,7 +37,7 @@ public:
     void(const UploadStatus& upload_status, const FileObject<std::string> &log_messages));
   MOCK_METHOD1(addStatusMonitor,
     void(std::shared_ptr<StatusMonitor> monitor));
-  MOCK_METHOD0(isDataAvailableToRead, bool());
+  MOCK_METHOD0(IsDataAvailableToRead, bool());
 
   /**
    * Set the observer for the queue.
@@ -84,7 +84,7 @@ public:
   void SetUp() override
   {
     file_manager = std::make_shared<::testing::StrictMock<MockDataReader>>();
-    file_upload_streamer = createFileUploadStreamer<std::string>(file_manager, kFileManagerOptions);
+    file_upload_streamer = CreateFileUploadStreamer<std::string>(file_manager, kFileManagerOptions);
     mock_sink = std::make_shared<::testing::StrictMock<MockSink>>();
   }
 
@@ -96,19 +96,19 @@ public:
   }
 
 protected:
-  std::shared_ptr<::testing::StrictMock<MockDataReader>> file_manager;
-  std::shared_ptr<FileUploadStreamer<std::string>> file_upload_streamer;
-  std::shared_ptr<MockSink> mock_sink;
+  std::shared_ptr<::testing::StrictMock<MockDataReader>> file_manager_;
+  std::shared_ptr<FileUploadStreamer<std::string>> file_upload_streamer_;
+  std::shared_ptr<MockSink> mock_sink_;
 };
 
 
 TEST_F(FileStreamerTest, success_on_network_and_file) {
   // Create the pipeline
-  file_upload_streamer->setSink(mock_sink);
+  file_upload_streamer->SetSink(mock_sink);
 
   // Set the file and network available
   file_manager->status_monitor_->setStatus(AVAILABLE);
-  file_upload_streamer->onPublisherStateChange(AVAILABLE);
+  file_upload_streamer->OnPublisherStateChange(AVAILABLE);
 
   FileObject<std::string> test_file_object;
   test_file_object.batch_data = "data";
@@ -123,17 +123,17 @@ TEST_F(FileStreamerTest, success_on_network_and_file) {
 
 TEST_F(FileStreamerTest, fail_enqueue_retry) {
   // Create the pipeline
-  file_upload_streamer->setSink(mock_sink);
+  file_upload_streamer->SetSink(mock_sink);
 
   // Set the file and network available
   file_manager->status_monitor_->setStatus(AVAILABLE);
-  file_upload_streamer->onPublisherStateChange(AVAILABLE);
+  file_upload_streamer->OnPublisherStateChange(AVAILABLE);
 
   FileObject<std::string> test_file_object;
   test_file_object.batch_data = "data";
   test_file_object.batch_size = 1;
   SharedFileUploadTask task;
-  // TODO: capture and test equivalence
+  // TODO(unknown): capture and test equivalence
   EXPECT_CALL(*mock_sink, tryEnqueue(testing::_, testing::_))
       .WillOnce(testing::Invoke([&task](SharedFileUploadTask& data,
                                         const std::chrono::microseconds&){
@@ -150,17 +150,17 @@ TEST_F(FileStreamerTest, fail_enqueue_retry) {
 
 TEST_F(FileStreamerTest, fail_task_clears_queue) {
   // Create the pipeline
-  file_upload_streamer->setSink(mock_sink);
+  file_upload_streamer->SetSink(mock_sink);
 
   // Set the file and network available
   file_manager->status_monitor_->setStatus(AVAILABLE);
-  file_upload_streamer->onPublisherStateChange(AVAILABLE);
+  file_upload_streamer->OnPublisherStateChange(AVAILABLE);
 
   FileObject<std::string> test_file_object;
   test_file_object.batch_data = "data";
   test_file_object.batch_size = 1;
   SharedFileUploadTask task;
-  // TODO: capture and test equivalence
+  // TODO(unknown): capture and test equivalence
   EXPECT_CALL(*mock_sink, tryEnqueue(testing::_, testing::_))
     .WillOnce(testing::Invoke([&task](SharedFileUploadTask& data,
                                       const std::chrono::microseconds&){
@@ -178,11 +178,11 @@ TEST_F(FileStreamerTest, fail_task_clears_queue) {
 
 TEST_F(FileStreamerTest, success_task_does_not_clear_queue) {
   // Create the pipeline
-  file_upload_streamer->setSink(mock_sink);
+  file_upload_streamer->SetSink(mock_sink);
 
   // Set the file and network available
   file_manager->status_monitor_->setStatus(AVAILABLE);
-  file_upload_streamer->onPublisherStateChange(AVAILABLE);
+  file_upload_streamer->OnPublisherStateChange(AVAILABLE);
 
   FileObject<std::string> test_file_object;
   test_file_object.batch_data = "data";
