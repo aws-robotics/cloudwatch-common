@@ -17,7 +17,10 @@
 
 #include <dataflow_lite/dataflow/status_monitor.h>
 
-using namespace Aws::DataFlow;
+
+namespace Aws {
+namespace DataFlow {
+
 void StatusMonitor::SetStatus(const Status &status) {
   status_ = status;
   if (multi_status_cond_ != nullptr) {
@@ -48,8 +51,7 @@ std::cv_status ThreadMonitor::WaitForWork(const std::chrono::microseconds& durat
   return status;
 }
 
-void MultiStatusConditionMonitor::AddStatusMonitor(
-  std::shared_ptr<StatusMonitor> &status_monitor)
+void MultiStatusConditionMonitor::AddStatusMonitor(const std::shared_ptr<StatusMonitor> & status_monitor)
 {
   if (status_monitor) {
     status_monitor->SetStatusObserver(this);
@@ -71,3 +73,6 @@ void MultiStatusConditionMonitor::SetStatus(
 bool MultiStatusConditionMonitor::HasWork() {
   return mask_factory_.GetCollectiveMask() == mask_;
 }
+
+}  // namespace DataFlow
+}  // namespace Aws

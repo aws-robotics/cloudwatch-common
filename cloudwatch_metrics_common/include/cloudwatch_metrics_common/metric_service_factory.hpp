@@ -26,6 +26,13 @@ class MetricServiceFactory
 {
 public:
   MetricServiceFactory() = default;
+
+  /**
+   * Block copy constructor and assignment operator for Factory object.
+   */
+  MetricServiceFactory(const MetricServiceFactory &) = delete;
+  MetricServiceFactory & operator=(const MetricServiceFactory &) = delete;
+
   ~MetricServiceFactory() = default;
 
   /**
@@ -41,14 +48,7 @@ public:
           const std::string & metrics_namespace,
           const Aws::Client::ClientConfiguration & client_config,
           const Aws::SDKOptions & sdk_options,
-          const CloudWatchOptions & cloudwatch_options = kDefaultCloudWatchOptions);
-
-private:
-  /**
-   * Block copy constructor and assignment operator for Factory object.
-   */
-  MetricServiceFactory(const MetricServiceFactory &) = delete;
-  MetricServiceFactory & operator=(const MetricServiceFactory &) = delete;
+          const CloudWatchOptions & cloudwatch_options);
 };
 
 }  // namespace CloudWatchMetrics

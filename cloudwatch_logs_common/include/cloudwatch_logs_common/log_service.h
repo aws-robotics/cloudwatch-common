@@ -37,10 +37,6 @@
 namespace Aws {
 namespace CloudWatchLogs {
 
-using namespace Aws::CloudWatchLogs;
-using namespace Aws::CloudWatchLogs::Utils;
-using namespace Aws::FileManagement;
-
 /**
  * Implementation to send logs to Cloudwatch. Note: though the batcher and publisher are required, the file streamer
  * is not. If the file streamer is not provided then log data is dropped if any failure is observed during the
@@ -58,7 +54,7 @@ public:
      */
   LogService(std::shared_ptr<Publisher<LogCollection>> log_publisher,
              std::shared_ptr<DataBatcher<LogType>> log_batcher,
-             std::shared_ptr<FileUploadStreamer<LogCollection>> log_file_upload_streamer = nullptr)
+             std::shared_ptr<Aws::FileManagement::FileUploadStreamer<LogCollection>> log_file_upload_streamer = nullptr)
           : CloudWatchService(std::move(log_publisher), std::move(log_batcher)) {
 
     this->file_upload_streamer_ = std::move(log_file_upload_streamer); // allow null, all this means is failures aren't written to file
@@ -71,7 +67,7 @@ public:
   * @param milliseconds timestamp of the log event
   * @return the AWS SDK log object to  be send to CloudWatch
   */
-  Aws::CloudWatchLogs::Model::InputLogEvent convertInputToBatched(
+  Aws::CloudWatchLogs::Model::InputLogEvent ConvertInputToBatched(
           const std::string &input,
           const std::chrono::milliseconds &milliseconds) override {
 
@@ -89,7 +85,7 @@ public:
   * @param input string input to be sent as a log
   * @return the AWS SDK log object to  be send to CloudWatch
   */
-  Aws::CloudWatchLogs::Model::InputLogEvent convertInputToBatched(
+  Aws::CloudWatchLogs::Model::InputLogEvent ConvertInputToBatched(
           const std::string &input) override {
 
     Aws::CloudWatchLogs::Model::InputLogEvent log_event;

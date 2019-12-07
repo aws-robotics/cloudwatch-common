@@ -57,11 +57,10 @@ void SanitizePath(std::string & path);
  */
 class FileTokenInfo {
 public:
-
   FileTokenInfo() = default;
 
   // NOLINTNEXTLINE(modernize-pass-by-value)
-  explicit FileTokenInfo(const std::string &file_path, const long position, const bool eof) :
+  explicit FileTokenInfo(const std::string &file_path, const int position, const bool eof) :
   file_path_{file_path},
   position_(position),
   eof_(eof)
@@ -69,7 +68,7 @@ public:
 
   };
 
-  explicit FileTokenInfo(std::string &&file_path, const long position, const bool eof) :
+  explicit FileTokenInfo(std::string &&file_path, const int position, const bool eof) :
       file_path_{std::move(file_path)},
       position_(position),
       eof_(eof)
@@ -78,6 +77,10 @@ public:
   };
 
   FileTokenInfo(const FileTokenInfo &info) = default;
+
+  FileTokenInfo & operator=(const FileTokenInfo & other) = default;
+
+  ~FileTokenInfo() = default;
 
   /**
    * Serializes a tokens information into a JSON string
@@ -117,7 +120,7 @@ public:
   /** 
    * The position in the file that this token corrosponds to
    */
-  long position_ = 0;
+  int position_ = 0;
 
   /**
    * Set to true if this is the last token for the file
@@ -182,7 +185,7 @@ public:
    * @param is_eof
    * @return
    */
-  DataToken CreateToken(const std::string &file_name, const long & streampos, bool is_eof);
+  DataToken CreateToken(const std::string &file_name, const int & streampos, bool is_eof);
 
   /**
    * Mark a token as failed so the FileManagerStrategy knows to keep the 
@@ -457,12 +460,6 @@ private:
    * Options for how and where to store files, and maximum file sizes.
    */
   FileManagerStrategyOptions options_;
-
-  /**
-   * Size of each batch when reading from a file.
-   * The Size corresponds to the number of lines read from the file
-   */
-  uint8_t batch_size_ = 1;
 
   /**
    * Stores which tokens to read from.

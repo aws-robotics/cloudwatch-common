@@ -48,8 +48,7 @@ static const std::vector<Aws::String> kRequiredProperties = {
  * @param basic_string - a reference to a JSON string. This should be a single object.
  * @return datum - a MetricDatum created from this string.
  */
-MetricDatum DeserializeMetricDatum(const Aws::String &basic_string) {
-  Aws::String aws_str(basic_string);
+MetricDatum DeserializeMetricDatum(const Aws::String & aws_str) {
   JsonValue json_value(aws_str);
   if (!json_value.WasParseSuccessful()) {
     throw std::invalid_argument("Failed to parse metric JSON string");

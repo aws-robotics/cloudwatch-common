@@ -128,7 +128,7 @@ virtual inline bool Shutdown() {
  */
 virtual inline bool BatchData(const D &data_to_batch) {
 
-  T t = convertInputToBatched(data_to_batch);
+  T t = ConvertInputToBatched(data_to_batch);
   return batcher_->BatchData(t);
 }
 
@@ -142,7 +142,7 @@ virtual inline bool BatchData(const D &data_to_batch) {
 virtual inline bool BatchData(const D &data_to_batch, const std::chrono::milliseconds &milliseconds) {
 
   // convert
-  T t = convertInputToBatched(data_to_batch, milliseconds);
+  T t = ConvertInputToBatched(data_to_batch, milliseconds);
   return batcher_->BatchData(t);
 }
 
@@ -207,8 +207,8 @@ virtual std::chrono::milliseconds GetCurrentTimestamp() {
 
 protected:
 
-virtual T convertInputToBatched(const D &input, const std::chrono::milliseconds &milliseconds) = 0;
-virtual T convertInputToBatched(const D &input) = 0;
+virtual T ConvertInputToBatched(const D &input, const std::chrono::milliseconds &milliseconds) = 0;
+virtual T ConvertInputToBatched(const D &input) = 0;
 
 
 /**

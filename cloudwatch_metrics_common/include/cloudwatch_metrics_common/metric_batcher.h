@@ -47,7 +47,11 @@ public:
      *  @param size of the batched data that will trigger a publish
      */
     explicit MetricBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
-                            size_t publish_trigger_size = DataBatcher::kDefaultTriggerSize);
+                           size_t publish_trigger_size = DataBatcher::kDefaultTriggerSize);
+
+    MetricBatcher(const MetricBatcher & other) = delete;
+
+    MetricBatcher & operator=(const MetricBatcher & other) = delete;
 
     /**
      *  @brief Tears down a MetricBatcher object

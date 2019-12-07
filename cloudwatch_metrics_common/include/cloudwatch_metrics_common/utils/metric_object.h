@@ -84,10 +84,10 @@ static MetricDatum MetricObjectToDatum(const MetricObject &metrics, const int64_
     datum.WithUnit(Aws::CloudWatch::Model::StandardUnitMapper::GetStandardUnitForName(unit_name));
   }
 
-  for (auto it = metrics.dimensions.begin(); it != metrics.dimensions.end(); ++it) {
+  for (const auto & dims : metrics.dimensions) {
     Aws::CloudWatch::Model::Dimension dimension;
-    Aws::String name(it->first.c_str());      // NOLINT(readability-redundant-string-cstr)
-    Aws::String d_value(it->second.c_str());  // NOLINT(readability-redundant-string-cstr)
+    Aws::String name(dims.first.c_str());     // NOLINT(readability-redundant-string-cstr)
+    Aws::String d_value(dims.second.c_str()); // NOLINT(readability-redundant-string-cstr)
     dimension.WithName(name.c_str()).WithValue(d_value);
     datum.AddDimensions(dimension);
   }

@@ -23,7 +23,7 @@
 #include <utility>
 #include "file_management/file_upload/file_manager_strategy.h"
 
-#define KB_TO_BYTES(x) ((size_t) (x) << 10)
+#define KB_TO_BYTES(x) (static_cast<size_t>(x) << 10u)
 
 namespace fs = std::experimental::filesystem;
 
@@ -108,7 +108,7 @@ void PrintCache(std::unordered_map<DataToken, FileTokenInfo> token_store,
                "Cache Info: staged_tokens \n %s", ss.str().c_str());
 }
 
-DataToken TokenStore::CreateToken(const std::string &file_name, const long & streampos, bool is_eof) {
+DataToken TokenStore::CreateToken(const std::string &file_name, const int & streampos, bool is_eof) {
   AWS_LOG_DEBUG(__func__, "Creating token");
   std::mt19937_64 rand( rand_device_() );
   DataToken token = rand();
@@ -215,7 +215,7 @@ void TokenStore::RestoreFromDisk() {
       FileTokenInfo token_info;
       try {
         token_info.Deserialize(line);
-      } catch (std::runtime_error e) {
+      } catch (const std::runtime_error & e) {
         AWS_LOG_ERROR(__func__, "Unable to parse token backup line: %s. Skipping.", line.c_str());
         continue;
       }
@@ -309,11 +309,11 @@ DataToken FileManagerStrategy::Read(std::string &data) {
     FileTokenInfo file_token = token_store_->PopAvailableToken(active_read_file_);
     active_read_file_stream_->seekg(file_token.position_);
   }
-  long position = active_read_file_stream_->tellg();
+  int position = active_read_file_stream_->tellg();
   auto file_size = active_read_file_stream_->seekg(0, std::ifstream::end).tellg();
   active_read_file_stream_->seekg(position, std::ifstream::beg);
   std::getline(*active_read_file_stream_, data);
-  long next_position = active_read_file_stream_->tellg();
+  int next_position = active_read_file_stream_->tellg();
   token = token_store_->CreateToken(active_read_file_, position, next_position >= file_size);
 
   if (next_position >= file_size) {

@@ -30,7 +30,10 @@
 #include <cloudwatch_logs_common/utils/cloudwatch_logs_facade.h>
 #include <cloudwatch_logs_common/definitions/definitions.h>
 
-using namespace Aws::CloudWatchLogs::Utils;
+
+namespace Aws {
+namespace CloudWatchLogs {
+namespace Utils {
 
 constexpr uint16_t kMaxLogsPerRequest = 100;
 
@@ -39,9 +42,9 @@ CloudWatchLogsFacade::CloudWatchLogsFacade(const Aws::Client::ClientConfiguratio
   this->cw_client_ = std::make_shared<Aws::CloudWatchLogs::CloudWatchLogsClient>(client_config);
 }
 
-CloudWatchLogsFacade::CloudWatchLogsFacade(const std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient>& cw_client)
+CloudWatchLogsFacade::CloudWatchLogsFacade(std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient> cw_client)
 {
-  this->cw_client_ = cw_client;
+  this->cw_client_ = std::move(cw_client);
 }
 
 Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::SendLogsRequest(
@@ -200,7 +203,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CheckLogGroup
     auto & log_group_list = response.GetResult().GetLogGroups();
     next_token = response.GetResult().GetNextToken();
 
-    for (auto curr_log_group : log_group_list) {
+    for (const auto & curr_log_group : log_group_list) {
       if (curr_log_group.GetLogGroupName().c_str() == log_group) {  // NOLINT(readability-redundant-string-cstr)
         AWS_LOGSTREAM_DEBUG(__func__, "Found Log Group named: " << log_group << ".");
         status = CW_LOGS_SUCCEEDED;
@@ -282,7 +285,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::CheckLogStrea
     auto & log_stream_list = response.GetResult().GetLogStreams();
     next_token = response.GetResult().GetNextToken();
 
-    for (auto curr_log_stream : log_stream_list) {
+    for (const auto & curr_log_stream : log_stream_list) {
       if (curr_log_stream.GetLogStreamName().c_str() == log_stream) { // NOLINT(readability-redundant-string-cstr)
         AWS_LOGSTREAM_DEBUG(__func__, "Found Log Stream named: " << log_stream << " in Log Group :"
                                                                  << log_group << ".");
@@ -323,3 +326,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::GetLogStreamT
 
   return status;
 }
+
+}  // namespace Utils
+}  // namespace CloudWatchLogs
+}  // namespace Aws

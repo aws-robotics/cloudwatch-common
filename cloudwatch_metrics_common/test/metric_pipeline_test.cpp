@@ -41,6 +41,7 @@
 
 using namespace Aws::CloudWatchMetrics;
 using namespace Aws::CloudWatchMetrics::Utils;
+using namespace Aws::FileManagement;
 using namespace std::chrono_literals;
 
 /**

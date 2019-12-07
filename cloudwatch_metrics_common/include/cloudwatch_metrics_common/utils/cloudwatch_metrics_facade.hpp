@@ -57,7 +57,8 @@ public:
    * @brief Creates a new CloudWatchMetricsFacade with an existing client
    * @param cw_client The client for interacting with cloudwatch
    */
-  explicit CloudWatchMetricsFacade(const std::shared_ptr<Aws::CloudWatch::CloudWatchClient>& cw_client);
+  explicit CloudWatchMetricsFacade(std::shared_ptr<Aws::CloudWatch::CloudWatchClient> cw_client);
+
   virtual ~CloudWatchMetricsFacade() = default;
 
   /**

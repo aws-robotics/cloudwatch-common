@@ -28,8 +28,8 @@ struct CloudWatchOptions {
   CloudWatchOptions() = default;
 
   CloudWatchOptions(const Aws::DataFlow::UploaderOptions _uploader_options,
-                    const Aws::FileManagement::FileManagerStrategyOptions & _strategy_options)
-    : uploader_options(_uploader_options), file_manager_strategy_options(_strategy_options) {}
+                    Aws::FileManagement::FileManagerStrategyOptions _strategy_options)
+    : uploader_options(_uploader_options), file_manager_strategy_options(std::move(_strategy_options)) {}
 
   /**
    * All options for the FileUpload system

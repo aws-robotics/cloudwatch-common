@@ -51,6 +51,10 @@ public:
   explicit LogBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
                       size_t publish_trigger_size = DataBatcher::kDefaultTriggerSize);
 
+  LogBatcher(const LogBatcher & other) = delete;
+
+  LogBatcher & operator=(const LogBatcher & other) = delete;
+
   /**
    *  @brief Tears down a LogBatcher object
    */

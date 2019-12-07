@@ -51,8 +51,8 @@ public:
    * @param try_enqueue_duration maximum amount of time to attempt to empty queue during the publish method
    */
   explicit DataBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
-              size_t trigger_size = DataBatcher::kDefaultTriggerSize,
-              std::chrono::microseconds try_enqueue_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(2))) {
+                      size_t trigger_size = DataBatcher::kDefaultTriggerSize,
+                      std::chrono::microseconds try_enqueue_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(2))) {
 
     ValidateConfigurableSizes(max_allowable_batch_size, trigger_size);
 
@@ -108,7 +108,7 @@ public:
   /**
    * Reset the batched data shared pointer.
    */
-  virtual void ResetBatchedData() {
+  void ResetBatchedData() {
     std::lock_guard<std::recursive_mutex> lk(mtx_);
 
     this->batched_data_ = std::make_shared<std::list<T>>();

@@ -26,7 +26,9 @@
 
 #include <string>
 
-using namespace Aws::CloudWatchMetrics::Utils;
+namespace Aws {
+namespace CloudWatchMetrics {
+namespace Utils {
 
 // https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
 #define MAX_METRIC_DATUMS_PER_REQUEST 20
@@ -36,9 +38,9 @@ CloudWatchMetricsFacade::CloudWatchMetricsFacade(const Aws::Client::ClientConfig
   this->cw_client_ = std::make_shared<Aws::CloudWatch::CloudWatchClient>(client_config);
 }
 
-CloudWatchMetricsFacade::CloudWatchMetricsFacade(const std::shared_ptr<Aws::CloudWatch::CloudWatchClient>& cw_client)
+CloudWatchMetricsFacade::CloudWatchMetricsFacade(std::shared_ptr<Aws::CloudWatch::CloudWatchClient> cw_client)
 {
-  this->cw_client_ = cw_client;
+  this->cw_client_ = std::move(cw_client);
 }
 
 CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsRequest(
@@ -107,3 +109,7 @@ CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsToCloudWatch(
 
   return status;
 }
+
+}  // namespace Utils
+}  // namespace CloudWatchMetrics
+}  // namespace Aws

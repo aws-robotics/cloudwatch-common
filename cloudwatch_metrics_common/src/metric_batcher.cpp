@@ -32,8 +32,9 @@
 #include <string>
 #include <stdexcept>
 
-using namespace Aws::CloudWatchMetrics;
-using namespace Aws::FileManagement;
+
+namespace Aws {
+namespace CloudWatchMetrics {
 
 MetricBatcher::MetricBatcher(size_t max_allowable_batch_size,
                              size_t publish_trigger_size)
@@ -43,6 +44,8 @@ MetricBatcher::MetricBatcher(size_t max_allowable_batch_size,
 MetricBatcher::~MetricBatcher() = default;
 
 bool MetricBatcher::PublishBatchedData() {
+  static const char * const kFuncName = __func__;
+
   std::lock_guard<std::recursive_mutex> lk(mtx_);
 
   // is there anything to send?
@@ -66,18 +69,18 @@ bool MetricBatcher::PublishBatchedData() {
           if (DataFlow::UploadStatus::INVALID_DATA == upload_status) {
 
             // publish indicated the task data was bad, this task should be discarded
-            AWS_LOG_WARN(__func__, "MetricBatcher: Task failed due to invalid metric data, dropping");
+            AWS_LOG_WARN(kFuncName, "MetricBatcher: Task failed due to invalid metric data, dropping");
 
           } else if (DataFlow::UploadStatus::SUCCESS != upload_status) {
 
-            AWS_LOG_INFO(__func__, "MetricBatcher: Task failed: writing metrics to file");
+            AWS_LOG_INFO(kFuncName, "MetricBatcher: Task failed: writing metrics to file");
             metric_file_manager->Write(metrics_to_publish);
 
           } else {
-            AWS_LOG_DEBUG(__func__, "MetricBatcher: Task metric upload successful");
+            AWS_LOG_DEBUG(kFuncName, "MetricBatcher: Task metric upload successful");
           }
         } else {
-          AWS_LOG_INFO(__func__, "MetricBatcher: not publishing task as metrics_to_publish is empty");
+          AWS_LOG_INFO(kFuncName, "MetricBatcher: not publishing task as metrics_to_publish is empty");
         }
     };
 
@@ -138,5 +141,8 @@ void MetricBatcher::SetMetricFileManager(std::shared_ptr<Aws::FileManagement::Fi
   if (nullptr == metric_file_manager) {
     throw std::invalid_argument("input FileManager cannot be null");
   }
-  this->metric_file_manager_ = metric_file_manager;
+  this->metric_file_manager_ = std::move(metric_file_manager);
 }
+
+}  // namespace CloudWatchMetrics
+}  // namespace Aws
