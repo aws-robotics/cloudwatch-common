@@ -27,16 +27,16 @@ using namespace Aws::DataFlow;
 
 void TestEnqueueDequeue(IObservedQueue<std::string> &observed_queue) {
   auto status_monitor = std::make_shared<StatusMonitor>();
-  observed_queue.setStatusMonitor(status_monitor);
+  observed_queue.SetStatusMonitor(status_monitor);
 
-  EXPECT_EQ(Status::UNAVAILABLE, status_monitor->getStatus());
-  observed_queue.enqueue("hello");
-  EXPECT_EQ(Status::AVAILABLE, status_monitor->getStatus());
+  EXPECT_EQ(Status::UNAVAILABLE, status_monitor->GetStatus());
+  observed_queue.Enqueue("hello");
+  EXPECT_EQ(Status::AVAILABLE, status_monitor->GetStatus());
   std::string data;
-  ASSERT_TRUE(observed_queue.dequeue(data, std::chrono::microseconds(0)));
+  ASSERT_TRUE(observed_queue.Dequeue(data, std::chrono::microseconds(0)));
   EXPECT_EQ("hello", data);
-  EXPECT_TRUE(observed_queue.empty());
-  EXPECT_EQ(Status::UNAVAILABLE, status_monitor->getStatus());
+  EXPECT_TRUE(observed_queue.Empty());
+  EXPECT_EQ(Status::UNAVAILABLE, status_monitor->GetStatus());
 }
 
 TEST(observed_queue_test, Sanity) {
@@ -61,13 +61,13 @@ TEST(observed_queue_test, synchronized_enqueue_dequeue_test) {
 TEST(observed_queue_test, enqueue_blocked_dequeue_test) {
   ObservedBlockingQueue<std::string> observed_queue(1);
   auto status_monitor = std::make_shared<StatusMonitor>();
-  observed_queue.setStatusMonitor(status_monitor);
+  observed_queue.SetStatusMonitor(status_monitor);
 
-  EXPECT_EQ(Status::UNAVAILABLE, status_monitor->getStatus());
-  EXPECT_TRUE(observed_queue.tryEnqueue("hello", std::chrono::seconds(0)));
-  EXPECT_FALSE(observed_queue.tryEnqueue("fail", std::chrono::seconds(0)));
+  EXPECT_EQ(Status::UNAVAILABLE, status_monitor->GetStatus());
+  EXPECT_TRUE(observed_queue.TryEnqueue("hello", std::chrono::seconds(0)));
+  EXPECT_FALSE(observed_queue.TryEnqueue("fail", std::chrono::seconds(0)));
   std::string data;
-  ASSERT_TRUE(observed_queue.dequeue(data, std::chrono::microseconds(0)));
+  ASSERT_TRUE(observed_queue.Dequeue(data, std::chrono::microseconds(0)));
   EXPECT_EQ("hello", data);
-  EXPECT_TRUE(observed_queue.tryEnqueue("hello", std::chrono::seconds(0)));
+  EXPECT_TRUE(observed_queue.TryEnqueue("hello", std::chrono::seconds(0)));
 }

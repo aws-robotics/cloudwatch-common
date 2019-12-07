@@ -52,18 +52,18 @@ public:
 
     void SetUp() override {
 
-      test_publisher = std::make_shared<SimpleTestPublisher>();
+      test_publisher_ = std::make_shared<SimpleTestPublisher>();
 
-      EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
-      EXPECT_EQ(ServiceState::CREATED, test_publisher->getState());
-      EXPECT_EQ(0, test_publisher->getPublishAttempts());
-      EXPECT_EQ(0, test_publisher->getPublishSuccesses());
-      EXPECT_EQ(0.0f, test_publisher->getPublishSuccessPercentage());
-      EXPECT_EQ(std::chrono::milliseconds(0), test_publisher->getLastPublishDuration());
+      EXPECT_EQ(PublisherState::UNKNOWN, test_publisher_->GetPublisherState());
+      EXPECT_EQ(ServiceState::CREATED, test_publisher_->GetState());
+      EXPECT_EQ(0, test_publisher_->GetPublishAttempts());
+      EXPECT_EQ(0, test_publisher_->GetPublishSuccesses());
+      EXPECT_EQ(0.0f, test_publisher_->GetPublishSuccessPercentage());
+      EXPECT_EQ(std::chrono::milliseconds(0), test_publisher_->GetLastPublishDuration());
     }
 
     void TearDown() override {
-      test_publisher.reset();
+      test_publisher_.reset();
     }
 protected:
     std::shared_ptr<SimpleTestPublisher> test_publisher_;
@@ -82,13 +82,13 @@ TEST_F(PublisherTest, Sanity) {
 TEST_F(PublisherTest, TestPublishFailNotStarted) {
 
   std::string data("They're taking the hobbits to Isengard!");
-  auto status = test_publisher->attemptPublish(data);
+  auto status = test_publisher_->AttemptPublish(data);
 
   EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, status);
-  EXPECT_FALSE(test_publisher->canPublish());
-  EXPECT_EQ(0, test_publisher->getPublishAttempts());
-  EXPECT_EQ(std::chrono::milliseconds(0), test_publisher->getLastPublishDuration());
-  EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
+  EXPECT_FALSE(test_publisher_->CanPublish());
+  EXPECT_EQ(0, test_publisher_->GetPublishAttempts());
+  EXPECT_EQ(std::chrono::milliseconds(0), test_publisher_->GetLastPublishDuration());
+  EXPECT_EQ(PublisherState::UNKNOWN, test_publisher_->GetPublisherState());
 }
 
 /**
@@ -98,17 +98,17 @@ TEST_F(PublisherTest, TestPublishSuccessWhenStarted) {
 
   std::string data("They're taking the hobbits to Isengard!");
 
-  bool b = test_publisher->Start();
+  bool b = test_publisher_->Start();
   EXPECT_TRUE(b);
-  EXPECT_TRUE(test_publisher->canPublish());
+  EXPECT_TRUE(test_publisher_->CanPublish());
 
-  auto status = test_publisher->attemptPublish(data);
+  auto status = test_publisher_->AttemptPublish(data);
   EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, status);
-  EXPECT_EQ(1, test_publisher->getPublishAttempts());
-  EXPECT_EQ(1, test_publisher->getPublishSuccesses());
-  EXPECT_EQ(100.0f, test_publisher->getPublishSuccessPercentage());
-  EXPECT_LT(std::chrono::milliseconds(0), test_publisher->getLastPublishDuration());
-  EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
+  EXPECT_EQ(1, test_publisher_->GetPublishAttempts());
+  EXPECT_EQ(1, test_publisher_->GetPublishSuccesses());
+  EXPECT_EQ(100.0f, test_publisher_->GetPublishSuccessPercentage());
+  EXPECT_LT(std::chrono::milliseconds(0), test_publisher_->GetLastPublishDuration());
+  EXPECT_EQ(PublisherState::CONNECTED, test_publisher_->GetPublisherState());
 }
 
 /**
@@ -118,28 +118,28 @@ TEST_F(PublisherTest, TestPublishFailure) {
 
   std::string data("They're taking the hobbits to Isengard!");
 
-  bool b = test_publisher->Start();
+  bool b = test_publisher_->Start();
   EXPECT_TRUE(b);
-  EXPECT_TRUE(test_publisher->canPublish());
+  EXPECT_TRUE(test_publisher_->CanPublish());
 
-  auto status = test_publisher->attemptPublish(data);
+  auto status = test_publisher_->AttemptPublish(data);
 
   EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, status);
-  EXPECT_EQ(1, test_publisher->getPublishAttempts());
-  EXPECT_EQ(1, test_publisher->getPublishSuccesses());
-  EXPECT_EQ(100.0f, test_publisher->getPublishSuccessPercentage());
-  EXPECT_LT(std::chrono::milliseconds(0), test_publisher->getLastPublishDuration());
-  EXPECT_EQ(PublisherState::CONNECTED, test_publisher->getPublisherState());
+  EXPECT_EQ(1, test_publisher_->GetPublishAttempts());
+  EXPECT_EQ(1, test_publisher_->GetPublishSuccesses());
+  EXPECT_EQ(100.0f, test_publisher_->GetPublishSuccessPercentage());
+  EXPECT_LT(std::chrono::milliseconds(0), test_publisher_->GetLastPublishDuration());
+  EXPECT_EQ(PublisherState::CONNECTED, test_publisher_->GetPublisherState());
 
-  test_publisher->setShouldSucceed(false);
-  status = test_publisher->attemptPublish(data);
+  test_publisher_->SetShouldSucceed(false);
+  status = test_publisher_->AttemptPublish(data);
 
   EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, status);
-  EXPECT_EQ(2, test_publisher->getPublishAttempts());
-  EXPECT_EQ(1, test_publisher->getPublishSuccesses());
-  EXPECT_EQ(50.0f, test_publisher->getPublishSuccessPercentage());
-  EXPECT_LT(std::chrono::milliseconds(0), test_publisher->getLastPublishDuration());
-  EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState());
+  EXPECT_EQ(2, test_publisher_->GetPublishAttempts());
+  EXPECT_EQ(1, test_publisher_->GetPublishSuccesses());
+  EXPECT_EQ(50.0f, test_publisher_->GetPublishSuccessPercentage());
+  EXPECT_LT(std::chrono::milliseconds(0), test_publisher_->GetLastPublishDuration());
+  EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher_->GetPublisherState());
 }
 
 /**
@@ -150,28 +150,28 @@ TEST_F(PublisherTest, TestPublisherShutdown) {
 
   std::string data("They're taking the hobbits to Isengard!");
 
-  bool b = test_publisher->Start();
+  bool b = test_publisher_->Start();
   EXPECT_TRUE(b);
-  EXPECT_TRUE(test_publisher->canPublish());
-  EXPECT_EQ(ServiceState::STARTED, test_publisher->getState());
+  EXPECT_TRUE(test_publisher_->CanPublish());
+  EXPECT_EQ(ServiceState::STARTED, test_publisher_->GetState());
 
-  std::thread pub_thread(&SimpleTestPublisher::AttemptPublish, test_publisher, std::ref(data));
+  std::thread pub_thread(&SimpleTestPublisher::AttemptPublish, test_publisher_, std::ref(data));
 
-  // let the attemptPublish thread start and hold the lock
+  // let the AttemptPublish thread start and hold the lock
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  b = test_publisher->Shutdown();
+  b = test_publisher_->Shutdown();
 
   EXPECT_TRUE(b);
-  EXPECT_EQ(data, test_publisher->last_data);
-  EXPECT_EQ(ServiceState::SHUTDOWN, test_publisher->getState());
-  EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
+  EXPECT_EQ(data, test_publisher_->last_data);
+  EXPECT_EQ(ServiceState::SHUTDOWN, test_publisher_->GetState());
+  EXPECT_EQ(PublisherState::UNKNOWN, test_publisher_->GetPublisherState());
 
   // try to publish again but expect fast fail
-  auto status = test_publisher->attemptPublish(data);
+  auto status = test_publisher_->AttemptPublish(data);
 
   EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, status);
-  EXPECT_LT(std::chrono::milliseconds(0), test_publisher->getLastPublishDuration());
-  EXPECT_FALSE(test_publisher->canPublish());
+  EXPECT_LT(std::chrono::milliseconds(0), test_publisher_->GetLastPublishDuration());
+  EXPECT_FALSE(test_publisher_->CanPublish());
 
-  pub_thread.Join();
+  pub_thread.join();
 }

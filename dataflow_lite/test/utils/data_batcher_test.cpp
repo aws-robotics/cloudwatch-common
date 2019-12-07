@@ -37,14 +37,14 @@ public:
   }
 
   bool Shutdown() override {
-    this->resetBatchedData();
+    this->ResetBatchedData();
     return true;
   }
 
   bool PublishBatchedData() override {
-    std::lock_guard<std::recursive_mutex> lk(mtx);
+    std::lock_guard<std::recursive_mutex> lk(mtx_);
     pub_called++;
-    this->resetBatchedData();
+    this->ResetBatchedData();
     return true;
   }
   int pub_called;
@@ -57,13 +57,13 @@ class DataBatcherTest : public ::testing::Test {
 public:
     void SetUp() override
     {
-      test_batcher = std::make_shared<TestBatcher>();
-      test_batcher->Start();
+      test_batcher_ = std::make_shared<TestBatcher>();
+      test_batcher_->Start();
     }
 
     void TearDown() override
     {
-      test_batcher->Shutdown();
+      test_batcher_->Shutdown();
     }
 
 protected:
@@ -76,41 +76,41 @@ TEST_F(DataBatcherTest, Sanity) {
 
 TEST_F(DataBatcherTest, Init) {
 
-  EXPECT_EQ((size_t) TestBatcher::kDefaultTriggerSize,  test_batcher->getTriggerBatchSize());
-  EXPECT_EQ((size_t) TestBatcher::kDefaultMaxBatchSize, test_batcher->getMaxAllowableBatchSize());
-  EXPECT_EQ(0u, test_batcher->getCurrentBatchSize());
+  EXPECT_EQ((size_t) TestBatcher::kDefaultTriggerSize,  test_batcher_->GetTriggerBatchSize());
+  EXPECT_EQ((size_t) TestBatcher::kDefaultMaxBatchSize, test_batcher_->GetMaxAllowableBatchSize());
+  EXPECT_EQ(0u, test_batcher_->GetCurrentBatchSize());
 }
 
 TEST_F(DataBatcherTest, TestMaxSizeClear) {
 
   size_t new_max = 10;
-  test_batcher->setMaxAllowableBatchSize(new_max);
-  EXPECT_EQ(new_max, test_batcher->getMaxAllowableBatchSize());
+  test_batcher_->SetMaxAllowableBatchSize(new_max);
+  EXPECT_EQ(new_max, test_batcher_->GetMaxAllowableBatchSize());
 
   for(size_t i=0; i<new_max; i++) {
-    test_batcher->BatchData(i);
-    EXPECT_EQ(i+1, test_batcher->getCurrentBatchSize());
+    test_batcher_->BatchData(i);
+    EXPECT_EQ(i+1, test_batcher_->GetCurrentBatchSize());
   }
 
-  test_batcher->BatchData(42);
-  EXPECT_EQ(0u, test_batcher->getCurrentBatchSize());
-  EXPECT_EQ(0, test_batcher->pub_called);
+  test_batcher_->BatchData(42);
+  EXPECT_EQ(0u, test_batcher_->GetCurrentBatchSize());
+  EXPECT_EQ(0, test_batcher_->pub_called);
 }
 
 TEST_F(DataBatcherTest, TestPublishTrigger) {
 
   size_t new_max = 10;
-  test_batcher->setTriggerBatchSize(new_max);
-  EXPECT_EQ(new_max, test_batcher->getTriggerBatchSize());
+  test_batcher_->SetTriggerBatchSize(new_max);
+  EXPECT_EQ(new_max, test_batcher_->GetTriggerBatchSize());
 
   for(size_t i=0; i<new_max-1; i++) {
-  test_batcher->BatchData(i);
-  EXPECT_EQ(i+1, test_batcher->getCurrentBatchSize());
+  test_batcher_->BatchData(i);
+  EXPECT_EQ(i+1, test_batcher_->GetCurrentBatchSize());
   }
 
-  test_batcher->BatchData(42);
-  EXPECT_EQ(0u, test_batcher->getCurrentBatchSize());
-  EXPECT_EQ(1, test_batcher->pub_called);
+  test_batcher_->BatchData(42);
+  EXPECT_EQ(0u, test_batcher_->GetCurrentBatchSize());
+  EXPECT_EQ(1, test_batcher_->pub_called);
 }
 
 TEST_F(DataBatcherTest, TestValidateArguments) {
@@ -127,15 +127,15 @@ TEST_F(DataBatcherTest, TestValidateArguments) {
 TEST_F(DataBatcherTest, TestBatcherArguments) {
 
   size_t max = 10;
-  EXPECT_THROW(test_batcher->setMaxAllowableBatchSize(0), std::invalid_argument);
-  EXPECT_NO_THROW(test_batcher->setMaxAllowableBatchSize(max));
-  EXPECT_EQ(max, test_batcher->getMaxAllowableBatchSize());
+  EXPECT_THROW(test_batcher_->SetMaxAllowableBatchSize(0), std::invalid_argument);
+  EXPECT_NO_THROW(test_batcher_->SetMaxAllowableBatchSize(max));
+  EXPECT_EQ(max, test_batcher_->GetMaxAllowableBatchSize());
 
   size_t trigger = 5;
-  EXPECT_THROW(test_batcher->setTriggerBatchSize(0), std::invalid_argument);
-  EXPECT_THROW(test_batcher->setTriggerBatchSize(trigger + max), std::invalid_argument);
-  EXPECT_NO_THROW(test_batcher->setTriggerBatchSize(trigger));
-  EXPECT_EQ(trigger, test_batcher->getTriggerBatchSize());
+  EXPECT_THROW(test_batcher_->SetTriggerBatchSize(0), std::invalid_argument);
+  EXPECT_THROW(test_batcher_->SetTriggerBatchSize(trigger + max), std::invalid_argument);
+  EXPECT_NO_THROW(test_batcher_->SetTriggerBatchSize(trigger));
+  EXPECT_EQ(trigger, test_batcher_->GetTriggerBatchSize());
 
   EXPECT_THROW(TestBatcher(100, 200), std::invalid_argument);
 }

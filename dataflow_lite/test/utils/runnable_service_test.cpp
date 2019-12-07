@@ -34,8 +34,8 @@ public:
     ~HardWorker() override = default;
 
     bool Shutdown() override {
-      std::unique_lock <std::mutex> lck(this->test_mtx);
-      this->test_cv.notify_all(); // stop blocking in the work thread
+      std::unique_lock <std::mutex> lck(this->test_mtx_);
+      this->test_cv_.notify_all(); // stop blocking in the work thread
       return RunnableService::Shutdown();
     }
 
@@ -43,8 +43,8 @@ public:
       this->has_worked_ = true;
 
       // manually wait for shutdown
-      std::unique_lock <std::mutex> lck(this->test_mtx);
-      this->test_cv.wait(lck);
+      std::unique_lock <std::mutex> lck(this->test_mtx_);
+      this->test_cv_.wait(lck);
     }
 
     bool GetHasWorked() {
@@ -63,18 +63,18 @@ class RunnableServiceTest : public ::testing::Test {
 public:
     void SetUp() override
     {
-      hard_worker = std::make_shared<HardWorker>();
-      EXPECT_EQ(ServiceState::CREATED, hard_worker->getState());
-      EXPECT_FALSE(hard_worker->isRunning());
+      hard_worker_ = std::make_shared<HardWorker>();
+      EXPECT_EQ(ServiceState::CREATED, hard_worker_->GetState());
+      EXPECT_FALSE(hard_worker_->IsRunning());
     }
 
     void TearDown() override
     {
-      hard_worker->Shutdown();
-      hard_worker->Join();
-      EXPECT_EQ(ServiceState::SHUTDOWN, hard_worker->getState());
-      EXPECT_FALSE(hard_worker->isRunning());
-      hard_worker.reset();
+      hard_worker_->Shutdown();
+      hard_worker_->Join();
+      EXPECT_EQ(ServiceState::SHUTDOWN, hard_worker_->GetState());
+      EXPECT_FALSE(hard_worker_->IsRunning());
+      hard_worker_.reset();
     }
 
 protected:
@@ -89,26 +89,26 @@ TEST_F(RunnableServiceTest, Sanity) {
  * Exercise the RunnableService start and shutdown. Verify that it ran.
  */
 TEST_F(RunnableServiceTest, Test) {
-  EXPECT_EQ(false, hard_worker->getHasWorked());
-  EXPECT_EQ(false, hard_worker->isRunning());
+  EXPECT_EQ(false, hard_worker_->GetHasWorked());
+  EXPECT_EQ(false, hard_worker_->IsRunning());
 
   //  start the worker
-  EXPECT_EQ(true, hard_worker->Start());
-  EXPECT_EQ(ServiceState::STARTED, hard_worker->getState());
+  EXPECT_EQ(true, hard_worker_->Start());
+  EXPECT_EQ(ServiceState::STARTED, hard_worker_->GetState());
   // expect false on subsequent start
-  EXPECT_EQ(false, hard_worker->Start());
+  EXPECT_EQ(false, hard_worker_->Start());
 
   //  wait to make sure the thread was started
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-  EXPECT_EQ(true, hard_worker->isRunning());
-  EXPECT_EQ(ServiceState::STARTED, hard_worker->getState());
+  EXPECT_EQ(true, hard_worker_->IsRunning());
+  EXPECT_EQ(ServiceState::STARTED, hard_worker_->GetState());
 
-  EXPECT_EQ(true, hard_worker->Shutdown());
-  EXPECT_EQ(false, hard_worker->Shutdown());
+  EXPECT_EQ(true, hard_worker_->Shutdown());
+  EXPECT_EQ(false, hard_worker_->Shutdown());
 
-  hard_worker->waitForShutdown(std::chrono::milliseconds(1000)); // wait with timeout so we don't block other tests
+  hard_worker_->WaitForShutdown(std::chrono::milliseconds(1000)); // wait with timeout so we don't block other tests
 
   // did we at least work?
-  EXPECT_EQ(true, hard_worker->getHasWorked());
+  EXPECT_EQ(true, hard_worker_->GetHasWorked());
 }

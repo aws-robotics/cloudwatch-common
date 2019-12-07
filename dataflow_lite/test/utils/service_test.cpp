@@ -25,11 +25,11 @@ class ServiceTest : public ::testing::Test {
 public:
 
     void SetUp() override {
-      test_service = std::make_shared<Service>();
+      test_service_ = std::make_shared<Service>();
     }
 
     void TearDown() override {
-      test_service.reset();
+      test_service_.reset();
     }
 protected:
     std::shared_ptr<Service> test_service_;
@@ -43,9 +43,9 @@ TEST_F(ServiceTest, Sanity) {
  * Test the lifecycle (state mgmt) of a Service
  */
 TEST_F(ServiceTest, TestLifecycle) {
-  EXPECT_EQ(ServiceState::CREATED, test_service->getState());
-  EXPECT_TRUE(test_service->Start());
-  EXPECT_EQ(ServiceState::STARTED, test_service->getState());
-  EXPECT_TRUE(test_service->Shutdown());
-  EXPECT_EQ(ServiceState::SHUTDOWN, test_service->getState());
+  EXPECT_EQ(ServiceState::CREATED, test_service_->GetState());
+  EXPECT_TRUE(test_service_->Start());
+  EXPECT_EQ(ServiceState::STARTED, test_service_->GetState());
+  EXPECT_TRUE(test_service_->Shutdown());
+  EXPECT_EQ(ServiceState::SHUTDOWN, test_service_->GetState());
 }

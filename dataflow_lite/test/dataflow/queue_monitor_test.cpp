@@ -29,24 +29,24 @@ class MockObservedQueue :
   public IObservedQueue<std::string>
 {
 public:
-  MOCK_METHOD0(clear, void (void));
-  MOCK_CONST_METHOD0(size, size_t (void));
-  MOCK_CONST_METHOD0(empty, bool (void));
-  MOCK_METHOD2(dequeue, bool (std::string& data,
+  MOCK_METHOD0(Clear, void (void));
+  MOCK_CONST_METHOD0(Size, size_t (void));
+  MOCK_CONST_METHOD0(Empty, bool (void));
+  MOCK_METHOD2(Dequeue, bool (std::string& data,
     const std::chrono::microseconds& duration));
-  MOCK_METHOD1(enqueue, bool (std::string& data));
-  MOCK_METHOD2(tryEnqueue,
+  MOCK_METHOD1(Enqueue, bool (std::string& data));
+  MOCK_METHOD2(TryEnqueue,
     bool (std::string& data,
     const std::chrono::microseconds &duration));
-  inline bool enqueue(std::string&& /*value*/) override {
+  inline bool Enqueue(std::string&& /*value*/) override {
     return false;
   }
 
-  inline bool tryEnqueue(
+  inline bool TryEnqueue(
       std::string&& value,
       const std::chrono::microseconds& /*duration*/) override
   {
-    return enqueue(value);
+    return Enqueue(value);
   }
 
   /**
@@ -54,7 +54,7 @@ public:
    *
    * @param status_monitor
    */
-  inline void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
+  inline void SetStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) override {
     status_monitor_ = status_monitor;
   }
 
@@ -85,12 +85,12 @@ TEST(queue_demux_test, single_source_test)
   auto observed_queue = std::make_shared<MockObservedQueue>();
   std::shared_ptr<StatusMonitor> monitor;
   std::string actual = "test_string";
-  EXPECT_CALL(*observed_queue, dequeue(_, _))
-    .WillOnce(Invoke([=](auto && arg1, auto && arg2) { return dequeueFunc(arg1, actual, arg2); };));
+  EXPECT_CALL(*observed_queue, Dequeue(_, _))
+    .WillOnce(Invoke([=](auto && arg1, auto && arg2) { return dequeueFunc(arg1, actual, arg2); }));
   QueueMonitor<std::string> queue_monitor;
   queue_monitor.AddSource(observed_queue, PriorityOptions());
   std::string data;
-  EXPECT_TRUE(queue_monitor.dequeue(data, std::chrono::microseconds(0)));
+  EXPECT_TRUE(queue_monitor.Dequeue(data, std::chrono::microseconds(0)));
   EXPECT_EQ(actual, data);
 }
 
@@ -98,23 +98,23 @@ TEST(queue_demux_test, multi_source_test)
 {
   QueueMonitor<std::string> queue_monitor;
   auto low_priority_queue = std::make_shared<StrictMock<MockObservedQueue>>();
-  EXPECT_CALL(*low_priority_queue, dequeue(_, _))
-    .WillOnce(Invoke([=](auto && arg1, auto && arg2) { return dequeueFunc(arg1, "low_priority", arg2); };))
+  EXPECT_CALL(*low_priority_queue, Dequeue(_, _))
+    .WillOnce(Invoke([=](auto && arg1, auto && arg2) { return dequeueFunc(arg1, "low_priority", arg2); }))
     .WillRepeatedly(Return(false));
   queue_monitor.AddSource(low_priority_queue, PriorityOptions(LOWEST_PRIORITY));
 
   auto high_priority_observed_queue = std::make_shared<StrictMock<MockObservedQueue>>();
   std::shared_ptr<StatusMonitor> monitor;
-  EXPECT_CALL(*high_priority_observed_queue, dequeue(_, _))
-    .WillOnce(Invoke([=](auto && arg1, auto && arg2) { return dequeueFunc(arg1, "high_priority", arg2); };))
+  EXPECT_CALL(*high_priority_observed_queue, Dequeue(_, _))
+    .WillOnce(Invoke([=](auto && arg1, auto && arg2) { return dequeueFunc(arg1, "high_priority", arg2); }))
     .WillRepeatedly(Return(false));;
   queue_monitor.AddSource(high_priority_observed_queue, PriorityOptions(HIGHEST_PRIORITY));
   std::string data;
-  EXPECT_TRUE(queue_monitor.dequeue(data, std::chrono::microseconds(0)));
+  EXPECT_TRUE(queue_monitor.Dequeue(data, std::chrono::microseconds(0)));
   EXPECT_EQ("high_priority", data);
-  EXPECT_TRUE(queue_monitor.dequeue(data, std::chrono::microseconds(0)));
+  EXPECT_TRUE(queue_monitor.Dequeue(data, std::chrono::microseconds(0)));
   EXPECT_EQ("low_priority", data);
-  EXPECT_FALSE(queue_monitor.dequeue(data, std::chrono::microseconds(0)));
+  EXPECT_FALSE(queue_monitor.Dequeue(data, std::chrono::microseconds(0)));
 }
 
 int main(int argc, char ** argv)

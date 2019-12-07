@@ -18,7 +18,7 @@ protected:
   MetricDatum metric_datum_;
 
   void SetUp() override {
-    metric_datum = MetricDatum();
+    metric_datum_ = MetricDatum();
   }
 
   void TearDown() override {
@@ -63,13 +63,13 @@ TEST_F(TestMetricSerialization, serialize_returns_valid_string) {
   const auto metric_unit = Aws::CloudWatch::Model::StandardUnit::Seconds;
   const double value = 42;
 
-  metric_datum.SetTimestamp(ts);
-  metric_datum.SetMetricName(metric_name);
-  metric_datum.SetStorageResolution(storage_resolution);
-  metric_datum.SetUnit(metric_unit);
-  metric_datum.SetValue(value);
+  metric_datum_.SetTimestamp(ts);
+  metric_datum_.SetMetricName(metric_name);
+  metric_datum_.SetStorageResolution(storage_resolution);
+  metric_datum_.SetUnit(metric_unit);
+  metric_datum_.SetValue(value);
   Aws::String serialized_metric_datum;
-  EXPECT_NO_THROW(serialized_metric_datum = SerializeMetricDatum(metric_datum));
+  EXPECT_NO_THROW(serialized_metric_datum = SerializeMetricDatum(metric_datum_));
   MetricDatum result;
   EXPECT_NO_THROW(result = DeserializeMetricDatum(serialized_metric_datum));
   EXPECT_EQ(result.GetTimestamp().Millis(), ts.Millis());

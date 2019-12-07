@@ -13,7 +13,6 @@
  * permissions and limitations under the License.
  */
 
-
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
@@ -25,7 +24,7 @@ class ObservableObjectTest : public ::testing::Test {
 public:
     void SetUp() override
     {
-      testIntObservable = std::make_shared<ObservableObject<int>>(kInitialValue);
+      testIntObservable_ = std::make_shared<ObservableObject<int>>(kInitialValue);
     }
 
     void TearDown() override
@@ -40,44 +39,44 @@ TEST_F(ObservableObjectTest, Sanity) {
 }
 
 TEST_F(ObservableObjectTest, TestInit) {
-  EXPECT_EQ(kInitialValue, testIntObservable->getValue());
+  EXPECT_EQ(kInitialValue, testIntObservable_->GetValue());
 }
 
 TEST_F(ObservableObjectTest, TestSet) {
-  EXPECT_EQ(kInitialValue, testIntObservable->getValue());
+  EXPECT_EQ(kInitialValue, testIntObservable_->GetValue());
   int first_set = 42;
-  testIntObservable->setValue(first_set);
-  EXPECT_EQ(first_set, testIntObservable->getValue());
+  testIntObservable_->SetValue(first_set);
+  EXPECT_EQ(first_set, testIntObservable_->GetValue());
 }
 
 TEST_F(ObservableObjectTest, TestListener) {
-  EXPECT_EQ(kInitialValue, testIntObservable->getValue());
+  EXPECT_EQ(kInitialValue, testIntObservable_->GetValue());
   int first_set = 42;
-  testIntObservable->setValue(first_set);
-  EXPECT_EQ(first_set, testIntObservable->getValue());
+  testIntObservable_->SetValue(first_set);
+  EXPECT_EQ(first_set, testIntObservable_->GetValue());
 
   // register listener
   int listened_value;
   std::function<void(const int&)> lambda = [&listened_value](const int &currentValue){listened_value = currentValue;};
-  testIntObservable->addListener(lambda);
-  EXPECT_EQ(1u, testIntObservable->getNumberOfListeners());
+  testIntObservable_->AddListener(lambda);
+  EXPECT_EQ(1u, testIntObservable_->GetNumberOfListeners());
 
   int second_set = 242;
-  testIntObservable->setValue(second_set); // currently synchronous
+  testIntObservable_->SetValue(second_set); // currently synchronous
 
   EXPECT_EQ(second_set, listened_value);
-  EXPECT_EQ(second_set, testIntObservable->getValue());
+  EXPECT_EQ(second_set, testIntObservable_->GetValue());
 
   // test clear
 
-  testIntObservable->ClearListeners();
-  EXPECT_EQ(0u, testIntObservable->getNumberOfListeners());
+  testIntObservable_->ClearListeners();
+  EXPECT_EQ(0u, testIntObservable_->GetNumberOfListeners());
 
   int third_set = 1999;
-  testIntObservable->setValue(third_set); // currently synchronous
+  testIntObservable_->SetValue(third_set); // currently synchronous
 
   EXPECT_EQ(second_set, listened_value);
-  EXPECT_EQ(third_set, testIntObservable->getValue());
+  EXPECT_EQ(third_set, testIntObservable_->GetValue());
 }
 
 TEST_F(ObservableObjectTest, TestFaultyListener) {
@@ -88,10 +87,10 @@ TEST_F(ObservableObjectTest, TestFaultyListener) {
       INVALID = 999999999
   };
 
-  EXPECT_EQ(kInitialValue, testIntObservable->getValue());
+  EXPECT_EQ(kInitialValue, testIntObservable_->GetValue());
   int first_set = VALID_2;
-  testIntObservable->setValue(first_set);
-  EXPECT_EQ(first_set, testIntObservable->getValue());
+  testIntObservable_->SetValue(first_set);
+  EXPECT_EQ(first_set, testIntObservable_->GetValue());
 
   // register listener
   int listened_value;
@@ -109,30 +108,30 @@ TEST_F(ObservableObjectTest, TestFaultyListener) {
   int good_listened_value;
   auto lambda = [&good_listened_value](const int &currentValue) {good_listened_value = currentValue;};
 
-  testIntObservable->addListener(bad_lambda);
-  EXPECT_EQ(1u, testIntObservable->getNumberOfListeners());
+  testIntObservable_->AddListener(bad_lambda);
+  EXPECT_EQ(1u, testIntObservable_->GetNumberOfListeners());
 
-  testIntObservable->addListener(lambda);
-  EXPECT_EQ(2u, testIntObservable->getNumberOfListeners());
+  testIntObservable_->AddListener(lambda);
+  EXPECT_EQ(2u, testIntObservable_->GetNumberOfListeners());
 
-  testIntObservable->setValue(1); // currently synchronous
+  testIntObservable_->SetValue(1); // currently synchronous
 
   EXPECT_EQ(VALID_1, listened_value);
   EXPECT_EQ(VALID_1, good_listened_value);
-  EXPECT_EQ(VALID_1, testIntObservable->getValue());
+  EXPECT_EQ(VALID_1, testIntObservable_->GetValue());
 
-  testIntObservable->setValue(INVALID); // currently synchronous
+  testIntObservable_->SetValue(INVALID); // currently synchronous
 
-  EXPECT_EQ(1u, testIntObservable->getNumberOfListeners());
-  EXPECT_EQ(INVALID, testIntObservable->getValue());
+  EXPECT_EQ(1u, testIntObservable_->GetNumberOfListeners());
+  EXPECT_EQ(INVALID, testIntObservable_->GetValue());
   EXPECT_EQ(INVALID, good_listened_value);
   EXPECT_EQ(VALID_1 , listened_value);
 
   // ensure the bad listener is not added if it immediately throws
-  bool added = testIntObservable->addListener(bad_lambda);
-  EXPECT_EQ(1u, testIntObservable->getNumberOfListeners());
+  bool added = testIntObservable_->AddListener(bad_lambda);
+  EXPECT_EQ(1u, testIntObservable_->GetNumberOfListeners());
   EXPECT_FALSE(added);
-  EXPECT_EQ(INVALID, testIntObservable->getValue());
+  EXPECT_EQ(INVALID, testIntObservable_->GetValue());
 }
 
 int main(int argc, char **argv) {

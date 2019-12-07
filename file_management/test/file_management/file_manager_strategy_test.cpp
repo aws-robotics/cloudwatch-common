@@ -32,14 +32,14 @@ using namespace Aws::FileManagement;
 
 class MockFileManagerStrategy : public FileManagerStrategy {
 public:
-  explicit MockFileManagerStrategy(const FileManagerStrategyOptions &options) : FileManagerStrategy(options) {}
+  explicit MockFileManagerStrategy(const FileManagerStrategyOptions & options) : FileManagerStrategy(options) {}
 
   std::string GetFileToRead() {
-    return FileManagerStrategy::getFileToRead();
+    return FileManagerStrategy::GetFileToRead();
   }
 
   std::string GetActiveWriteFile() {
-    return FileManagerStrategy::getActiveWriteFile();
+    return FileManagerStrategy::GetActiveWriteFile();
   }
 };
 
@@ -60,8 +60,8 @@ protected:
   std::string prefix_ = "test";
   std::string extension_ = ".log";
   uint max_file_size_ = 1024;
-  uint storage_limit_ = max_file_size * 10;
-  FileManagerStrategyOptions options_{folder, prefix, extension, max_file_size, storage_limit};
+  uint storage_limit_ = max_file_size_ * 10;
+  FileManagerStrategyOptions options_{folder_, prefix_, extension_, max_file_size_, storage_limit_};
 };
 
 
@@ -69,17 +69,17 @@ TEST_F(FileManagerStrategyTest, restart_without_token) {
   const std::string data1 = "test_data_1";
   const std::string data2 = "test_data_2";
   {
-    FileManagerStrategy file_manager_strategy(options);
+    FileManagerStrategy file_manager_strategy(options_);
     EXPECT_NO_THROW(file_manager_strategy.Start());
     file_manager_strategy.Write(data1);
     file_manager_strategy.Write(data2);
   }
   {
-    FileManagerStrategy file_manager_strategy(options);
+    FileManagerStrategy file_manager_strategy(options_);
     EXPECT_NO_THROW(file_manager_strategy.Start());
     std::string result1, result2;
-    file_manager_strategy.read(result1);
-    file_manager_strategy.read(result2);
+    file_manager_strategy.Read(result1);
+    file_manager_strategy.Read(result2);
     EXPECT_EQ(data1, result1);
     EXPECT_EQ(data2, result2);
   }
@@ -90,19 +90,19 @@ TEST_F(FileManagerStrategyTest, restart_without_token) {
 //  const std::string data1 = "test_data_1";
 //  const std::string data2 = "test_data_2";
 //  {
-//    FileManagerStrategy file_manager_strategy(options);
+//    FileManagerStrategy file_manager_strategy(options_);
 //    EXPECT_NO_THROW(file_manager_strategy.Start());
 //    file_manager_strategy.Write(data1);
 //    file_manager_strategy.Write(data2);
 //    std::string result1;
-//    DataToken token1 = file_manager_strategy.read(result1);
+//    DataToken token1 = file_manager_strategy.Read(result1);
 //    EXPECT_EQ(data1, result1);
 //  }
 //  {
-//    FileManagerStrategy file_manager_strategy(options);
+//    FileManagerStrategy file_manager_strategy(options_);
 //    EXPECT_NO_THROW(file_manager_strategy.Start());
 //    std::string result2;
-//    DataToken token2 = file_manager_strategy.read(result2);
+//    DataToken token2 = file_manager_strategy.Read(result2);
 //    EXPECT_EQ(data2, result2);
 //  }
 //}
@@ -110,29 +110,29 @@ TEST_F(FileManagerStrategyTest, restart_without_token) {
 TEST_F(FileManagerStrategyTest, fail_token_restart_from_last_location) {
   const std::string data1 = "test_data_1";
   const std::string data2 = "test_data_2";
-  FileManagerStrategy file_manager_strategy(options);
+  FileManagerStrategy file_manager_strategy(options_);
   EXPECT_NO_THROW(file_manager_strategy.Start());
   file_manager_strategy.Write(data1);
   file_manager_strategy.Write(data2);
   std::string result1;
-  DataToken token1 = file_manager_strategy.read(result1);
+  DataToken token1 = file_manager_strategy.Read(result1);
   EXPECT_EQ(data1, result1);
-  file_manager_strategy.resolve(token1, true);
+  file_manager_strategy.Resolve(token1, true);
   std::string result2, result3, result4;
-  DataToken token2 = file_manager_strategy.read(result2);
+  DataToken token2 = file_manager_strategy.Read(result2);
   EXPECT_EQ(data2, result2);
 
-  file_manager_strategy.resolve(token2, false);
+  file_manager_strategy.Resolve(token2, false);
   // Token was failed, should be re-read.
-  DataToken token3 = file_manager_strategy.read(result3);
+  DataToken token3 = file_manager_strategy.Read(result3);
   EXPECT_EQ(data2, result3);
-  file_manager_strategy.resolve(token3, false);
+  file_manager_strategy.Resolve(token3, false);
   // Token was failed, should be re-read.
   EXPECT_TRUE(file_manager_strategy.IsDataAvailable());
-  DataToken token4 = file_manager_strategy.read(result4);
+  DataToken token4 = file_manager_strategy.Read(result4);
   EXPECT_EQ(data2, result4);
   EXPECT_FALSE(file_manager_strategy.IsDataAvailable());
-  file_manager_strategy.resolve(token4, true);
+  file_manager_strategy.Resolve(token4, true);
   EXPECT_FALSE(file_manager_strategy.IsDataAvailable());
 }
 
@@ -140,34 +140,34 @@ TEST_F(FileManagerStrategyTest, fail_token_restart_from_last_location) {
  * Test that the upload complete with CW Failure goes to a file.
  */
 TEST_F(FileManagerStrategyTest, start_success) {
-  FileManagerStrategy file_manager_strategy(options);
+  FileManagerStrategy file_manager_strategy(options_);
   EXPECT_NO_THROW(file_manager_strategy.Start());
 }
 
 TEST_F(FileManagerStrategyTest, discover_stored_files) {
   const std::string test_data = "test_data";
   {
-    FileManagerStrategy file_manager_strategy(options);
+    FileManagerStrategy file_manager_strategy(options_);
     EXPECT_NO_THROW(file_manager_strategy.Start());
     file_manager_strategy.Write(test_data);
   }
   {
-    FileManagerStrategy file_manager_strategy(options);
+    FileManagerStrategy file_manager_strategy(options_);
     EXPECT_NO_THROW(file_manager_strategy.Start());
     EXPECT_TRUE(file_manager_strategy.IsDataAvailable());
     std::string result;
-    DataToken token = file_manager_strategy.read(result);
+    DataToken token = file_manager_strategy.Read(result);
     EXPECT_EQ(test_data, result);
-    file_manager_strategy.resolve(token, true);
+    file_manager_strategy.Resolve(token, true);
   }
 }
 
 TEST_F(FileManagerStrategyTest, get_file_to_read_gets_newest) {
   namespace fs = std::experimental::filesystem;
   const uint max_file_size_in_kb = 25;
-  options.maximum_file_size_in_kb = max_file_size_in_kb;
+  options_.maximum_file_size_in_kb = max_file_size_in_kb;
   {
-    MockFileManagerStrategy file_manager_strategy(options);
+    MockFileManagerStrategy file_manager_strategy(options_);
     file_manager_strategy.Start();
     std::ostringstream ss_25_kb;
     for (int i = 0; i < 1024; i++) {
@@ -179,11 +179,11 @@ TEST_F(FileManagerStrategyTest, get_file_to_read_gets_newest) {
       file_manager_strategy.Write(string_25_kb);
     }
 
-    long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
+    long file_count = std::distance(fs::directory_iterator(folder_), fs::directory_iterator{});
     EXPECT_EQ(5, file_count);
 
     std::vector<std::string> file_paths;
-    for (const auto &entry : fs::directory_iterator(folder)) {
+    for (const auto &entry : fs::directory_iterator(folder_)) {
       const fs::path &path = entry.path();
       file_paths.push_back(path);
     }
@@ -192,8 +192,8 @@ TEST_F(FileManagerStrategyTest, get_file_to_read_gets_newest) {
     const std::string expected_active_write_file = file_paths.end()[-1];
     const std::string expected_file_to_be_read = file_paths.end()[-2];
 
-    EXPECT_EQ(expected_active_write_file, file_manager_strategy.getActiveWriteFile());
-    EXPECT_EQ(expected_file_to_be_read, file_manager_strategy.getFileToRead());
+    EXPECT_EQ(expected_active_write_file, file_manager_strategy.GetActiveWriteFile());
+    EXPECT_EQ(expected_file_to_be_read, file_manager_strategy.GetFileToRead());
   }
 }
 
@@ -201,9 +201,9 @@ TEST_F(FileManagerStrategyTest, get_file_to_read_gets_newest) {
 TEST_F(FileManagerStrategyTest, rotate_large_files) {
   namespace fs = std::experimental::filesystem;
   const uint max_file_size_in_kb = 10;
-  options.maximum_file_size_in_kb = max_file_size_in_kb;
+  options_.maximum_file_size_in_kb = max_file_size_in_kb;
   {
-    FileManagerStrategy file_manager_strategy(options);
+    FileManagerStrategy file_manager_strategy(options_);
     file_manager_strategy.Start();
     std::ostringstream data1ss;
     for (int i = 0; i < 1024; i++) {
@@ -211,7 +211,7 @@ TEST_F(FileManagerStrategyTest, rotate_large_files) {
     }
     std::string data1 = data1ss.str();
     file_manager_strategy.Write(data1);
-    long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
+    long file_count = std::distance(fs::directory_iterator(folder_), fs::directory_iterator{});
     EXPECT_EQ(1, file_count);
     std::ostringstream data2ss;
     for (int i = 0; i < 1024; i++) {
@@ -219,7 +219,7 @@ TEST_F(FileManagerStrategyTest, rotate_large_files) {
     }
     std::string data2 = data2ss.str();
     file_manager_strategy.Write(data2);
-    file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
+    file_count = std::distance(fs::directory_iterator(folder_), fs::directory_iterator{});
     EXPECT_EQ(2, file_count);
   }
 }
@@ -227,17 +227,17 @@ TEST_F(FileManagerStrategyTest, rotate_large_files) {
 TEST_F(FileManagerStrategyTest, resolve_token_deletes_file) {
   const std::string test_data = "test_data";
   {
-    FileManagerStrategy file_manager_strategy(options);
+    FileManagerStrategy file_manager_strategy(options_);
     file_manager_strategy.Start();
     EXPECT_FALSE(file_manager_strategy.IsDataAvailable());
     file_manager_strategy.Write(test_data);
     EXPECT_TRUE(file_manager_strategy.IsDataAvailable());
     std::string result;
-    DataToken token = file_manager_strategy.read(result);
-    file_manager_strategy.resolve(token, true);
+    DataToken token = file_manager_strategy.Read(result);
+    file_manager_strategy.Resolve(token, true);
   }
   {
-    FileManagerStrategy file_manager_strategy(options);
+    FileManagerStrategy file_manager_strategy(options_);
     file_manager_strategy.Start();
     EXPECT_FALSE(file_manager_strategy.IsDataAvailable());
   }
@@ -247,10 +247,10 @@ TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
   namespace fs = std::experimental::filesystem;
   const uint max_file_size_in_kb = 50;
   const uint storage_limit = 150;
-  options.maximum_file_size_in_kb = max_file_size_in_kb;
-  options.storage_limit_in_kb = storage_limit;
+  options_.maximum_file_size_in_kb = max_file_size_in_kb;
+  options_.storage_limit_in_kb = storage_limit;
   {
-    FileManagerStrategy file_manager_strategy(options);
+    FileManagerStrategy file_manager_strategy(options_);
     file_manager_strategy.Start();
     std::ostringstream ss_25_kb;
     for (int i = 0; i < 1024; i++) {
@@ -258,18 +258,18 @@ TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
     }
     std::string string_25_kb = ss_25_kb.str();
     file_manager_strategy.Write(string_25_kb);
-    long file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
+    long file_count = std::distance(fs::directory_iterator(folder_), fs::directory_iterator{});
     EXPECT_EQ(1, file_count);
 
     for (int i = 0; i < 5; i++) {
       file_manager_strategy.Write(string_25_kb);
     }
 
-    file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
+    file_count = std::distance(fs::directory_iterator(folder_), fs::directory_iterator{});
     EXPECT_EQ(3, file_count);
 
     std::vector<std::string> file_paths;
-    for (const auto &entry : fs::directory_iterator(folder)) {
+    for (const auto &entry : fs::directory_iterator(folder_)) {
       const fs::path &path = entry.path();
       file_paths.push_back(path);
     }
@@ -278,10 +278,10 @@ TEST_F(FileManagerStrategyTest, on_storage_limit_delete_oldest_file) {
     const std::string file_to_be_deleted = file_paths[0];
 
     file_manager_strategy.Write(string_25_kb);
-    file_count = std::distance(fs::directory_iterator(folder), fs::directory_iterator{});
+    file_count = std::distance(fs::directory_iterator(folder_), fs::directory_iterator{});
     EXPECT_EQ(3, file_count);
 
-    for (const auto &entry : fs::directory_iterator(folder)) {
+    for (const auto &entry : fs::directory_iterator(folder_)) {
       const std::string file_path = entry.path();
       EXPECT_TRUE(file_path != file_to_be_deleted);
     }

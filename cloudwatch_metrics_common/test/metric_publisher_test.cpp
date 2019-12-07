@@ -36,7 +36,7 @@ public:
   std::string last_metric_namespace;
   MetricDatumCollection last_metrics;
 
-  MockCloudWatchFacade() { reset(); }
+  MockCloudWatchFacade() { Reset(); }
 
   void Reset()
   {
@@ -94,26 +94,26 @@ TEST_F(TestMetricPublisherFixture, TestLogPublisher_PublishLogs_ReturnsFalseWhen
 {
   //empty list
   MetricDatumCollection test_list;
-  EXPECT_EQ(Aws::DataFlow::UploadStatus::INVALID_DATA, publisher_->attemptPublish(test_list));
-  EXPECT_EQ(PublisherState::NOT_CONNECTED, publisher_->getPublisherState());
+  EXPECT_EQ(Aws::DataFlow::UploadStatus::INVALID_DATA, publisher_->AttemptPublish(test_list));
+  EXPECT_EQ(PublisherState::NOT_CONNECTED, publisher_->GetPublisherState());
   EXPECT_EQ(0u, mock_cw_->send_metrics_call_count);
 }
 
 TEST_F(TestMetricPublisherFixture, TestMetricPublisher_PublishMetrics_ReturnsSuccessWhenListIngested)
 {
-  EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, publisher_->attemptPublish(metrics_list_));
-  EXPECT_EQ(PublisherState::CONNECTED, publisher_->getPublisherState());
+  EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, publisher_->AttemptPublish(metrics_list_));
+  EXPECT_EQ(PublisherState::CONNECTED, publisher_->GetPublisherState());
   EXPECT_EQ(1u, mock_cw_->send_metrics_call_count);
 }
 
 TEST_F(TestMetricPublisherFixture, TestMetricPublisher_MultiplePublishes)
 {
 
-  EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, publisher_->attemptPublish(metrics_list_));
-  EXPECT_EQ(PublisherState::CONNECTED, publisher_->getPublisherState());
+  EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, publisher_->AttemptPublish(metrics_list_));
+  EXPECT_EQ(PublisherState::CONNECTED, publisher_->GetPublisherState());
   EXPECT_EQ(1u, mock_cw_->send_metrics_call_count);
 
-  EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, publisher_->attemptPublish(metrics_list_));
-  EXPECT_EQ(PublisherState::CONNECTED, publisher_->getPublisherState());
+  EXPECT_EQ(Aws::DataFlow::UploadStatus::SUCCESS, publisher_->AttemptPublish(metrics_list_));
+  EXPECT_EQ(PublisherState::CONNECTED, publisher_->GetPublisherState());
   EXPECT_EQ(2u, mock_cw_->send_metrics_call_count);
 }
