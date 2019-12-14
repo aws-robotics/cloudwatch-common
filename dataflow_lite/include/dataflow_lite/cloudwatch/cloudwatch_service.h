@@ -132,6 +132,10 @@ virtual inline bool BatchData(const D &data_to_batch) {
   return batcher_->BatchData(t);
 }
 
+virtual inline bool batchData(const D &data_to_batch) {
+  return CloudWatchService::BatchData(data_to_batch);
+}
+
 /**
  * Entry point to batch data for publishing
  *
@@ -157,6 +161,10 @@ virtual inline bool PublishBatchedData() {
     return batcher_->PublishBatchedData();
   }
   return false;
+}
+
+virtual inline bool publishBatchedData() {
+  return CloudWatchService::PublishBatchedData();
 }
 
 /**
@@ -195,6 +203,9 @@ virtual bool IsConnected() {
   return this->publisher_->GetPublisherState() == PublisherState::CONNECTED;
 }
 
+virtual bool isConnected() {
+  return CloudWatchService::IsConnected();
+}
 
 /**
  * Return the current timestamp

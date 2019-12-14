@@ -34,8 +34,8 @@ enum ServiceState {
 /**
  * Map used to pretty print the ServiceState enum.
  */
-static std::map<ServiceState, std::string> g_SERVICE_STATE_NAME_MAP = {{CREATED, "CREATED"}, {STARTED, "STARTED"},
-                                                                     {SHUTDOWN,"SHUTDOWN"}};
+static const std::map<ServiceState, std::string> kServiceStateNameMap = {{CREATED, "CREATED"}, {STARTED, "STARTED"},
+                                                                         {SHUTDOWN,"SHUTDOWN"}};
 
 /**
  * Interface that defines init, start, and shutdown methods for an implementing class to define.
@@ -66,6 +66,10 @@ public:
       return true;
     }
 
+    virtual bool start() {
+      return Service::Start();
+    }
+
     /**
      * Cleanup. Should be called before destruction. The format overriding classes should use is the following:
      *
@@ -85,13 +89,17 @@ public:
       return true;
     }
 
+    virtual bool shutdown() {
+      return Service::Shutdown();
+    }
+
     /**
      * Return a descriptive string describing the service and it's state.
      * @return
      */
     virtual std::string GetStatusString() {
       // a more descriptive name (tag supplied on construction) would be ideal
-      return typeid(this).name() + std::string(", state=") + g_SERVICE_STATE_NAME_MAP[GetState()];
+      return typeid(this).name() + std::string(", state=") + kServiceStateNameMap.at(GetState());
     }
 
     /**

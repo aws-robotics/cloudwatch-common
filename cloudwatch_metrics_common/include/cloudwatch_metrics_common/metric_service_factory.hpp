@@ -49,6 +49,18 @@ public:
           const Aws::Client::ClientConfiguration & client_config,
           const Aws::SDKOptions & sdk_options,
           const CloudWatchOptions & cloudwatch_options);
+
+  virtual std::shared_ptr<MetricService> createMetricService( // NOLINT(readability-identifier-naming)
+          const std::string & metrics_namespace,
+          const Aws::Client::ClientConfiguration & client_config,
+          const Aws::SDKOptions & sdk_options,
+          const CloudWatchOptions & cloudwatch_options)
+  {
+    return MetricServiceFactory::CreateMetricService(metrics_namespace,
+                                                     client_config, 
+                                                     sdk_options, 
+                                                     cloudwatch_options);
+  }
 };
 
 }  // namespace CloudWatchMetrics
