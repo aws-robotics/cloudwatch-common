@@ -63,6 +63,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::SendLogsReque
       case Aws::CloudWatchLogs::CloudWatchLogsErrors::INVALID_PARAMETER_COMBINATION:
       case Aws::CloudWatchLogs::CloudWatchLogsErrors::INVALID_PARAMETER_VALUE:
       case Aws::CloudWatchLogs::CloudWatchLogsErrors::MISSING_PARAMETER:
+      case Aws::CloudWatchLogs::CloudWatchLogsErrors::INVALID_PARAMETER:
         status = CW_LOGS_INVALID_PARAMETER;
         break;
       default:
