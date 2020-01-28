@@ -184,10 +184,11 @@ MetricObject createTestMetricObject(
         const double value = 2.42,
         const std::string & unit = "gigawatts",
         const int64_t timestamp = 1234,
+        const std::map<StatisticValuesType, double> & statistic_values = std::map<StatisticValuesType, double>(),
         const std::map<std::string, std::string> & dimensions = std::map<std::string, std::string>(),
         const int storage_resolution = 60
         ) {
-  return MetricObject {name, value, unit, timestamp, dimensions, storage_resolution};
+  return MetricObject{name, unit, timestamp, value, statistic_values, dimensions, storage_resolution};
 }
 
 TEST_F(PipelineTest, Sanity) {

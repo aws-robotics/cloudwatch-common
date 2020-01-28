@@ -13,12 +13,13 @@
  * permissions and limitations under the License.
  */
 
+#include <limits>
 #include <list>
 #include <map>
 #include <string>
 
-#include <aws/monitoring/model/StandardUnit.h>
 #include <aws/monitoring/model/PutMetricDataRequest.h>
+#include <aws/monitoring/model/StandardUnit.h>
 #include <cloudwatch_metrics_common/definitions/definitions.h>
 
 namespace Aws {
@@ -46,17 +47,53 @@ static std::unordered_map<std::string, Aws::CloudWatch::Model ::StandardUnit> un
   {"", Aws::CloudWatch::Model::StandardUnit::None},
 };
 
+enum class StatisticValuesType
+{
+  MINIMUM,
+  MAXIMUM,
+  SUM,
+  SAMPLE_COUNT
+};
+
 /**
  * Wrapper object for the AWS specific Aws::CloudWatch::Model::MetricDatum. This object is meant to be constructed from
  * userland provided metric data instead of using the AWS SKD specific object.
  */
 struct MetricObject {
-    const std::string metric_name;
-    const double value;
-    const std::string unit;
-    const int64_t timestamp;
-    const std::map<std::string, std::string> dimensions;
-    const int storage_resolution;
+  MetricObject()
+    : timestamp(std::numeric_limits<int64_t>::lowest()),
+      value(std::numeric_limits<double>::quiet_NaN()),
+      storage_resolution(std::numeric_limits<int>::lowest()) {}
+
+  MetricObject(
+    const std::string & _name,
+    const double _value,
+    const std::string & _unit,
+    const int64_t _timestamp,
+    const std::map<std::string, std::string> & _dimensions,
+    const int _storage_resolution)
+    : metric_name(_name), unit(_unit), timestamp(_timestamp), value(_value),
+      dimensions(_dimensions), storage_resolution(_storage_resolution) {}
+
+  MetricObject(
+    const std::string & _name,
+    const std::string & _unit,
+    const int64_t _timestamp,
+    const double _value,
+    const std::map<StatisticValuesType, double> & _statistic_values,
+    const std::map<std::string, std::string> & _dimensions,
+    const int _storage_resolution)
+    : metric_name(_name), unit(_unit), timestamp(_timestamp), value(_value),
+      statistic_values(_statistic_values), dimensions(_dimensions),
+      storage_resolution(_storage_resolution) {}
+
+  std::string metric_name;
+  std::string unit;
+  int64_t timestamp;
+  double value;
+  std::map<StatisticValuesType, double> statistic_values;
+  std::map<std::string, std::string> dimensions;
+  int storage_resolution;
 };
 
 /**
@@ -82,6 +119,22 @@ static MetricDatum metricObjectToDatum(const MetricObject &metrics, const int64_
   } else {
     Aws::String unit_name(metrics.unit.c_str());
     datum.WithUnit(Aws::CloudWatch::Model::StandardUnitMapper::GetStandardUnitForName(unit_name));
+  }
+
+  if (!metrics.statistic_values.empty()) {
+    Aws::CloudWatch::Model::StatisticSet stats;
+    for (const auto & keyval : metrics.statistic_values) {
+      if (keyval.first == StatisticValuesType::MINIMUM) {
+        stats.SetMinimum(keyval.second);
+      } else if (keyval.first == StatisticValuesType::MAXIMUM) {
+        stats.SetMaximum(keyval.second);
+      } else if (keyval.first == StatisticValuesType::SUM) {
+        stats.SetSum(keyval.second);
+      } else if (keyval.first == StatisticValuesType::SAMPLE_COUNT) {
+        stats.SetSampleCount(keyval.second);
+      }
+    }
+    datum.SetStatisticValues(std::move(stats));
   }
 
   for (auto it = metrics.dimensions.begin(); it != metrics.dimensions.end(); ++it) {
