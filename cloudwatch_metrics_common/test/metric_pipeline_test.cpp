@@ -200,14 +200,42 @@ TEST(MetricPipelineTest, TestCreateMetricObject) {
   std::string name("HeWhoShallNotBenamed");
 
   auto object = createTestMetricObject(name);
-  auto empty = std::map<std::string, std::string>();
-
   EXPECT_EQ(name, object.metric_name);
   EXPECT_EQ(2.42, object.value);
   EXPECT_EQ("gigawatts", object.unit);
   EXPECT_EQ(1234, object.timestamp);
-  EXPECT_EQ(empty, object.dimensions);
+  EXPECT_TRUE(object.statistic_values.empty());
+  EXPECT_TRUE(object.dimensions.empty());
   EXPECT_EQ(60, object.storage_resolution);
+}
+
+TEST_F(PipelineTest, TestConvertToBatchedData) {
+
+  const std::string metric_name = "test_object";
+  const std::string dimension_name = "blah";
+  const std::string dimension_value = "blah blah";
+
+  auto object = createTestMetricObject(metric_name);
+  object.unit = "percent";
+  object.statistic_values[StatisticValuesType::SUM] = 111.1;
+  object.statistic_values[StatisticValuesType::SAMPLE_COUNT] = 24;
+  object.dimensions[dimension_name] = dimension_value;
+
+  auto datum = cw_service->convertInputToBatched(object);
+  EXPECT_EQ(metric_name, datum.GetMetricName().c_str());
+  EXPECT_DOUBLE_EQ(2.42, datum.GetValue());
+  EXPECT_EQ(Aws::CloudWatch::Model::StandardUnit::Percent, datum.GetUnit());
+  EXPECT_EQ(1234, datum.GetTimestamp().Millis());
+  EXPECT_EQ(60, datum.GetStorageResolution());
+
+  const auto & statistic_values = datum.GetStatisticValues();
+  EXPECT_DOUBLE_EQ(24, statistic_values.GetSampleCount());
+  EXPECT_DOUBLE_EQ(111.1, statistic_values.GetSum());
+
+  const auto & dimensions = datum.GetDimensions();
+  EXPECT_EQ(1u, dimensions.size());
+  EXPECT_EQ(dimension_name, dimensions[0].GetName().c_str());
+  EXPECT_EQ(dimension_value, dimensions[0].GetValue().c_str());
 }
 
 /**

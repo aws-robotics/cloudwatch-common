@@ -141,7 +141,7 @@ static MetricDatum metricObjectToDatum(const MetricObject &metrics, const int64_
     Aws::CloudWatch::Model::Dimension dimension;
     Aws::String name(it->first.c_str());
     Aws::String d_value(it->second.c_str());
-    dimension.WithName(name.c_str()).WithValue(d_value);
+    dimension.WithName(name).WithValue(d_value);
     datum.AddDimensions(dimension);
   }
 
