@@ -13,7 +13,6 @@
  * permissions and limitations under the License.
  */
 
-#include <limits>
 #include <list>
 #include <map>
 #include <string>
@@ -57,14 +56,9 @@ enum class StatisticValuesType
 
 /**
  * Wrapper object for the AWS specific Aws::CloudWatch::Model::MetricDatum. This object is meant to be constructed from
- * userland provided metric data instead of using the AWS SKD specific object.
+ * userland provided metric data instead of using the AWS SDK specific object.
  */
 struct MetricObject {
-  MetricObject()
-    : timestamp(std::numeric_limits<int64_t>::lowest()),
-      value(std::numeric_limits<double>::quiet_NaN()),
-      storage_resolution(std::numeric_limits<int>::lowest()) {}
-
   MetricObject(
     const std::string & _name,
     const double _value,
@@ -98,8 +92,6 @@ struct MetricObject {
 
 /**
  * Helper method to constructor an Aws::CloudWatch::Model::MetricDatum from a MetricObject.
- *
- * Note: currently this does not support statistics data
  *
  * @param metrics input MetricObject
  * @param timestamp

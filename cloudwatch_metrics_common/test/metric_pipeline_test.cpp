@@ -184,6 +184,17 @@ MetricObject createTestMetricObject(
         const double value = 2.42,
         const std::string & unit = "gigawatts",
         const int64_t timestamp = 1234,
+        const std::map<std::string, std::string> & dimensions = std::map<std::string, std::string>(),
+        const int storage_resolution = 60
+        ) {
+  return MetricObject {name, value, unit, timestamp, dimensions, storage_resolution};
+}
+
+MetricObject createTestMetricObjectWithStatistics(
+        const std::string & name,
+        const double value = 2.42,
+        const std::string & unit = "gigawatts",
+        const int64_t timestamp = 1234,
         const std::map<StatisticValuesType, double> & statistic_values = std::map<StatisticValuesType, double>(),
         const std::map<std::string, std::string> & dimensions = std::map<std::string, std::string>(),
         const int storage_resolution = 60
@@ -215,7 +226,7 @@ TEST_F(PipelineTest, TestConvertToBatchedData) {
   const std::string dimension_name = "blah";
   const std::string dimension_value = "blah blah";
 
-  auto object = createTestMetricObject(metric_name);
+  auto object = createTestMetricObjectWithStatistics(metric_name);
   object.unit = "percent";
   object.statistic_values[StatisticValuesType::SUM] = 111.1;
   object.statistic_values[StatisticValuesType::SAMPLE_COUNT] = 24;
