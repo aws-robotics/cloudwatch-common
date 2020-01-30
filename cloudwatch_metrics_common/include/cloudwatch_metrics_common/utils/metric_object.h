@@ -71,21 +71,19 @@ struct MetricObject {
 
   MetricObject(
     const std::string & _name,
+    const std::map<StatisticValuesType, double> & _statistic_values,
     const std::string & _unit,
     const int64_t _timestamp,
-    const double _value,
-    const std::map<StatisticValuesType, double> & _statistic_values,
     const std::map<std::string, std::string> & _dimensions,
     const int _storage_resolution)
-    : metric_name(_name), unit(_unit), timestamp(_timestamp), value(_value),
-      statistic_values(_statistic_values), dimensions(_dimensions),
-      storage_resolution(_storage_resolution) {}
+    : metric_name(_name), unit(_unit), timestamp(_timestamp), statistic_values(_statistic_values),
+      dimensions(_dimensions), storage_resolution(_storage_resolution) {}
 
   std::string metric_name;
   std::string unit;
   int64_t timestamp;
-  double value;
-  std::map<StatisticValuesType, double> statistic_values;
+  double value; // mutually exclusive with statistic_values
+  std::map<StatisticValuesType, double> statistic_values; // mutually exclusive with value
   std::map<std::string, std::string> dimensions;
   int storage_resolution;
 };
@@ -103,17 +101,11 @@ static MetricDatum metricObjectToDatum(const MetricObject &metrics, const int64_
   Aws::String aws_metric_name(metrics.metric_name.c_str());
   Aws::Utils::DateTime date_time(timestamp);
 
-  datum.WithMetricName(aws_metric_name).WithTimestamp(date_time).WithValue(metrics.value);
+  datum.WithMetricName(aws_metric_name).WithTimestamp(date_time);
 
-  auto mapped_unit = units_mapper.find(metrics.unit);
-  if (units_mapper.end() != mapped_unit) {
-    datum.WithUnit(mapped_unit->second);
+  if (metrics.statistic_values.empty()) {
+    datum.SetValue(metrics.value);
   } else {
-    Aws::String unit_name(metrics.unit.c_str());
-    datum.WithUnit(Aws::CloudWatch::Model::StandardUnitMapper::GetStandardUnitForName(unit_name));
-  }
-
-  if (!metrics.statistic_values.empty()) {
     Aws::CloudWatch::Model::StatisticSet stats;
     for (const auto & keyval : metrics.statistic_values) {
       if (keyval.first == StatisticValuesType::MINIMUM) {
@@ -127,6 +119,14 @@ static MetricDatum metricObjectToDatum(const MetricObject &metrics, const int64_
       }
     }
     datum.SetStatisticValues(std::move(stats));
+  }
+
+  auto mapped_unit = units_mapper.find(metrics.unit);
+  if (units_mapper.end() != mapped_unit) {
+    datum.SetUnit(mapped_unit->second);
+  } else {
+    Aws::String unit_name(metrics.unit.c_str());
+    datum.SetUnit(Aws::CloudWatch::Model::StandardUnitMapper::GetStandardUnitForName(unit_name));
   }
 
   for (auto it = metrics.dimensions.begin(); it != metrics.dimensions.end(); ++it) {

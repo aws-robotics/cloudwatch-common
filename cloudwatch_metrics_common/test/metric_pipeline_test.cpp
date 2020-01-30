@@ -179,7 +179,7 @@ protected:
     std::shared_ptr<Aws::DataFlow::QueueMonitor<TaskPtr<MetricDatumCollection>>>queue_monitor;
 };
 
-MetricObject createTestMetricObject(
+MetricObject createTestMetricObjectWithValue(
         const std::string & name,
         const double value = 2.42,
         const std::string & unit = "gigawatts",
@@ -190,16 +190,21 @@ MetricObject createTestMetricObject(
   return MetricObject {name, value, unit, timestamp, dimensions, storage_resolution};
 }
 
-MetricObject createTestMetricObjectWithStatistics(
+MetricObject createTestMetricObjectWithStatisticValues(
         const std::string & name,
         const double value = 2.42,
         const std::string & unit = "gigawatts",
         const int64_t timestamp = 1234,
-        const std::map<StatisticValuesType, double> & statistic_values = std::map<StatisticValuesType, double>(),
         const std::map<std::string, std::string> & dimensions = std::map<std::string, std::string>(),
         const int storage_resolution = 60
         ) {
-  return MetricObject{name, unit, timestamp, value, statistic_values, dimensions, storage_resolution};
+  std::map<StatisticValuesType, double> statistic_values = {
+    {StatisticValuesType::MINIMUM, value},
+    {StatisticValuesType::MAXIMUM, value},
+    {StatisticValuesType::SUM, value},
+    {StatisticValuesType::SAMPLE_COUNT, 1.0}
+  };
+  return MetricObject{name, statistic_values, unit, timestamp, dimensions, storage_resolution};
 }
 
 TEST_F(PipelineTest, Sanity) {
@@ -210,7 +215,7 @@ TEST(MetricPipelineTest, TestCreateMetricObject) {
 
   std::string name("HeWhoShallNotBenamed");
 
-  auto object = createTestMetricObject(name);
+  auto object = createTestMetricObjectWithValue(name);
   EXPECT_EQ(name, object.metric_name);
   EXPECT_EQ(2.42, object.value);
   EXPECT_EQ("gigawatts", object.unit);
@@ -226,15 +231,15 @@ TEST_F(PipelineTest, TestConvertToBatchedData) {
   const std::string dimension_name = "blah";
   const std::string dimension_value = "blah blah";
 
-  auto object = createTestMetricObjectWithStatistics(metric_name);
+  auto object = createTestMetricObjectWithStatisticValues(metric_name);
   object.unit = "percent";
+  object.statistic_values.clear();
   object.statistic_values[StatisticValuesType::SUM] = 111.1;
   object.statistic_values[StatisticValuesType::SAMPLE_COUNT] = 24;
   object.dimensions[dimension_name] = dimension_value;
 
   auto datum = cw_service->convertInputToBatched(object);
   EXPECT_EQ(metric_name, datum.GetMetricName().c_str());
-  EXPECT_DOUBLE_EQ(2.42, datum.GetValue());
   EXPECT_EQ(Aws::CloudWatch::Model::StandardUnit::Percent, datum.GetUnit());
   EXPECT_EQ(1234, datum.GetTimestamp().Millis());
   EXPECT_EQ(60, datum.GetStorageResolution());
@@ -254,7 +259,7 @@ TEST_F(PipelineTest, TestConvertToBatchedData) {
  */
 TEST_F(PipelineTest, TestBatcherManualPublish) {
 
-  auto toBatch = createTestMetricObject(std::string("testMetric"));
+  auto toBatch = createTestMetricObjectWithValue(std::string("testMetric"));
   EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   bool is_batched = cw_service->batchData(toBatch);
   EXPECT_EQ(1u, batcher->getCurrentBatchSize());
@@ -284,12 +289,12 @@ TEST_F(PipelineTest, TestBatcherManualPublish) {
  */
 TEST_F(PipelineTest, TestBatcherManualPublishMultipleItems) {
 
-  auto toBatch = createTestMetricObject(std::string("TestBatcherManualPublish"));
+  auto toBatch = createTestMetricObjectWithValue(std::string("TestBatcherManualPublish"));
   bool is_batched = cw_service->batchData(toBatch);
   EXPECT_TRUE(is_batched);
 
   for(int i=99; i>0; i--) {
-    auto batchedBottles = createTestMetricObject(std::to_string(99) + std::string(" bottles of beer on the wall"));
+    auto batchedBottles = createTestMetricObjectWithValue(std::to_string(99) + std::string(" bottles of beer on the wall"));
     is_batched = cw_service->batchData(batchedBottles);
     EXPECT_TRUE(is_batched);
   }
@@ -321,7 +326,7 @@ TEST_F(PipelineTest, TestBatcherSize) {
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
 
   for(size_t i=1; i<size; i++) {
-    auto toBatch = createTestMetricObject(std::string("test message ") + std::to_string(i));
+    auto toBatch = createTestMetricObjectWithValue(std::string("test message ") + std::to_string(i));
     bool is_batched = cw_service->batchData(toBatch);
 
     EXPECT_TRUE(is_batched);
@@ -331,7 +336,7 @@ TEST_F(PipelineTest, TestBatcherSize) {
   }
 
   ASSERT_EQ(size, batcher->getTriggerBatchSize());
-  auto toBatch = createTestMetricObject(("test message " + std::to_string(size)));
+  auto toBatch = createTestMetricObjectWithValue(("test message " + std::to_string(size)));
   bool is_batched = cw_service->batchData(toBatch);
 
   EXPECT_TRUE(is_batched);
@@ -352,7 +357,7 @@ TEST_F(PipelineTest, TestSinglePublisherFailureToFileManager) {
   batcher->setMetricFileManager(fileManager);
 
   // batch
-  auto toBatch = createTestMetricObject(std::string("TestBatcherManualPublish"));
+  auto toBatch = createTestMetricObjectWithValue(std::string("TestBatcherManualPublish"));
   EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   bool is_batched = cw_service->batchData(toBatch);
   EXPECT_EQ(1u, batcher->getCurrentBatchSize());
@@ -386,7 +391,7 @@ TEST_F(PipelineTest, TestInvalidDataNotPassedToFileManager) {
   batcher->setMetricFileManager(fileManager);
 
   // batch
-  auto toBatch = createTestMetricObject(std::string("TestBatcherManualPublish"));
+  auto toBatch = createTestMetricObjectWithValue(std::string("TestBatcherManualPublish"));
   EXPECT_EQ(0u, batcher->getCurrentBatchSize());
   bool is_batched = cw_service->batchData(toBatch);
   EXPECT_EQ(1u, batcher->getCurrentBatchSize());
@@ -430,7 +435,7 @@ TEST_F(PipelineTest, TestPublisherIntermittant) {
     batcher->setMetricFileManager(fileManager);
 
     // batch
-    auto toBatch = createTestMetricObject(std::string("TestPublisherIntermittant"));
+    auto toBatch = createTestMetricObjectWithValue(std::string("TestPublisherIntermittant"));
     EXPECT_EQ(0u, batcher->getCurrentBatchSize());
     bool is_batched = cw_service->batchData(toBatch);
     EXPECT_EQ(1u, batcher->getCurrentBatchSize());
@@ -478,7 +483,7 @@ TEST_F(PipelineTest, TestBatchDataTooFast) {
   EXPECT_EQ(max, batcher->getMaxAllowableBatchSize());
 
   for(size_t i=1; i<=max; i++) {
-  auto toBatch = createTestMetricObject(std::string("test message " + std::to_string(i)));
+  auto toBatch = createTestMetricObjectWithValue(std::string("test message " + std::to_string(i)));
   bool is_batched = cw_service->batchData(toBatch);
 
   EXPECT_TRUE(is_batched);
@@ -487,7 +492,7 @@ TEST_F(PipelineTest, TestBatchDataTooFast) {
   EXPECT_EQ(PublisherState::UNKNOWN, test_publisher->getPublisherState());
   }
 
-  auto toBatch = createTestMetricObject(std::string("iocaine powder"));
+  auto toBatch = createTestMetricObjectWithValue(std::string("iocaine powder"));
   bool b = cw_service->batchData(toBatch);
 
   EXPECT_FALSE(b);
