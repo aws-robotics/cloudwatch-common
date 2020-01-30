@@ -59,6 +59,16 @@ enum class StatisticValuesType
  * userland provided metric data instead of using the AWS SDK specific object.
  */
 struct MetricObject {
+  /**
+   * Construct a new instance of MetricObject that contains a scalar value.
+   *
+   * @param _name metric name
+   * @param _value metric scalar value
+   * @param _unit metric unit
+   * @param _timestamp metric time stamp
+   * @param _dimensions dimensions delineating extra details about the metric
+   * @param _storage_resolution
+   */
   MetricObject(
     const std::string & _name,
     const double _value,
@@ -69,6 +79,16 @@ struct MetricObject {
     : metric_name(_name), unit(_unit), timestamp(_timestamp), value(_value),
       dimensions(_dimensions), storage_resolution(_storage_resolution) {}
 
+  /**
+   * Construct a new instance of MetricObject that contains a statistical values.
+   *
+   * @param _name metric name
+   * @param _statistic_values statistical values of the metric
+   * @param _unit metric unit
+   * @param _timestamp metric time stamp
+   * @param _dimensions dimensions delineating extra details about the metric
+   * @param _storage_resolution
+   */
   MetricObject(
     const std::string & _name,
     const std::map<StatisticValuesType, double> & _statistic_values,
