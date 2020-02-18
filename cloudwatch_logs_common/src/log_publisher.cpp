@@ -32,9 +32,11 @@
 #include <fstream>
 #include <utility>
 
-constexpr int kMaxRetries = 1; // todo this should probably be configurable, maybe part of the generic publisher interface
 
-using namespace Aws::CloudWatchLogs;
+namespace Aws {
+namespace CloudWatchLogs {
+
+constexpr int kMaxRetries = 1; // todo this should probably be configurable, maybe part of the generic publisher interface
 
 LogPublisher::LogPublisher(
   const std::string & log_group,
@@ -319,3 +321,6 @@ bool LogPublisher::shutdown() {
   Aws::ShutdownAPI(this->options_);
   return is_shutdown;
 }
+
+}  // namespace CloudWatchLogs
+}  // namespace Aws

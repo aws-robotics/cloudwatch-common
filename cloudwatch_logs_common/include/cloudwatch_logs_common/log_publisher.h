@@ -75,6 +75,10 @@ public:
   LogPublisher(const std::string & log_group, const std::string & log_stream,
                std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cw_client);
 
+  LogPublisher(const LogPublisher & other) = delete;
+
+  LogPublisher & operator=(const LogPublisher & other) = delete;
+
   /**
    *  @brief Tears down the LogPublisher object
    */

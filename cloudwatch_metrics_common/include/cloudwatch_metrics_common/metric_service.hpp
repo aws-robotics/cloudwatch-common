@@ -38,16 +38,12 @@
 namespace Aws {
 namespace CloudWatchMetrics {
 
-using namespace Aws::CloudWatchMetrics;
-using namespace Aws::CloudWatchMetrics::Utils;
-using namespace Aws::FileManagement;
-
 /**
  * Implementation to send metrics to CloudWatch. Note: though the batcher and publisher are required, the file streamer
  * is not. If the file streamer is not provided then metric data is dropped if any failure is observed during the
  * attempt to publish.
  */
-class MetricService : public Aws::CloudWatch::CloudWatchService<MetricObject, MetricDatum>
+class MetricService : public Aws::CloudWatch::CloudWatchService<Utils::MetricObject, MetricDatum>
 {
 public:
 
@@ -61,8 +57,7 @@ public:
     MetricService(
             std::shared_ptr<Publisher<MetricDatumCollection>> publisher,
             std::shared_ptr<DataBatcher<MetricDatum>> batcher,
-            std::shared_ptr<FileUploadStreamer<MetricDatumCollection>> file_upload_streamer = nullptr
-            )
+            std::shared_ptr<Aws::FileManagement::FileUploadStreamer<MetricDatumCollection>> file_upload_streamer = nullptr)
             : CloudWatchService(std::move(publisher), std::move(batcher)) {
 
       this->file_upload_streamer_ = std::move(file_upload_streamer);
@@ -76,7 +71,7 @@ public:
      * @return MetricDatum to publish
      */
     MetricDatum convertInputToBatched(
-            const MetricObject &input,
+            const Utils::MetricObject &input,
             const std::chrono::milliseconds &milliseconds) override {
 
       return metricObjectToDatum(input, static_cast<int64_t>(milliseconds.count()));
@@ -88,8 +83,7 @@ public:
      * @param input MetricObject to convert
      * @return MetricDatum to publish
      */
-    MetricDatum convertInputToBatched(
-            const MetricObject &input) override {
+    MetricDatum convertInputToBatched(const Utils::MetricObject &input) override {
 
       return metricObjectToDatum(input, input.timestamp);
     }

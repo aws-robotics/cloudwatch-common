@@ -94,7 +94,7 @@ public:
     /**
      * Clear all active listeners
      */
-    virtual void clearListeners() {
+    void clearListeners() {
       std::lock_guard<std::recursive_mutex> lk(listener_mutex_);
       listeners_.clear();
     }

@@ -40,10 +40,8 @@ class MetricPublisher : public Publisher<MetricDatumCollection>
 {
 public:
 
-
   MetricPublisher(const std::string & metrics_namespace, const Aws::Client::ClientConfiguration & client_config);
-  MetricPublisher(const std::string & metrics_namespace,
-    const std::shared_ptr<Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade>& cloudwatch_metrics_facade);
+  MetricPublisher(const std::string & metrics_namespace, std::shared_ptr<Utils::CloudWatchMetricsFacade> cloudwatch_metrics_facade);
 
   /**
    *  @brief Tears down the MetricPublisher object

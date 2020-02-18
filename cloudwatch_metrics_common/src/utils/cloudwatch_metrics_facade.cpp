@@ -26,7 +26,9 @@
 
 #include <string>
 
-using namespace Aws::CloudWatchMetrics::Utils;
+namespace Aws {
+namespace CloudWatchMetrics {
+namespace Utils {
 
 // https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
 #define MAX_METRIC_DATUMS_PER_REQUEST 20
@@ -107,3 +109,7 @@ CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsToCloudWatch(
 
   return status;
 }
+
+}  // namespace Utils
+}  // namespace CloudWatchMetrics
+}  // namespace Aws

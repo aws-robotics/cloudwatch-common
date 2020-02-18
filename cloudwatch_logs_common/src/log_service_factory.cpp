@@ -31,10 +31,14 @@
 
 #include <cloudwatch_logs_common/definitions/definitions.h>
 
-using namespace Aws::CloudWatchLogs;
-using namespace Aws::CloudWatchLogs::Utils;
-using namespace Aws::FileManagement;
+using Aws::CloudWatchLogs::Utils::LogFileManager;
+using Aws::CloudWatchLogs::LogPublisher;
+using Aws::FileManagement::TaskObservedBlockingQueue;
 
+namespace Aws {
+namespace CloudWatchLogs {
+
+// NOLINTNEXTLINE(google-default-arguments)
 std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   const std::string & log_group,
   const std::string & log_stream,
@@ -49,9 +53,9 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
   auto publisher = std::make_shared<LogPublisher>(log_group, log_stream, client_config);
 
   auto queue_monitor =
-      std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogCollection>>>();
+      std::make_shared<Aws::DataFlow::QueueMonitor<Aws::FileManagement::TaskPtr<LogCollection>>>();
 
-  FileUploadStreamerOptions file_upload_options{
+  Aws::FileManagement::FileUploadStreamerOptions file_upload_options{
     cloudwatch_options.uploader_options.file_upload_batch_size,
     cloudwatch_options.uploader_options.file_max_queue_size
   };
@@ -89,3 +93,6 @@ std::shared_ptr<LogService> LogServiceFactory::CreateLogService(
 
   return log_service;  // allow user to start
 }
+
+}  // namespace CloudWatchLogs
+}  // namespace Aws

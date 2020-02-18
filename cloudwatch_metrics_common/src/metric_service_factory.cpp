@@ -29,9 +29,16 @@
 
 #include <cloudwatch_metrics_common/definitions/definitions.h>
 
-using namespace Aws::CloudWatchMetrics;
+using Aws::CloudWatchMetrics::Utils::MetricFileManager;
+using Aws::CloudWatchMetrics::MetricPublisher;
+using Aws::FileManagement::TaskObservedBlockingQueue;
 
-std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
+
+namespace Aws {
+namespace CloudWatchMetrics {
+
+// NOLINTNEXTLINE(google-default-arguments)
+std::shared_ptr<MetricService> MetricServiceFactory::createMetricService(
         const std::string & metrics_namespace,
         const Aws::Client::ClientConfiguration & client_config,
         const Aws::SDKOptions & sdk_options,
@@ -44,9 +51,9 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
   auto metric_publisher = std::make_shared<MetricPublisher>(metrics_namespace, client_config);
 
   auto queue_monitor =
-          std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<MetricDatumCollection>>>();
+          std::make_shared<Aws::DataFlow::QueueMonitor<Aws::FileManagement::TaskPtr<MetricDatumCollection>>>();
 
-  FileUploadStreamerOptions file_upload_options{
+  Aws::FileManagement::FileUploadStreamerOptions file_upload_options{
     cloudwatch_options.uploader_options.file_upload_batch_size,
     cloudwatch_options.uploader_options.file_max_queue_size
   };
@@ -84,3 +91,6 @@ std::shared_ptr<MetricService> MetricServiceFactory:: createMetricService(
 
   return metric_service;
 }
+
+}  // namespace CloudWatchMetrics
+}  // namespace Aws

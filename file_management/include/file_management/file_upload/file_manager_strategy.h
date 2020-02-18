@@ -13,7 +13,6 @@
  * permissions and limitations under the License.
  */
 
-
 #pragma once
 
 #include <iostream>
@@ -59,6 +58,7 @@ public:
 
   FileTokenInfo() = default;
 
+  // NOLINTNEXTLINE(google-runtime-int)
   explicit FileTokenInfo(const std::string &file_path, const long position, const bool eof) :
   file_path_{file_path},
   position_(position),
@@ -67,6 +67,7 @@ public:
 
   };
 
+  // NOLINTNEXTLINE(google-runtime-int)
   explicit FileTokenInfo(std::string &&file_path, const long position, const bool eof) :
       file_path_{std::move(file_path)},
       position_(position),
@@ -75,7 +76,11 @@ public:
 
   };
 
-  FileTokenInfo(const FileTokenInfo & info) = default;
+  FileTokenInfo(const FileTokenInfo &info) = default;
+
+  FileTokenInfo & operator=(const FileTokenInfo & other) = default;
+
+  ~FileTokenInfo() = default;
 
   /**
    * Serializes a tokens information into a JSON string
@@ -115,7 +120,7 @@ public:
   /** 
    * The position in the file that this token corrosponds to
    */
-  long position_ = 0;
+  int64_t position_ = 0;
 
   /**
    * Set to true if this is the last token for the file
@@ -180,7 +185,8 @@ public:
    * @param is_eof
    * @return
    */
-  DataToken createToken(const std::string &file_name, const long & streampos, bool is_eof);
+  // NOLINTNEXTLINE(google-runtime-int)
+  DataToken createToken(const std::string &file_name, const long streampos, bool is_eof);
 
   /**
    * Mark a token as failed so the FileManagerStrategy knows to keep the 
@@ -455,12 +461,6 @@ private:
    * Options for how and where to store files, and maximum file sizes.
    */
   FileManagerStrategyOptions options_;
-
-  /**
-   * Size of each batch when reading from a file.
-   * The Size corresponds to the number of lines read from the file
-   */
-  uint8_t batch_size = 1;
 
   /**
    * Stores which tokens to read from.

@@ -109,7 +109,7 @@ public:
   /**
    * Reset the batched data shared pointer.
    */
-  virtual void resetBatchedData() {
+  void resetBatchedData() {
     std::lock_guard<std::recursive_mutex> lk(mtx);
 
     this->batched_data_ = std::make_shared<std::list<T>>();
