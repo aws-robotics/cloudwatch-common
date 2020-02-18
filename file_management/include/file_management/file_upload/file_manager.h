@@ -93,7 +93,8 @@ public:
    *
    * @param options for the FileManagerStrategy
    */
-  explicit FileManager(const FileManagerStrategyOptions &options) {
+  // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+  FileManager(const FileManagerStrategyOptions &options) {
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }
 

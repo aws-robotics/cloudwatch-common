@@ -40,7 +40,8 @@ public:
    */
   MetricFileManager() = default;
 
-  explicit MetricFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
+  // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+  MetricFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
     : FileManager(options) {
   }
 

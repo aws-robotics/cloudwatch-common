@@ -39,12 +39,12 @@ class LogFileManager :
    */
   LogFileManager()  = default;
 
-  explicit LogFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
+  // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+  LogFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
     : FileManager(options) {
   }
 
-  explicit LogFileManager(
-      const std::shared_ptr<FileManagerStrategy> &file_manager_strategy)
+  explicit LogFileManager(const std::shared_ptr<FileManagerStrategy> &file_manager_strategy)
       : FileManager(file_manager_strategy)
   {
   }

@@ -36,7 +36,8 @@ public:
      *
      * @param initialValue
      */
-    explicit ObservableObject<T>(const T initialValue) {
+    // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+    ObservableObject<T>(const T initialValue) {
       value_.store(initialValue);
     }
     /**

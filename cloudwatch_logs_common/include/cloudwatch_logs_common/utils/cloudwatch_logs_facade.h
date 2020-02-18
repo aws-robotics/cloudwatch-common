@@ -43,14 +43,16 @@ public:
    *
    *  @param client_config The configuration for the cloudwatch client
    */
-  explicit CloudWatchLogsFacade(const Aws::Client::ClientConfiguration & client_config);
+  // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+  CloudWatchLogsFacade(const Aws::Client::ClientConfiguration & client_config);
 
   /**
    * @brief Creates a new CloudWatchLogsFacade with an existing client
    *
    * @param cw_client The client for interacting with cloudwatch
    */
-  explicit CloudWatchLogsFacade(const std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient>& cw_client);
+  // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+  CloudWatchLogsFacade(const std::shared_ptr<Aws::CloudWatchLogs::CloudWatchLogsClient>& cw_client);
 
   virtual ~CloudWatchLogsFacade() = default;
 

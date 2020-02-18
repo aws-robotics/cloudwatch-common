@@ -50,7 +50,8 @@ public:
    * @param trigger_size if this limit is reached then the queue is emptied via the publish method
    * @param try_enqueue_duration maximum amount of time to attempt to empty queue during the publish method
    */
-  explicit DataBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
+  // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+  DataBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
               size_t trigger_size = DataBatcher::kDefaultTriggerSize,
               std::chrono::microseconds try_enqueue_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(2))) {
 
