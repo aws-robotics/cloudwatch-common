@@ -37,11 +37,11 @@ void sanitizePath(std::string & path) {
   }
   if (path.front() == '~') {
     char * home = getenv("HOME");
-    if (NULL == home) {
+    if (nullptr == home) {
       AWS_LOG_WARN(__func__, "No HOME environment variable set. Attempting to use ROS_HOME instead.");
       home = getenv("ROS_HOME");
     }
-    if (NULL != home) {
+    if (nullptr != home) {
       path.replace(0, 1, home);
     } else {
       throw std::runtime_error("The storage directory path uses '~' but no HOME environment variable set.");

@@ -33,7 +33,7 @@ TEST_F(TestMetricSerialization, deserialize_returns_metric_datum) {
 
   MetricDatum result;
   EXPECT_NO_THROW(result = deserializeMetricDatum(mock_serialized_metric_datum));
-  Aws::Utils::DateTime ts((int64_t)5);
+  Aws::Utils::DateTime ts(static_cast<int64_t>(5));
   EXPECT_EQ(result.GetTimestamp(), ts);
   EXPECT_EQ(result.GetMetricName(), "awesomeness");
   auto expected_counts = Aws::Vector<double>();

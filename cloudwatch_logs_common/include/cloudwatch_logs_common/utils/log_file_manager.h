@@ -39,7 +39,7 @@ class LogFileManager :
    */
   LogFileManager()  = default;
 
-  LogFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
+  explicit LogFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
     : FileManager(options) {
   }
 
@@ -57,5 +57,5 @@ class LogFileManager :
 };
 
 }  // namespace Utils
-}  // namespace CloudwatchLogs
+}  // namespace CloudWatchLogs
 }  // namespace Aws

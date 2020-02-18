@@ -52,7 +52,7 @@ public:
     /**
      *  @brief Tears down a MetricBatcher object
      */
-    virtual ~MetricBatcher();
+    ~MetricBatcher() override;
 
     /**
      * Queue the batched data to be given to the publisher and sent to CloudWatch. Attempts to write to disk (through
@@ -60,16 +60,16 @@ public:
      *
      * @return true if the batched data could be queued, false otherwise
      */
-    virtual bool publishBatchedData() override;
+    bool publishBatchedData() override;
     /**
      * Override default behavior to attempt to write to file to disk when emptying the collection.
      */
-    virtual void emptyCollection() override;
+    void emptyCollection() override;
     /**
      * Start this service
      * @return
      */
-    virtual bool start() override;
+    bool start() override;
 
     /**
      * Set the log file manager, used for task publishing failures (write to disk if unable to send to CloudWatch).

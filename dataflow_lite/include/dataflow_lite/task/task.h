@@ -111,7 +111,7 @@ public:
 
     virtual ~BasicTask() = default;
 
-    virtual void onComplete(const UploadStatus &status) override {
+    void onComplete(const UploadStatus &status) override {
       if (upload_status_function_) {
         upload_status_function_(status, *batch_data_);
       }
@@ -133,5 +133,5 @@ private:
     UploadStatusFunction<UploadStatus, T> upload_status_function_;
 };
 
-}
-}
+}  // namespace DataFlow
+}  // namespace Aws

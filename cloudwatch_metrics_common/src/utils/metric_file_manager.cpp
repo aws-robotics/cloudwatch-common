@@ -84,5 +84,5 @@ void MetricFileManager::write(const MetricDatumCollection &data) {
 }
 
 }  // namespace Utils
-}  // namespace Cloudwatchmetrics
+}  // namespace CloudWatchMetrics
 }  // namespace Aws

@@ -40,7 +40,7 @@ public:
    */
   MetricFileManager() = default;
 
-  MetricFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
+  explicit MetricFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
     : FileManager(options) {
   }
 
@@ -65,5 +65,5 @@ public:
 };
 
 }  // namespace Utils
-}  // namespace CloudwatchMetrics
+}  // namespace CloudWatchMetrics
 }  // namespace Aws

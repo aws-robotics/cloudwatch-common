@@ -28,7 +28,7 @@ struct CloudWatchOptions {
   /**
    * All options for the FileUpload system
    */
-  Aws::DataFlow::UploaderOptions uploader_options;
+  Aws::DataFlow::UploaderOptions uploader_options{};
   /**
    * All options for the FileManager system
    */

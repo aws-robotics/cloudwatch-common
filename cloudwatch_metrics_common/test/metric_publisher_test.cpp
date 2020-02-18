@@ -32,7 +32,7 @@ class MockCloudWatchFacade : public Utils::CloudWatchMetricsFacade
 {
 public:
   Utils::CloudWatchMetricsStatus send_metrics_ret_val;
-  uint32_t send_metrics_call_count;
+  uint32_t send_metrics_call_count{};
   std::string last_metric_namespace;
   MetricDatumCollection last_metrics;
 

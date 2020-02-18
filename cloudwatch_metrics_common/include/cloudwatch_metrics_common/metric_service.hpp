@@ -33,6 +33,7 @@
 
 #include <chrono>
 #include <stdexcept>
+#include <utility>
 
 namespace Aws {
 namespace CloudWatchMetrics {
@@ -62,9 +63,9 @@ public:
             std::shared_ptr<DataBatcher<MetricDatum>> batcher,
             std::shared_ptr<FileUploadStreamer<MetricDatumCollection>> file_upload_streamer = nullptr
             )
-            : CloudWatchService(publisher, batcher) {
+            : CloudWatchService(std::move(publisher), std::move(batcher)) {
 
-      this->file_upload_streamer_ = file_upload_streamer;
+      this->file_upload_streamer_ = std::move(file_upload_streamer);
     }
 
     /**
@@ -74,11 +75,11 @@ public:
      * @param milliseconds timestamp to use for metric
      * @return MetricDatum to publish
      */
-    virtual MetricDatum convertInputToBatched(
+    MetricDatum convertInputToBatched(
             const MetricObject &input,
             const std::chrono::milliseconds &milliseconds) override {
 
-      return metricObjectToDatum(input, (int64_t) milliseconds.count());
+      return metricObjectToDatum(input, static_cast<int64_t>(milliseconds.count()));
     }
 
     /**
@@ -87,7 +88,7 @@ public:
      * @param input MetricObject to convert
      * @return MetricDatum to publish
      */
-    virtual MetricDatum convertInputToBatched(
+    MetricDatum convertInputToBatched(
             const MetricObject &input) override {
 
       return metricObjectToDatum(input, input.timestamp);

@@ -27,7 +27,7 @@
 class TestBatcher : public DataBatcher<int> {
 public:
 
-  TestBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
+  explicit TestBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
           size_t publish_trigger_size = DataBatcher::kDefaultTriggerSize) : DataBatcher(max_allowable_batch_size, publish_trigger_size) {
     pub_called = 0;
   }

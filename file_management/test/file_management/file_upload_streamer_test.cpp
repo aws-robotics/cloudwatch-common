@@ -133,7 +133,7 @@ TEST_F(FileStreamerTest, fail_enqueue_retry) {
   test_file_object.batch_data = "data";
   test_file_object.batch_size = 1;
   SharedFileUploadTask task;
-  // TODO: capture and test equivalence
+  // TODO(unknown): capture and test equivalence
   EXPECT_CALL(*mock_sink, tryEnqueue(testing::_, testing::_))
       .WillOnce(testing::Invoke([&task](SharedFileUploadTask& data,
                                         const std::chrono::microseconds&){
@@ -160,7 +160,7 @@ TEST_F(FileStreamerTest, fail_task_clears_queue) {
   test_file_object.batch_data = "data";
   test_file_object.batch_size = 1;
   SharedFileUploadTask task;
-  // TODO: capture and test equivalence
+  // TODO(unknown): capture and test equivalence
   EXPECT_CALL(*mock_sink, tryEnqueue(testing::_, testing::_))
     .WillOnce(testing::Invoke([&task](SharedFileUploadTask& data,
                                       const std::chrono::microseconds&){

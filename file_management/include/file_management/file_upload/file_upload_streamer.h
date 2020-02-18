@@ -83,7 +83,7 @@ public:
     status_monitor_timeout_ = kTimeout;
   }
 
-  virtual ~FileUploadStreamer() = default;
+  ~FileUploadStreamer() override = default;
 
   /**
    * Add a status monitor for the file upload manager to wait for work on.
@@ -94,7 +94,7 @@ public:
     status_condition_monitor_.addStatusMonitor(status_monitor);
   }
 
-  inline bool shutdown() {
+  inline bool shutdown() override {
     bool is_shutdown = true;
     is_shutdown &= RunnableService::shutdown();
     is_shutdown &= data_reader_->shutdown();
@@ -122,7 +122,7 @@ public:
   /**
    * Start the upload thread.
    */
-  bool start() {
+  bool start() override {
     bool is_started = true;
     is_started &= data_reader_->start();
     is_started &= RunnableService::start();

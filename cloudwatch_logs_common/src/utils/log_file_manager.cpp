@@ -76,5 +76,5 @@ void LogFileManager::write(const LogCollection & data) {
 }
 
 }  // namespace Utils
-}  // namespace CloudwatchLogs
+}  // namespace CloudWatchLogs
 }  // namespace Aws

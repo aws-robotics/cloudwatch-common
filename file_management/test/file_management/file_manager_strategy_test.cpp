@@ -32,7 +32,7 @@ using namespace Aws::FileManagement;
 
 class MockFileManagerStrategy : public FileManagerStrategy {
 public:
-  MockFileManagerStrategy(const FileManagerStrategyOptions &options) : FileManagerStrategy(options) {}
+  explicit MockFileManagerStrategy(const FileManagerStrategyOptions &options) : FileManagerStrategy(options) {}
 
   std::string getFileToRead() {
     return FileManagerStrategy::getFileToRead();
@@ -308,7 +308,7 @@ TEST_F(SanitizePathTest, sanitizePath_home_set) {
   sanitizePath(test_path);
 
   // Cleanup before test
-  if (NULL != original_home) {
+  if (nullptr != original_home) {
     setenv("HOME", original_home, 1);
   } else {
     unsetenv("HOME");
@@ -327,10 +327,10 @@ TEST_F(SanitizePathTest, sanitizePath_home_not_set_roshome_set) {
   sanitizePath(test_path);
 
   // Cleanup before test
-  if (NULL != original_home) {
+  if (nullptr != original_home) {
     setenv("HOME", original_home, 1);
   }
-  if (NULL != original_ros_home) {
+  if (nullptr != original_ros_home) {
     setenv("ROS_HOME", original_ros_home, 1);
   } else {
     unsetenv("ROS_HOME");
@@ -351,10 +351,10 @@ TEST_F(SanitizePathTest, sanitizePath_home_not_set_roshome_not_set) {
   ASSERT_THROW(sanitizePath(test_path), std::runtime_error);
 
   // Cleanup before test
-  if (NULL != original_home) {
+  if (nullptr != original_home) {
     setenv("HOME", original_home, 1);
   }
-  if (NULL != original_ros_home) {
+  if (nullptr != original_ros_home) {
     setenv("ROS_HOME", original_ros_home, 1);
   }
 

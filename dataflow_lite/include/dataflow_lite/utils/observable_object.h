@@ -36,7 +36,7 @@ public:
      *
      * @param initialValue
      */
-    ObservableObject<T>(const T initialValue) {
+    explicit ObservableObject<T>(const T initialValue) {
       value_.store(initialValue);
     }
     /**

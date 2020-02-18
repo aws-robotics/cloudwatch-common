@@ -53,7 +53,7 @@ class ObservedQueue :
   public IObservedQueue<T, Allocator> {
 public:
 
-  virtual ~ObservedQueue() = default;
+  ~ObservedQueue() override = default;
 
   /**
    * Set the observer for the queue.
@@ -138,7 +138,7 @@ public:
   /**
    * Clear the dequeue
    */
-  void clear() {
+  void clear() override {
     dequeue_.clear();
   }
 
@@ -178,7 +178,7 @@ template<
     class Allocator = std::allocator<T>>
 class ObservedSynchronizedQueue : public ObservedQueue<T, Allocator> {
 public:
-  virtual ~ObservedSynchronizedQueue() = default;
+  ~ObservedSynchronizedQueue() override = default;
 
   /**
    * Enqueue data and notify the observer of data available.
@@ -260,7 +260,7 @@ public:
   /**
    * Clear the dequeue
    */
-  void clear() {
+  void clear() override {
     std::unique_lock<DequeueMutex> lock(dequeue_mutex_);
     OQ::clear();
   }
@@ -296,7 +296,7 @@ public:
     max_queue_size_ = max_queue_size;
   }
 
-  virtual ~ObservedBlockingQueue() = default;
+  ~ObservedBlockingQueue() override = default;
   /**
    * Enqueue data and notify the observer of data available.
    *
@@ -385,7 +385,7 @@ public:
   /**
    * Clear the dequeue
    */
-  void clear() {
+  void clear() override {
     std::lock_guard<std::mutex> lock(dequeue_mutex_);
     OQ::clear();
   }

@@ -75,13 +75,7 @@ public:
 
   };
 
-  FileTokenInfo(const FileTokenInfo &info) :
-      file_path_{info.file_path_},
-      position_(info.position_),
-      eof_(info.eof_)
-  {
-
-  };
+  FileTokenInfo(const FileTokenInfo & info) = default;
 
   /**
    * Serializes a tokens information into a JSON string
@@ -101,7 +95,7 @@ public:
    * Takes a Token JSON string and sets this tokens
    * values based on that. 
    */
-  void deserialize(const std::string token_info_json) {
+  void deserialize(const std::string& token_info_json) {
     const Aws::String aws_str(token_info_json.c_str());
     const Aws::Utils::Json::JsonValue json_value(aws_str);
     if (!json_value.WasParseSuccessful()) {
@@ -126,7 +120,7 @@ public:
   /**
    * Set to true if this is the last token for the file
    */
-  bool eof_;
+  bool eof_{};
 };
 
 inline bool operator==(const FileTokenInfo& lhs, const FileTokenInfo& rhs){
@@ -138,7 +132,7 @@ inline bool operator!=(const FileTokenInfo& lhs, const FileTokenInfo& rhs){ retu
 class DataManagerStrategy : public Service {
 public:
   DataManagerStrategy() = default;
-  virtual ~DataManagerStrategy() = default;
+  ~DataManagerStrategy() override = default;
 
   virtual bool isDataAvailable() = 0;
 
@@ -284,7 +278,7 @@ class FileManagerStrategy : public DataManagerStrategy {
 public:
   explicit FileManagerStrategy(const FileManagerStrategyOptions &options);
 
-  ~FileManagerStrategy() = default;
+  ~FileManagerStrategy() override = default;
 
   /**
    * Starts the FileManagerStrategy, this does any initialization I/O tasks required.
@@ -421,7 +415,7 @@ private:
   /**
    * Disk space used by all stored files. Does not include active_write_file_size_.
    */
-  std::atomic<size_t> stored_files_size_;
+  std::atomic<size_t> stored_files_size_{};
 
   /**
    * Path to the file we're currently writing to. This file cannot be read from or deleted. 
@@ -431,7 +425,7 @@ private:
   /** 
    * The size of the active_write_file. Stored here to minimize disk reads. 
    */
-  std::atomic<size_t> active_write_file_size_;
+  std::atomic<size_t> active_write_file_size_{};
 
   /** 
    * A lock on the active write file, to ensure that when it's rotated nothing is writing 

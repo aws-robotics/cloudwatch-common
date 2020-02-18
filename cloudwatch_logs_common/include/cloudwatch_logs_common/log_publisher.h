@@ -78,15 +78,15 @@ public:
   /**
    *  @brief Tears down the LogPublisher object
    */
-  virtual ~LogPublisher();
+  ~LogPublisher() override;
 
-  virtual bool shutdown() override;
+  bool shutdown() override;
 
   /**
    * Create the cloudwatch facade
    * @return
    */
-  virtual bool start() override;
+  bool start() override;
 
   LogPublisherRunState getRunState();
 

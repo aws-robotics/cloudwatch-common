@@ -36,7 +36,7 @@ MetricPublisher::MetricPublisher(
 }
 
 MetricPublisher::MetricPublisher(const std::string & metrics_namespace,
-                const std::shared_ptr<Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade> cloudwatch_metrics_facade)
+                const std::shared_ptr<Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade>& cloudwatch_metrics_facade)
 {
   this->metrics_namespace_ = metrics_namespace;
   this->cloudwatch_metrics_facade_ = cloudwatch_metrics_facade;

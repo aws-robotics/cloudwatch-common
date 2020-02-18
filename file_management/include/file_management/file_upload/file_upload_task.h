@@ -49,7 +49,7 @@ class FileUploadTask : public Aws::DataFlow::Task<T> {
     this->upload_status_function_ = upload_status_function;
   }
 
-  virtual ~FileUploadTask() = default;
+  ~FileUploadTask() override = default;
 
   void onComplete(const Aws::DataFlow::UploadStatus &status) override {
     if (upload_status_function_) {

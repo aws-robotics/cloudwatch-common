@@ -50,7 +50,7 @@ public:
    * @param trigger_size if this limit is reached then the queue is emptied via the publish method
    * @param try_enqueue_duration maximum amount of time to attempt to empty queue during the publish method
    */
-  DataBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
+  explicit DataBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
               size_t trigger_size = DataBatcher::kDefaultTriggerSize,
               std::chrono::microseconds try_enqueue_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(2))) {
 
@@ -66,7 +66,7 @@ public:
   /**
    * Destruct a DataBatcher instance
    */
-  ~DataBatcher() = default;
+  ~DataBatcher() override = default;
 
   /**
    * Batch an item.
@@ -213,7 +213,7 @@ public:
    * Shutdown the batcher: this blocks until publish has completed in order to attempt to empty any unpublished data.
    * @return the result of Service::shutdown()
    */
-  bool shutdown() {
+  bool shutdown() override {
     bool is_shutdown = Service::shutdown();
     std::lock_guard<std::recursive_mutex> lk(mtx);
     this->emptyCollection();  // attempt to write to disk before discarding
@@ -239,8 +239,8 @@ private:
     /**
      * Size used for the internal storage
      */
-    std::atomic<size_t> max_allowable_batch_size_;
-    std::atomic<size_t> trigger_batch_size_;
-    std::atomic<std::chrono::microseconds> try_enqueue_duration_;
+    std::atomic<size_t> max_allowable_batch_size_{};
+    std::atomic<size_t> trigger_batch_size_{};
+    std::atomic<std::chrono::microseconds> try_enqueue_duration_{};
 };
 

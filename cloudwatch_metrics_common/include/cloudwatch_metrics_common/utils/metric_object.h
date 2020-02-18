@@ -102,7 +102,7 @@ struct MetricObject {
   std::string metric_name;
   std::string unit;
   int64_t timestamp;
-  double value; // mutually exclusive with statistic_values
+  double value{}; // mutually exclusive with statistic_values
   std::map<StatisticValuesType, double> statistic_values; // mutually exclusive with value
   std::map<std::string, std::string> dimensions;
   int storage_resolution;
@@ -138,7 +138,7 @@ static MetricDatum metricObjectToDatum(const MetricObject &metrics, const int64_
         stats.SetSampleCount(keyval.second);
       }
     }
-    datum.SetStatisticValues(std::move(stats));
+    datum.SetStatisticValues(stats);
   }
 
   auto mapped_unit = units_mapper.find(metrics.unit);
@@ -149,10 +149,10 @@ static MetricDatum metricObjectToDatum(const MetricObject &metrics, const int64_
     datum.SetUnit(Aws::CloudWatch::Model::StandardUnitMapper::GetStandardUnitForName(unit_name));
   }
 
-  for (auto it = metrics.dimensions.begin(); it != metrics.dimensions.end(); ++it) {
+  for (const auto & it : metrics.dimensions) {
     Aws::CloudWatch::Model::Dimension dimension;
-    Aws::String name(it->first.c_str());
-    Aws::String d_value(it->second.c_str());
+    Aws::String name(it.first.c_str());
+    Aws::String d_value(it.second.c_str());
     dimension.WithName(name).WithValue(d_value);
     datum.AddDimensions(dimension);
   }
