@@ -38,6 +38,7 @@
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
+using namespace Aws::FileManagement;
 using namespace std::chrono_literals;
 
 /**
