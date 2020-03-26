@@ -41,6 +41,7 @@
 
 using namespace Aws::CloudWatchMetrics;
 using namespace Aws::CloudWatchMetrics::Utils;
+using namespace Aws::FileManagement;
 using namespace std::chrono_literals;
 
 /**
@@ -55,7 +56,7 @@ public:
     last_upload_status = Aws::DataFlow::UploadStatus::UNKNOWN;
   };
 
-  virtual ~TestPublisher() = default    ;
+  ~TestPublisher() override = default    ;
 
   bool start() override {
     return Publisher::start();
@@ -126,15 +127,15 @@ public:
       this->notify();
     };
 
-    FileObject<MetricDatumCollection> readBatch(size_t batch_size) {
+    FileObject<MetricDatumCollection> readBatch(size_t batch_size) override {
       // do nothing
       FileObject<MetricDatumCollection> testFile;
       testFile.batch_size = batch_size;
       return testFile;
     }
 
-    std::atomic<int> written_count;
-    std::atomic<size_t> last_data_size;
+    std::atomic<int> written_count{};
+    std::atomic<size_t> last_data_size{};
     std::condition_variable cv; // todo think about adding this into the interface
     mutable std::mutex mtx; // todo think about adding this  into  the interface
 };
@@ -463,7 +464,7 @@ TEST_F(PipelineTest, TestPublisherIntermittant) {
               Aws::DataFlow::UploadStatus::FAIL: Aws::DataFlow::UploadStatus::SUCCESS,
               test_publisher->getLastUploadStatus());
 
-    float expected_percentage = (float) expected_success / (float) i * 100.0f;
+    float expected_percentage = static_cast<float>(expected_success) / static_cast<float>(i) * 100.0f;
     EXPECT_FLOAT_EQ(expected_percentage, test_publisher->getPublishSuccessPercentage());
 
     fileManager->wait_for_millis(std::chrono::milliseconds(100));

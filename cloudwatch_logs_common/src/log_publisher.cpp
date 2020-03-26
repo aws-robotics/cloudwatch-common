@@ -30,10 +30,13 @@
 #include <list>
 #include <memory>
 #include <fstream>
+#include <utility>
+
+
+namespace Aws {
+namespace CloudWatchLogs {
 
 constexpr int kMaxRetries = 1; // todo this should probably be configurable, maybe part of the generic publisher interface
-
-using namespace Aws::CloudWatchLogs;
 
 LogPublisher::LogPublisher(
   const std::string & log_group,
@@ -54,14 +57,12 @@ LogPublisher::LogPublisher(
   std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cloudwatch_facade)
   : run_state_(LOG_PUBLISHER_RUN_CREATE_GROUP)
 {
-  this->cloudwatch_facade_ = cloudwatch_facade;
+  this->cloudwatch_facade_ = std::move(cloudwatch_facade);
   this->log_group_ = log_group;
   this->log_stream_ = log_stream;
 }
 
-LogPublisher::~LogPublisher()
-{
-}
+LogPublisher::~LogPublisher() = default;
 
 bool LogPublisher::checkIfConnected(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors error) {
   if (CW_LOGS_NOT_CONNECTED == error) {
@@ -320,3 +321,6 @@ bool LogPublisher::shutdown() {
   Aws::ShutdownAPI(this->options_);
   return is_shutdown;
 }
+
+}  // namespace CloudWatchLogs
+}  // namespace Aws

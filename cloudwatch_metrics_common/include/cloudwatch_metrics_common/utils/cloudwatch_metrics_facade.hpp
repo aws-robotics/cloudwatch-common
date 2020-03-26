@@ -52,12 +52,15 @@ public:
    *  @brief Creates a new CloudWatchMetricsFacade
    *  @param client_config The configuration for the cloudwatch client
    */
+  // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
   CloudWatchMetricsFacade(const Aws::Client::ClientConfiguration & client_config);
   /**
    * @brief Creates a new CloudWatchMetricsFacade with an existing client
    * @param cw_client The client for interacting with cloudwatch
    */
-  CloudWatchMetricsFacade(const std::shared_ptr<Aws::CloudWatch::CloudWatchClient> cw_client);
+  // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+  CloudWatchMetricsFacade(const std::shared_ptr<Aws::CloudWatch::CloudWatchClient>& cw_client);
+
   virtual ~CloudWatchMetricsFacade() = default;
 
   /**

@@ -22,7 +22,7 @@
 #include <iomanip>
 #include "file_management/file_upload/file_manager_strategy.h"
 
-#define KB_TO_BYTES(x) ((size_t) (x) << 10)
+#define KB_TO_BYTES(x) (static_cast<size_t>(x) << 10u)
 
 namespace fs = std::experimental::filesystem;
 
@@ -37,11 +37,11 @@ void sanitizePath(std::string & path) {
   }
   if (path.front() == '~') {
     char * home = getenv("HOME");
-    if (NULL == home) {
+    if (nullptr == home) {
       AWS_LOG_WARN(__func__, "No HOME environment variable set. Attempting to use ROS_HOME instead.");
       home = getenv("ROS_HOME");
     }
-    if (NULL != home) {
+    if (nullptr != home) {
       path.replace(0, 1, home);
     } else {
       throw std::runtime_error("The storage directory path uses '~' but no HOME environment variable set.");
@@ -107,9 +107,9 @@ void printCache(std::unordered_map<DataToken, FileTokenInfo> token_store,
                "Cache Info: staged_tokens \n %s", ss.str().c_str());
 }
 
-DataToken TokenStore::createToken(const std::string &file_name, const long & streampos, bool is_eof) {
-  AWS_LOG_DEBUG(__func__,
-               "Creating token");
+// NOLINTNEXTLINE(google-runtime-int)
+DataToken TokenStore::createToken(const std::string &file_name, const long streampos, bool is_eof) {
+  AWS_LOG_DEBUG(__func__, "Creating token");
   std::mt19937_64 rand( rand_device() );
   DataToken token = rand();
   token_store_.emplace(token, FileTokenInfo(file_name, streampos, is_eof));
@@ -215,7 +215,7 @@ void TokenStore::restoreFromDisk() {
       FileTokenInfo token_info;
       try {
         token_info.deserialize(line);
-      } catch (std::runtime_error e) {
+      } catch (const std::runtime_error & e) {
         AWS_LOG_ERROR(__func__, "Unable to parse token backup line: %s. Skipping.", line.c_str());
         continue;
       }
@@ -309,11 +309,11 @@ DataToken FileManagerStrategy::read(std::string &data) {
     FileTokenInfo file_token = token_store_->popAvailableToken(active_read_file_);
     active_read_file_stream_->seekg(file_token.position_);
   }
-  long position = active_read_file_stream_->tellg();
+  int position = active_read_file_stream_->tellg();
   auto file_size = active_read_file_stream_->seekg(0, std::ifstream::end).tellg();
   active_read_file_stream_->seekg(position, std::ifstream::beg);
   std::getline(*active_read_file_stream_, data);
-  long next_position = active_read_file_stream_->tellg();
+  int next_position = active_read_file_stream_->tellg();
   token = token_store_->createToken(active_read_file_, position, next_position >= file_size);
 
   if (next_position >= file_size) {

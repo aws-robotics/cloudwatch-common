@@ -30,6 +30,13 @@ class LogServiceFactory
 {
 public:
   LogServiceFactory() = default;
+
+  /**
+   * Block copy constructor and assignment operator for Factory object.
+   */
+  LogServiceFactory(const LogServiceFactory &) = delete;
+  LogServiceFactory & operator=(const LogServiceFactory &) = delete;
+
   ~LogServiceFactory() = default;
 
   /**
@@ -43,18 +50,13 @@ public:
    *
    *  @return An instance of LogService
    */
+  // NOLINTNEXTLINE(google-default-arguments)
   virtual std::shared_ptr<LogService> CreateLogService(
     const std::string & log_group,
     const std::string & log_stream,
     const Aws::Client::ClientConfiguration & client_config,
     const Aws::SDKOptions & sdk_options,
     const CloudWatchOptions & cloudwatch_options = kDefaultCloudWatchOptions);
-private:
-  /**
-   * Block copy constructor and assignment operator for Factory object.
-   */
-  LogServiceFactory(const LogServiceFactory &) = delete;
-  LogServiceFactory & operator=(const LogServiceFactory &) = delete;
 };
 
 }  // namespace CloudWatchLogs

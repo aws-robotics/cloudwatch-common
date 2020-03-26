@@ -75,18 +75,22 @@ public:
   LogPublisher(const std::string & log_group, const std::string & log_stream,
                std::shared_ptr<Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade> cw_client);
 
+  LogPublisher(const LogPublisher & other) = delete;
+
+  LogPublisher & operator=(const LogPublisher & other) = delete;
+
   /**
    *  @brief Tears down the LogPublisher object
    */
-  virtual ~LogPublisher();
+  ~LogPublisher() override;
 
-  virtual bool shutdown() override;
+  bool shutdown() override;
 
   /**
    * Create the cloudwatch facade
    * @return
    */
-  virtual bool start() override;
+  bool start() override;
 
   LogPublisherRunState getRunState();
 

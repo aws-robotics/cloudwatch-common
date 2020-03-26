@@ -54,7 +54,7 @@ public:
       last_publish_duration_.store(std::chrono::milliseconds(0));
     }
 
-    virtual ~Publisher() = default;
+    ~Publisher() override = default;
 
     /**
      * Return the current state of the publisher.
@@ -72,7 +72,7 @@ public:
      * @return the resulting Aws::DataFlow::UploadStatus from the publish attempt. Returns FAIL if not in the started
      * state.
      */
-    virtual Aws::DataFlow::UploadStatus attemptPublish(T &data) override {
+    Aws::DataFlow::UploadStatus attemptPublish(T &data) override {
 
       // don't attempt to publish if not in the started state
       if(ServiceState::STARTED != this->getState()) {
@@ -105,7 +105,7 @@ public:
      * Shutdown the publisher. This waits for attemptPublish to finish before returning.
      * @return the result of shutdown
      */
-    virtual bool shutdown() override {
+    bool shutdown() override {
       bool b = Service::shutdown();  // set shutdown state to try and fast fail any publish calls
 
       std::lock_guard<std::mutex> lck (publish_mutex_);
@@ -160,7 +160,7 @@ public:
         return 0;
       }
       int successes = publish_successes_.load();
-      return (float) successes / (float) attempts * 100.0f;
+      return static_cast<float>(successes) / static_cast<float>(attempts) * 100.0f;
     }
 
     /**
@@ -191,15 +191,15 @@ private:
     /**
      * Number of publish successes
      */
-    std::atomic<int> publish_successes_;
+    std::atomic<int> publish_successes_{};
     /**
      * Number of publish attempts
      */
-    std::atomic<int> publish_attempts_;
+    std::atomic<int> publish_attempts_{};
     /**
      * The amount of time taken for the last publish action
      */
-    std::atomic<std::chrono::milliseconds> last_publish_duration_;
+    std::atomic<std::chrono::milliseconds> last_publish_duration_{};
     /**
      * Mutex used in publish and shutdown
      */

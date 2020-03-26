@@ -36,7 +36,7 @@ template <typename T>
 class FileObject {
 public:
   T batch_data;
-  size_t batch_size;
+  size_t batch_size{};
   std::list<DataToken> data_tokens;
 };
 
@@ -93,6 +93,7 @@ public:
    *
    * @param options for the FileManagerStrategy
    */
+  // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
   FileManager(const FileManagerStrategyOptions &options) {
     file_manager_strategy_ = std::make_shared<FileManagerStrategy>(options);
   }
@@ -110,7 +111,7 @@ public:
     }
   }
 
-  virtual bool start() override {
+  bool start() override {
     bool started = true;
     if(file_manager_strategy_) {
       started &= file_manager_strategy_->start();
@@ -122,7 +123,7 @@ public:
     return started;
   }
 
-  virtual bool shutdown() override {
+  bool shutdown() override {
     bool is_shutdown = Service::shutdown();
     if(file_manager_strategy_) {
       file_status_monitor_->setStatus(Aws::DataFlow::Status::UNAVAILABLE);
@@ -161,7 +162,7 @@ public:
  * @param upload_status the status of an attempted upload of data
  * @param log_messages the data which was attempted to be uploaded
  */
-  virtual void fileUploadCompleteStatus(
+  void fileUploadCompleteStatus(
       const Aws::DataFlow::UploadStatus& upload_status,
       const FileObject<T> &log_messages) override {
     if (Aws::DataFlow::UploadStatus::SUCCESS == upload_status) {

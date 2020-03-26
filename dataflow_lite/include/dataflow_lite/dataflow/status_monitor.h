@@ -16,10 +16,11 @@
 #pragma once
 
 #include <atomic>
-#include <vector>
-#include <mutex>              // std::mutex, std::unique_lock
 #include <condition_variable> // std::condition_variable
+#include <mutex>              // std::mutex, std::unique_lock
+#include <stdexcept>
 #include <unordered_map>
+#include <vector>
 
 namespace Aws {
 namespace DataFlow {
@@ -66,10 +67,10 @@ public:
     uint64_t current_mask = 0, new_mask;
     size_t shift = 0;
     while (current_mask == 0) {
-      new_mask = (uint64_t) 1 << shift++;
+      new_mask = static_cast<uint64_t>(1) << shift++;
       current_mask = !(collective_mask_ & new_mask) ? new_mask : 0;
       if (shift > max_size) {
-        throw "No more masks available";
+        throw std::overflow_error("No more masks available");
       }
     }
     collective_mask_ |= current_mask;
@@ -117,14 +118,14 @@ public:
   MultiStatusConditionMonitor() {
     mask_ = 0;
   }
-  virtual ~MultiStatusConditionMonitor() = default;
+  ~MultiStatusConditionMonitor() override = default;
   void addStatusMonitor(std::shared_ptr<StatusMonitor> &status_monitor);
 protected:
   friend StatusMonitor;
   virtual void setStatus(const Status &status, StatusMonitor *status_monitor);
   bool hasWork() override;
   MaskFactory mask_factory_;
-  std::atomic<uint64_t> mask_;
+  std::atomic<uint64_t> mask_{};
   std::unordered_map<StatusMonitor*, uint64_t> status_monitors_;
 };
 

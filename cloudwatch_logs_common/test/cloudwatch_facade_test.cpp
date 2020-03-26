@@ -35,7 +35,7 @@ protected:
   Aws::SDKOptions options_;
   std::shared_ptr<CloudWatchLogsFacade> facade_;
   std::shared_ptr<CloudWatchLogsClientMock> mock_client;
-  CloudWatchLogsClientMock* mock_client_p;
+  CloudWatchLogsClientMock* mock_client_p{};
 
   void SetUp() override
   {
@@ -127,7 +127,7 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogGroup_SuccessResponse)
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogGroup_FailedResponse)
 {
-    Aws::CloudWatchLogs::Model::CreateLogGroupOutcome* failedOutcome =
+    auto* failedOutcome =
         new Aws::CloudWatchLogs::Model::CreateLogGroupOutcome();
 
     EXPECT_CALL(*mock_client_p, CreateLogGroup(testing::_))
@@ -142,7 +142,7 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogGroup_AlreadyExists)
     Aws::Client::AWSError<Aws::CloudWatchLogs::CloudWatchLogsErrors> error
     (Aws::CloudWatchLogs::CloudWatchLogsErrors::RESOURCE_ALREADY_EXISTS, false);
 
-    Aws::CloudWatchLogs::Model::CreateLogGroupOutcome* failedOutcome =
+    auto* failedOutcome =
         new Aws::CloudWatchLogs::Model::CreateLogGroupOutcome(error);
 
     EXPECT_CALL(*mock_client_p, CreateLogGroup(testing::_))
@@ -213,7 +213,7 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_SuccessResponse)
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_FailedResponse)
 {
-    Aws::CloudWatchLogs::Model::CreateLogStreamOutcome* failedOutcome =
+    auto* failedOutcome =
         new Aws::CloudWatchLogs::Model::CreateLogStreamOutcome();
 
     EXPECT_CALL(*mock_client_p, CreateLogStream(testing::_))
@@ -228,7 +228,7 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_AlreadyExists)
     Aws::Client::AWSError<Aws::CloudWatchLogs::CloudWatchLogsErrors> error
     (Aws::CloudWatchLogs::CloudWatchLogsErrors::RESOURCE_ALREADY_EXISTS, false);
 
-    Aws::CloudWatchLogs::Model::CreateLogStreamOutcome* failedOutcome =
+    auto* failedOutcome =
         new Aws::CloudWatchLogs::Model::CreateLogStreamOutcome(error);
 
     EXPECT_CALL(*mock_client_p, CreateLogStream(testing::_))
@@ -264,7 +264,7 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CheckLogStreamExists_LogStreamExis
     EXPECT_CALL(*mock_client_p, DescribeLogStreams(testing::_))
         .WillOnce(testing::Return(existsOutcome));
 
-    Aws::CloudWatchLogs::Model::LogStream * log_stream_object = new Aws::CloudWatchLogs::Model::LogStream();
+    auto * log_stream_object = new Aws::CloudWatchLogs::Model::LogStream();
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
         facade_->CheckLogStreamExists(LOG_GROUP_NAME1, LOG_STREAM_NAME1, log_stream_object));
 }

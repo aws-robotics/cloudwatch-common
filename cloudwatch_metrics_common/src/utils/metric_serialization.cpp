@@ -55,7 +55,7 @@ MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
     throw std::invalid_argument("Failed to parse metric JSON string");
   }
   auto view = json_value.View();
-  for (const auto property : required_properties) {
+  for (const auto& property : required_properties) {
     if (!view.KeyExists(property)) {
       std::string property_name(property.c_str());
       throw std::invalid_argument("Could not find required property " + property_name + " in JSON string");
@@ -99,7 +99,7 @@ MetricDatum deserializeMetricDatum(const Aws::String &basic_string) {
 Aws::String serializeMetricDatum(const MetricDatum &datum) {
   Aws::Utils::Json::JsonValue json_value;
 
-  const Aws::Vector<Aws::CloudWatch::Model::Dimension> dimensions = datum.GetDimensions();
+  const Aws::Vector<Aws::CloudWatch::Model::Dimension>& dimensions = datum.GetDimensions();
   Aws::Utils::Array<JsonValue> dimensions_array = Aws::Utils::Array<JsonValue>(dimensions.size());
   for (size_t i = 0; i < dimensions.size(); ++i) {
     JsonValue dimension_json;
@@ -108,7 +108,7 @@ Aws::String serializeMetricDatum(const MetricDatum &datum) {
         .WithString(kDimensionsValueKey, dimensions[i].GetValue());
   }
 
-  const Aws::Vector<double> values = datum.GetValues();
+  const Aws::Vector<double>& values = datum.GetValues();
   Aws::Utils::Array<JsonValue> values_array = Aws::Utils::Array<JsonValue>(values.size());
   for (size_t i = 0; i < values.size(); ++i) {
     JsonValue val;
@@ -126,5 +126,5 @@ Aws::String serializeMetricDatum(const MetricDatum &datum) {
 }
 
 }  // namespace Utils
-}  // namespace CloudwatchMetrics
+}  // namespace CloudWatchMetrics
 }  // namespace Aws

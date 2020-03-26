@@ -38,6 +38,7 @@
 
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::CloudWatchLogs::Utils;
+using namespace Aws::FileManagement;
 using namespace std::chrono_literals;
 
 /**
@@ -51,7 +52,7 @@ public:
     force_invalid_data_failure = false;
     last_upload_status = Aws::DataFlow::UploadStatus::UNKNOWN;
   };
-  virtual ~TestPublisher() = default;
+  ~TestPublisher() override = default;
 
   bool start() override {
     return Publisher::start();
@@ -79,7 +80,7 @@ public:
 protected:
 
   // override so we can notify when internal state changes, as attemptPublish sets state
-  virtual Aws::DataFlow::UploadStatus attemptPublish(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> &data) override {
+  Aws::DataFlow::UploadStatus attemptPublish(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> &data) override {
     last_upload_status = Publisher::attemptPublish(data);
     {
       this->notify();
@@ -122,15 +123,15 @@ public:
       this->notify();
     };
 
-    FileObject<LogCollection> readBatch(size_t batch_size) {
+    FileObject<LogCollection> readBatch(size_t batch_size) override {
       // do nothing
       FileObject<LogCollection> testFile;
       testFile.batch_size = batch_size;
       return testFile;
     }
 
-    std::atomic<int> written_count;
-    std::atomic<size_t> last_data_size;
+    std::atomic<int> written_count{};
+    std::atomic<size_t> last_data_size{};
     std::condition_variable cv;
     mutable std::mutex mtx;
 };
@@ -399,7 +400,7 @@ TEST_F(PipelineTest, TestPublisherIntermittant) {
       EXPECT_EQ(expected_success, test_publisher->getPublishSuccesses());
       EXPECT_EQ(i, test_publisher->getPublishAttempts());
 
-      float expected_percentage = (float) expected_success / (float) i * 100.0f;
+      float expected_percentage = static_cast<float>(expected_success) / static_cast<float>(i) * 100.0f;
       EXPECT_FLOAT_EQ(expected_percentage, test_publisher->getPublishSuccessPercentage());
 
       fileManager->wait_for_millis(std::chrono::milliseconds(100));

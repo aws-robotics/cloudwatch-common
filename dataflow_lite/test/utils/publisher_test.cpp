@@ -28,9 +28,9 @@ class SimpleTestPublisher : public Publisher<std::string>
 public:
 
   SimpleTestPublisher() {should_succeed_ = true;}
-  ~SimpleTestPublisher() = default;
+  ~SimpleTestPublisher() override = default;
 
-  virtual Aws::DataFlow::UploadStatus publishData(std::string &data) override {
+  Aws::DataFlow::UploadStatus publishData(std::string &data) override {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     last_data = data;
     return  should_succeed_ ? Aws::DataFlow::UploadStatus::SUCCESS : Aws::DataFlow::UploadStatus::FAIL;

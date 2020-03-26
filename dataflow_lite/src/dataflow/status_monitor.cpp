@@ -17,7 +17,9 @@
 
 #include <dataflow_lite/dataflow/status_monitor.h>
 
-using namespace Aws::DataFlow;
+namespace Aws {
+namespace DataFlow {
+
 void StatusMonitor::setStatus(const Status &status) {
   status_ = status;
   if (multi_status_cond_) {
@@ -71,3 +73,6 @@ void MultiStatusConditionMonitor::setStatus(
 bool MultiStatusConditionMonitor::hasWork() {
   return mask_factory_.getCollectiveMask() == mask_;
 }
+
+}  // namespace DataFlow
+}  // namespace Aws

@@ -31,9 +31,9 @@
 #include <string>
 #include <stdexcept>
 
-using namespace Aws::CloudWatchLogs;
-using namespace Aws::FileManagement;
 
+namespace Aws {
+namespace CloudWatchLogs {
 
 LogBatcher::LogBatcher(size_t max_allowable_batch_size,
                        size_t publish_trigger_size)
@@ -43,6 +43,8 @@ LogBatcher::LogBatcher(size_t max_allowable_batch_size,
 LogBatcher::~LogBatcher() = default;
 
 bool LogBatcher::publishBatchedData() {
+  static const char * const kFuncName = __func__;
+
   std::lock_guard<std::recursive_mutex> lk(mtx);
 
   // is there anything to send?
@@ -66,18 +68,18 @@ bool LogBatcher::publishBatchedData() {
           if (DataFlow::UploadStatus::INVALID_DATA == upload_status) {
 
             // publish indicated the task data was bad, this task should be discarded
-            AWS_LOG_WARN(__func__, "LogBatcher: Task failed due to invalid log data, dropping");
+            AWS_LOG_WARN(kFuncName, "LogBatcher: Task failed due to invalid log data, dropping");
 
           } else if (DataFlow::UploadStatus::SUCCESS != upload_status) {
 
-            AWS_LOG_INFO(__func__, "LogBatcher: Task failed to upload: writing logs to file. Status = %d", upload_status);
+            AWS_LOG_INFO(kFuncName, "LogBatcher: Task failed to upload: writing logs to file. Status = %d", upload_status);
             log_file_manager->write(log_messages);
 
           } else {
-            AWS_LOG_DEBUG(__func__, "LogBatcher: Task log upload successful");
+            AWS_LOG_DEBUG(kFuncName, "LogBatcher: Task log upload successful");
           }
         } else {
-          AWS_LOG_INFO(__func__, "LogBatcher: not publishing task as log_messages is empty");
+          AWS_LOG_INFO(kFuncName, "LogBatcher: not publishing task as log_messages is empty");
         }
     };
 
@@ -138,5 +140,8 @@ void LogBatcher::setLogFileManager(std::shared_ptr<Aws::FileManagement::FileMana
   if (nullptr == log_file_manager) {
     throw std::invalid_argument("input FileManager cannot be null");
   }
-  this->log_file_manager_ = log_file_manager;
+  this->log_file_manager_ = std::move(log_file_manager);
 }
+
+}  // namespace CloudWatchLogs
+}  // namespace Aws

@@ -51,10 +51,14 @@ public:
   explicit LogBatcher(size_t max_allowable_batch_size = DataBatcher::kDefaultMaxBatchSize,
                       size_t publish_trigger_size = DataBatcher::kDefaultTriggerSize);
 
+  LogBatcher(const LogBatcher & other) = delete;
+
+  LogBatcher & operator=(const LogBatcher & other) = delete;
+
   /**
    *  @brief Tears down a LogBatcher object
    */
-  virtual ~LogBatcher();
+  ~LogBatcher() override;
 
   /**
    *  @brief Services the log manager by performing periodic tasks when called.
@@ -63,13 +67,13 @@ public:
    *
    *  @return true of the data was succesfully published, false otherwise
    */
-  virtual bool publishBatchedData() override;
+  bool publishBatchedData() override;
 
   /**
    * Override default behavior to attempt to write to file to disk when emptying the collection.
    */
-  virtual void emptyCollection() override;
-  virtual bool start() override;
+  void emptyCollection() override;
+  bool start() override;
 
   /**
    * Set the log file manager, used for task publishing failures (write to disk if unable to send to CloudWatch).

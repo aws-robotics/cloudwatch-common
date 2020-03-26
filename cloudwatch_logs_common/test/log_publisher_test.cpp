@@ -29,17 +29,17 @@ constexpr int WAIT_TIME =
 class MockCloudWatchFacade : public Aws::CloudWatchLogs::Utils::CloudWatchLogsFacade
 {
 public:
-  uint32_t send_logs_call_count;
+  uint32_t send_logs_call_count{};
   std::string last_log_group;
   std::string last_log_stream;
   std::list<Aws::CloudWatchLogs::Model::InputLogEvent> last_logs;
   Aws::String next_token;
-  bool fail_cw_log_group;
-  bool fail_cw_log_stream;
-  bool fail_cw_create_log_group;
-  bool fail_cw_create_log_stream;
-  bool fail_cw_init_token;
-  bool fail_cw_send_logs;
+  bool fail_cw_log_group{};
+  bool fail_cw_log_stream{};
+  bool fail_cw_create_log_group{};
+  bool fail_cw_create_log_stream{};
+  bool fail_cw_init_token{};
+  bool fail_cw_send_logs{};
   void Reset()
   {
     this->last_log_group = "";

@@ -13,7 +13,6 @@
  * permissions and limitations under the License.
  */
 
-
 #pragma once
 
 #include <iostream>
@@ -59,6 +58,7 @@ public:
 
   FileTokenInfo() = default;
 
+  // NOLINTNEXTLINE(google-runtime-int)
   explicit FileTokenInfo(const std::string &file_path, const long position, const bool eof) :
   file_path_{file_path},
   position_(position),
@@ -67,6 +67,7 @@ public:
 
   };
 
+  // NOLINTNEXTLINE(google-runtime-int)
   explicit FileTokenInfo(std::string &&file_path, const long position, const bool eof) :
       file_path_{std::move(file_path)},
       position_(position),
@@ -75,13 +76,11 @@ public:
 
   };
 
-  FileTokenInfo(const FileTokenInfo &info) :
-      file_path_{info.file_path_},
-      position_(info.position_),
-      eof_(info.eof_)
-  {
+  FileTokenInfo(const FileTokenInfo &info) = default;
 
-  };
+  FileTokenInfo & operator=(const FileTokenInfo & other) = default;
+
+  ~FileTokenInfo() = default;
 
   /**
    * Serializes a tokens information into a JSON string
@@ -101,7 +100,7 @@ public:
    * Takes a Token JSON string and sets this tokens
    * values based on that. 
    */
-  void deserialize(const std::string token_info_json) {
+  void deserialize(const std::string& token_info_json) {
     const Aws::String aws_str(token_info_json.c_str());
     const Aws::Utils::Json::JsonValue json_value(aws_str);
     if (!json_value.WasParseSuccessful()) {
@@ -121,12 +120,12 @@ public:
   /** 
    * The position in the file that this token corrosponds to
    */
-  long position_ = 0;
+  int64_t position_ = 0;
 
   /**
    * Set to true if this is the last token for the file
    */
-  bool eof_;
+  bool eof_{};
 };
 
 inline bool operator==(const FileTokenInfo& lhs, const FileTokenInfo& rhs){
@@ -138,7 +137,7 @@ inline bool operator!=(const FileTokenInfo& lhs, const FileTokenInfo& rhs){ retu
 class DataManagerStrategy : public Service {
 public:
   DataManagerStrategy() = default;
-  virtual ~DataManagerStrategy() = default;
+  ~DataManagerStrategy() override = default;
 
   virtual bool isDataAvailable() = 0;
 
@@ -186,7 +185,8 @@ public:
    * @param is_eof
    * @return
    */
-  DataToken createToken(const std::string &file_name, const long & streampos, bool is_eof);
+  // NOLINTNEXTLINE(google-runtime-int)
+  DataToken createToken(const std::string &file_name, const long streampos, bool is_eof);
 
   /**
    * Mark a token as failed so the FileManagerStrategy knows to keep the 
@@ -284,7 +284,7 @@ class FileManagerStrategy : public DataManagerStrategy {
 public:
   explicit FileManagerStrategy(const FileManagerStrategyOptions &options);
 
-  ~FileManagerStrategy() = default;
+  ~FileManagerStrategy() override = default;
 
   /**
    * Starts the FileManagerStrategy, this does any initialization I/O tasks required.
@@ -421,7 +421,7 @@ private:
   /**
    * Disk space used by all stored files. Does not include active_write_file_size_.
    */
-  std::atomic<size_t> stored_files_size_;
+  std::atomic<size_t> stored_files_size_{};
 
   /**
    * Path to the file we're currently writing to. This file cannot be read from or deleted. 
@@ -431,7 +431,7 @@ private:
   /** 
    * The size of the active_write_file. Stored here to minimize disk reads. 
    */
-  std::atomic<size_t> active_write_file_size_;
+  std::atomic<size_t> active_write_file_size_{};
 
   /** 
    * A lock on the active write file, to ensure that when it's rotated nothing is writing 
@@ -461,12 +461,6 @@ private:
    * Options for how and where to store files, and maximum file sizes.
    */
   FileManagerStrategyOptions options_;
-
-  /**
-   * Size of each batch when reading from a file.
-   * The Size corresponds to the number of lines read from the file
-   */
-  uint8_t batch_size = 1;
 
   /**
    * Stores which tokens to read from.

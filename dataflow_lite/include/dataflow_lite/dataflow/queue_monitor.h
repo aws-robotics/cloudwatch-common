@@ -46,7 +46,7 @@ class QueueMonitor :
 {
 public:
   QueueMonitor() = default;
-  virtual ~QueueMonitor() = default;
+  ~QueueMonitor() override = default;
 
   inline void addSource(
     std::shared_ptr<IObservedQueue < T>>observed_queue,

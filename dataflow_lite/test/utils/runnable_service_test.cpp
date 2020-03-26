@@ -31,15 +31,15 @@ public:
       has_worked_ = false;
     };
 
-    ~HardWorker() = default;
+    ~HardWorker() override = default;
 
-    virtual bool shutdown() {
+    bool shutdown() override {
       std::unique_lock <std::mutex> lck(this->test_mtx);
       this->test_cv.notify_all(); // stop blocking in the work thread
       return RunnableService::shutdown();
     }
 
-    virtual void work() override {
+    void work() override {
       this->has_worked_ = true;
 
       // manually wait for shutdown

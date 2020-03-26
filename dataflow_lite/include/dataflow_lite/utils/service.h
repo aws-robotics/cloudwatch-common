@@ -131,13 +131,13 @@ public:
     RunnableService() {
       should_run_.store(false);
     }
-    virtual ~RunnableService() = default;
+    ~RunnableService() override = default;
 
     /**
      * Starts the worker thread. Should be overridden if other actions are necessary to start.
      * @return
      */
-    virtual bool start() override {
+    bool start() override {
       bool started = startWorkerThread();
       started &= Service::start();
       return started;
@@ -147,7 +147,7 @@ public:
      * Stops the worker thread. Should be overridden if other actions are necessary to stop.
      * @return
      */
-    virtual bool shutdown() override {
+    bool shutdown() override {
       bool is_shutdown = Service::shutdown();
       is_shutdown &= stopWorkerThread();
       return is_shutdown;
@@ -195,7 +195,7 @@ public:
      * Return a descriptive string describing the service and it's state.
      * @return
      */
-    virtual std::string getStatusString() override {
+    std::string getStatusString() override {
       return Service::getStatusString() + std::string(", isRunning=") + (isRunning()
         ? std::string("True") : std::string("False"));
     }
@@ -246,7 +246,7 @@ protected:
 
 private:
   std::thread runnable_thread_;
-  std::atomic<bool> should_run_;
+  std::atomic<bool> should_run_{};
   std::condition_variable cv_;
   mutable std::mutex mtx_;
 };

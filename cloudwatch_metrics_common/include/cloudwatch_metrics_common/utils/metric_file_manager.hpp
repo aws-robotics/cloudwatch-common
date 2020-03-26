@@ -40,6 +40,7 @@ public:
    */
   MetricFileManager() = default;
 
+  // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
   MetricFileManager(const Aws::FileManagement::FileManagerStrategyOptions &options)
     : FileManager(options) {
   }
@@ -65,5 +66,5 @@ public:
 };
 
 }  // namespace Utils
-}  // namespace CloudwatchMetrics
+}  // namespace CloudWatchMetrics
 }  // namespace Aws

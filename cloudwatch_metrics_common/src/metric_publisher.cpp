@@ -24,8 +24,12 @@
 
 #include <memory>
 
-using namespace Aws::CloudWatchMetrics;
-using namespace Aws::CloudWatchMetrics::Utils;
+using Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade;
+using Aws::CloudWatchMetrics::Utils::CloudWatchMetricsStatus;
+
+
+namespace Aws {
+namespace CloudWatchMetrics {
 
 MetricPublisher::MetricPublisher(
   const std::string & metrics_namespace,
@@ -36,10 +40,10 @@ MetricPublisher::MetricPublisher(
 }
 
 MetricPublisher::MetricPublisher(const std::string & metrics_namespace,
-                const std::shared_ptr<Aws::CloudWatchMetrics::Utils::CloudWatchMetricsFacade> cloudwatch_metrics_facade)
+                                 std::shared_ptr<Utils::CloudWatchMetricsFacade> cloudwatch_metrics_facade)
 {
   this->metrics_namespace_ = metrics_namespace;
-  this->cloudwatch_metrics_facade_ = cloudwatch_metrics_facade;
+  this->cloudwatch_metrics_facade_ = std::move(cloudwatch_metrics_facade);
 }
 
 bool MetricPublisher::start() {
@@ -71,3 +75,6 @@ Aws::DataFlow::UploadStatus MetricPublisher::publishData(MetricDatumCollection &
       return Aws::DataFlow::UploadStatus::FAIL;
   }
 }
+
+}  // namespace CloudWatchMetrics
+}  // namespace Aws

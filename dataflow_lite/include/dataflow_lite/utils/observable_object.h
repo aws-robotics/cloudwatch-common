@@ -36,6 +36,7 @@ public:
      *
      * @param initialValue
      */
+    // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
     ObservableObject<T>(const T initialValue) {
       value_.store(initialValue);
     }
@@ -93,7 +94,7 @@ public:
     /**
      * Clear all active listeners
      */
-    virtual void clearListeners() {
+    void clearListeners() {
       std::lock_guard<std::recursive_mutex> lk(listener_mutex_);
       listeners_.clear();
     }

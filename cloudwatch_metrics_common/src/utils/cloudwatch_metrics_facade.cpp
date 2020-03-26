@@ -26,7 +26,9 @@
 
 #include <string>
 
-using namespace Aws::CloudWatchMetrics::Utils;
+namespace Aws {
+namespace CloudWatchMetrics {
+namespace Utils {
 
 // https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
 #define MAX_METRIC_DATUMS_PER_REQUEST 20
@@ -36,7 +38,7 @@ CloudWatchMetricsFacade::CloudWatchMetricsFacade(const Aws::Client::ClientConfig
   this->cw_client_ = std::make_shared<Aws::CloudWatch::CloudWatchClient>(client_config);
 }
 
-CloudWatchMetricsFacade::CloudWatchMetricsFacade(const std::shared_ptr<Aws::CloudWatch::CloudWatchClient> cw_client)
+CloudWatchMetricsFacade::CloudWatchMetricsFacade(const std::shared_ptr<Aws::CloudWatch::CloudWatchClient>& cw_client)
 {
   this->cw_client_ = cw_client;
 }
@@ -85,8 +87,8 @@ CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsToCloudWatch(
   request.SetNamespace(metric_namespace.c_str());
 
   // Note: this fails an entire set of metrics, even if some are sent back successfully
-  for (auto it = metrics.begin(); it != metrics.end(); ++it) {
-    datums.push_back(*it);
+  for (auto & metric : metrics) {
+    datums.push_back(metric);
     if (datums.size() >= MAX_METRIC_DATUMS_PER_REQUEST) {
 
       request.SetMetricData(datums);
@@ -107,3 +109,7 @@ CloudWatchMetricsStatus CloudWatchMetricsFacade::SendMetricsToCloudWatch(
 
   return status;
 }
+
+}  // namespace Utils
+}  // namespace CloudWatchMetrics
+}  // namespace Aws
