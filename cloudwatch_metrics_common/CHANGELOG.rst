@@ -5,8 +5,8 @@ Changelog for package cloudwatch_metrics_common
 1.0.1 (2019-03-20)
 ------------------
 
-Forthcoming
------------
+1.1.3 (2020-03-27)
+------------------
 * Bumping version to match bloom release (`#51 <https://github.com/aws-robotics/cloudwatch-common/issues/51>`_)
   Bumping version to 1.1.3
 * Fix linting issues found by clang-tidy 6.0 (`#50 <https://github.com/aws-robotics/cloudwatch-common/issues/50>`_)
