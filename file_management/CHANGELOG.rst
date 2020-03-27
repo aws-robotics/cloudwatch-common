@@ -14,6 +14,20 @@ Changelog for package file_management
 * Resolved false-positive error log messages
 * Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
 
+Forthcoming
+-----------
+* Bumping version to match bloom release (`#51 <https://github.com/aws-robotics/cloudwatch-common/issues/51>`_)
+  Bumping version to 1.1.3
+* Fix linting issues found by clang-tidy 6.0 (`#50 <https://github.com/aws-robotics/cloudwatch-common/issues/50>`_)
+  * clang-tidy fixes
+  * revert explicit constructor declarations to maintain API compatbility
+  * clang-tidy linting issues fixed manually
+  * fix unit tests build break
+* Increase package version numbers to 1.1.2 (`#44 <https://github.com/aws-robotics/cloudwatch-common/issues/44>`_)
+* Fixes a bug where we did not null check the result of getting the HOM… (`#43 <https://github.com/aws-robotics/cloudwatch-common/issues/43>`_)
+  Fixes a bug where we did not null check the result of getting the HOME env variable and also switches to create_directories instead of create_directory so that it doesn't SIGABRT when asked to create multiple levels of a directory.
+* Contributors: Miaofei Mei, Nick Burek, Ragha Prasad
+
 1.1.1 (2019-09-10)
 ------------------
 * Disable error on cast-align warning to support ARMhf builds (`#41 <https://github.com/aws-robotics/cloudwatch-common/issues/41>`_)
