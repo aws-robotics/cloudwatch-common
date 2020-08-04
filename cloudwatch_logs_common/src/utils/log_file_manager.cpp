@@ -18,6 +18,7 @@
 #include <memory>
 #include <iostream>
 #include <fstream>
+#include <chrono>
 #include "cloudwatch_logs_common/utils/log_file_manager.h"
 #include "file_management/file_upload/file_manager_strategy.h"
 #include <aws/core/utils/json/JsonSerializer.h>
@@ -54,6 +55,17 @@ FileObject<LogCollection> LogFileManager::readBatch(
     log_set.insert(input_event);
     data_tokens.push_back(data_token);
   }
+
+  typedef std::chrono::high_resolution_clock Clock;
+  typedef std::chrono::hours hours;
+  Clock::time_point t0 = log_set.end().GetTimestamp();
+  Clock::time_point t1 = log_set.begin().GetTimestamp();
+  hours hrs = std::chrono::duration_cast<hrs>(t1 - t0);
+
+  if(hrs >= 24){
+    AWS_LOGSTREAM_ERROR(__func__, "The logs in this batch exceed a 24 hour time duration.");
+  }
+
   LogCollection log_data(log_set.begin(), log_set.end());
   FileObject<LogCollection> file_object;
   file_object.batch_data = log_data;
