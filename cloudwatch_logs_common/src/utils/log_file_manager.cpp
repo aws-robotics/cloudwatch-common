@@ -29,6 +29,16 @@ namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
+//validate that the time between the oldest logand the newest log does not exceed 24 hours
+bool validateLogTime(const LogType & log1, const LogType & log2) {
+  //LogType.GetTimestamp returns time in milliseconds
+  //There are 86400000 milliseconds in 24 hours
+  if(log1.GetTimestamp() - log2.GetTimestamp() >= 86400000){
+    return false;
+  }
+  return true;
+}
+
 FileObject<LogCollection> LogFileManager::readBatch(
   size_t batch_size)
 {
@@ -66,16 +76,6 @@ FileObject<LogCollection> LogFileManager::readBatch(
   file_object.batch_size = actual_batch_size;
   file_object.data_tokens = data_tokens;
   return file_object;
-}
-
-//validate that the time between the oldest logand the newest log does not exceed 24 hours
-bool validateLogTime(const LogType & log1, const LogType & log2) {
-  //LogType.GetTimestamp returns time in milliseconds
-  //There are 86400000 milliseconds in 24 hours
-  if(log1.GetTimestamp() - log2.GetTimestamp() >= 86400000){
-    return false;
-  }
-  return true;
 }
 
 void LogFileManager::write(const LogCollection & data) {
