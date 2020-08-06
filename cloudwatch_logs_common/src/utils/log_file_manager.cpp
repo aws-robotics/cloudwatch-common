@@ -56,7 +56,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
     data_tokens.push_back(data_token);
   }
 
-  if((*log_set.end()).GetTimestamp() - (*log_set.begin()).GetTimestamp() >= 86400000){
+  if(!validateLogTime(*log_set.begin(), *log_set.end())){
     AWS_LOGSTREAM_ERROR(__func__, "The logs in this batch exceed a 24 hour time duration.");
   }
 
@@ -66,6 +66,16 @@ FileObject<LogCollection> LogFileManager::readBatch(
   file_object.batch_size = actual_batch_size;
   file_object.data_tokens = data_tokens;
   return file_object;
+}
+
+//validate that the time between the oldest logand the newest log does not exceed 24 hours
+bool validateLogTime(const LogType & log1, const LogType & log2) {
+  //LogType.GetTimestamp returns time in milliseconds
+  //There are 86400000 milliseconds in 24 hours
+  if(log1.GetTimestamp() - log2.GetTimestamp() >= 86400000){
+    return false;
+  }
+  return true;
 }
 
 void LogFileManager::write(const LogCollection & data) {
