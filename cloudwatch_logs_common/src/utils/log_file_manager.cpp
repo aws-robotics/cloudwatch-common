@@ -35,19 +35,8 @@ FileObject<LogCollection> LogFileManager::readBatch(
   /* We must sort the log data chronologically because it is not guaranteed
      to be ordered chronologically in the file, but CloudWatch requires all
      puts in a single batch to be sorted chronologically */
-  auto log_comparison = [](const LogType & log1, const LogType & log2) { 
-      typedef std::chrono::high_resolution_clock Clock;
-      typedef std::chrono::hours hours;
-      Clock::time_point t0 = log1.GetTimestamp();
-      Clock::time_point t1 = log2.GetTimestamp();
-      hours hrs = std::chrono::duration_cast<hrs>(t1 - t0);
-
-      if(hrs >= 24){
-        AWS_LOGSTREAM_ERROR(__func__, "The logs in this batch exceed a 24 hour time duration.");
-      }
-
-      return log1.GetTimestamp() < log2.GetTimestamp(); 
-    };
+  auto log_comparison = [](const LogType & log1, const LogType & log2)
+    { return log1.GetTimestamp() < log2.GetTimestamp(); };
   std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
   FileManagement::DataToken data_token;
   std::list<FileManagement::DataToken> data_tokens;
@@ -65,6 +54,10 @@ FileObject<LogCollection> LogFileManager::readBatch(
     actual_batch_size++;
     log_set.insert(input_event);
     data_tokens.push_back(data_token);
+  }
+
+  if(*log_set.end().GetTimestamp() - *log_set.begin().GetTimestamp() >= 86400000){
+    AWS_LOGSTREAM_ERROR(__func__, "The logs in this batch exceed a 24 hour time duration.");
   }
 
   LogCollection log_data(log_set.begin(), log_set.end());
