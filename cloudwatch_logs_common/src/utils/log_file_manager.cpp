@@ -56,7 +56,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
     data_tokens.push_back(data_token);
   }
 
-  if(*log_set.end().GetTimestamp() - *log_set.begin().GetTimestamp() >= 86400000){
+  if((*log_set.end()).GetTimestamp() - (*log_set.begin()).GetTimestamp() >= 86400000){
     AWS_LOGSTREAM_ERROR(__func__, "The logs in this batch exceed a 24 hour time duration.");
   }
 
