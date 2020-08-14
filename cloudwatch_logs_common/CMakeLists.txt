@@ -106,6 +106,10 @@ if(GMOCK_LIBRARY)
           test/pipeline_test.cpp
           )
 
+  add_common_gtest(file_manager_test
+          test/file_manager_test.cpp
+          )
+
   set(LIBS_FOR_TESTS
           ${GTEST_LIBRARIES}
           pthread
