@@ -37,6 +37,72 @@ using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::FileManagement;
 
+
+/**
+ * Test the publisher interface while ignoring all of the CloudWatch specific infrastructure.
+ */
+class TestPublisher : public Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>, public Waiter
+{
+public:
+  TestPublisher() : Publisher() {
+    force_failure = false;
+    force_invalid_data_failure = false;
+    last_upload_status = Aws::DataFlow::UploadStatus::UNKNOWN;
+  };
+  ~TestPublisher() override = default;
+
+  bool start() override {
+    return Publisher::start();
+  }
+
+  // notify just in case anyone is waiting
+  bool shutdown() override {
+    bool is_shutdown = Publisher::shutdown();
+    this->notify(); //don't leave anyone blocking
+    return is_shutdown;
+  };
+
+  void setForceFailure(bool nv) {
+    force_failure = nv;
+  }
+
+  void setForceInvalidDataFailure(bool nv) {
+    force_invalid_data_failure = nv;
+  }
+
+  Aws::DataFlow::UploadStatus getLastUploadStatus() {
+    return last_upload_status;
+  }
+
+protected:
+
+  // override so we can notify when internal state changes, as attemptPublish sets state
+  Aws::DataFlow::UploadStatus attemptPublish(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> &data) override {
+    last_upload_status = Publisher::attemptPublish(data);
+    {
+      this->notify();
+    }
+    return last_upload_status;
+  }
+
+  Aws::DataFlow::UploadStatus publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent>&) override {
+
+    if (force_failure) {
+      return Aws::DataFlow::UploadStatus::FAIL;
+
+    } else if (force_invalid_data_failure) {
+      return Aws::DataFlow::UploadStatus::INVALID_DATA;
+
+    } else {
+      return Aws::DataFlow::UploadStatus::SUCCESS;
+    }
+  }
+
+  bool force_failure;
+  bool force_invalid_data_failure;
+  Aws::DataFlow::UploadStatus last_upload_status;
+};
+
 class FileManagerTest : public ::testing::Test {
 public:
   void SetUp() override
