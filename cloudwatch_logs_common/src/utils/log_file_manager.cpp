@@ -70,6 +70,13 @@ FileObject<LogCollection> LogFileManager::readBatch(
     AWS_LOGSTREAM_ERROR(__func__, "The logs in this batch exceed a 24 hour time duration.");
   }
 
+  //at this point log_set has been sorted
+  //by the log_comparison insertion sort
+
+  for(int i = 0; i < log_set.size(); i++){
+    cout << i << endl;
+  }
+
   LogCollection log_data(log_set.begin(), log_set.end());
   FileObject<LogCollection> file_object;
   file_object.batch_data = log_data;

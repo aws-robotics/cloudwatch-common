@@ -29,6 +29,10 @@
 
 #include <file_management/file_upload/file_manager.h>
 #include <file_management/file_upload/file_manager_strategy.h>
+
+#include <cloudwatch_logs_common/log_service.h>
+#include <cloudwatch_logs_common/log_batcher.h>
+#include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/utils/log_file_manager.h>
 
 #include <dataflow_lite/utils/waiter.h>
@@ -36,7 +40,6 @@
 using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::FileManagement;
-
 
 /**
  * Test the publisher interface while ignoring all of the CloudWatch specific infrastructure.
