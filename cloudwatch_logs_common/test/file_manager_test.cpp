@@ -41,17 +41,48 @@ class FileManagerTest : public ::testing::Test {
 public:
   void SetUp() override
   {
+      test_publisher = std::make_shared<TestPublisher>();
+      batcher = std::make_shared<LogBatcher>();
+
+      //  log service owns the streamer, batcher, and publisher
+      cw_service = std::make_shared<LogService>(test_publisher, batcher);
+
+      stream_data_queue = std::make_shared<TaskObservedQueue<LogCollection>>();
+      queue_monitor = std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogCollection>>>();
+
+      // create pipeline
+      batcher->setSink(stream_data_queue);
+      queue_monitor->addSource(stream_data_queue, Aws::DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
+      cw_service->setSource(queue_monitor);
+
+      cw_service->start(); //this starts the worker thread
+      EXPECT_EQ(Aws::DataFlow::UploadStatus::UNKNOWN, test_publisher->getLastUploadStatus());
   }
 
   void TearDown() override
   {
+      if (cw_service) {
+        cw_service->shutdown();
+        cw_service->join();
+      }
     //std::experimental::filesystem::path storage_path(options.storage_directory);
     //std::experimental::filesystem::remove_all(storage_path);
   }
 
 protected:
   FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024};
+
+  std::shared_ptr<TestPublisher> test_publisher;
+  std::shared_ptr<LogBatcher> batcher;
+  std::shared_ptr<LogService> cw_service;
+
+  std::shared_ptr<TaskObservedQueue<LogCollection>> stream_data_queue;
+  std::shared_ptr<Aws::DataFlow::QueueMonitor<TaskPtr<LogCollection>>>queue_monitor;
 };
+
+TEST_F(FileManagerTest, Sanity) {
+  ASSERT_TRUE(true);
+}
 
 /**
  * Test File Manager
@@ -82,6 +113,40 @@ public:
     std::condition_variable cv;
     mutable std::mutex mtx;
 };
+
+TEST_F(FileManagerTest, TestSinglePublisherFailureToFileManager) {
+
+  std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
+  // hookup to the service
+  batcher->setLogFileManager(fileManager);
+
+  // batch
+  std::string toBatch("TestBatcherManualPublish");
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
+  bool is_batched = cw_service->batchData(toBatch);
+  EXPECT_EQ(1u, batcher->getCurrentBatchSize());
+  EXPECT_EQ(true, is_batched);
+
+  // force failure
+  test_publisher->setForceFailure(true);
+
+  // publish
+  bool b2 = cw_service->publishBatchedData();
+  test_publisher->wait_for(std::chrono::seconds(1));
+
+  EXPECT_TRUE(b2);
+  EXPECT_EQ(0u, batcher->getCurrentBatchSize());
+  EXPECT_EQ(PublisherState::NOT_CONNECTED, test_publisher->getPublisherState());
+  EXPECT_FALSE(cw_service->isConnected());
+  EXPECT_EQ(0, test_publisher->getPublishSuccesses());
+  EXPECT_EQ(1, test_publisher->getPublishAttempts());
+  EXPECT_EQ(0.0f, test_publisher->getPublishSuccessPercentage());
+
+  fileManager->wait_for(std::chrono::seconds(1));
+  //check that the filemanger callback worked
+  EXPECT_EQ(1, fileManager->written_count);
+  EXPECT_EQ(Aws::DataFlow::UploadStatus::FAIL, test_publisher->getLastUploadStatus());
+}
 
 //Test that logs in a batch separated by < 24 hours produce no error message
 
