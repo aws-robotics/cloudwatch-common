@@ -68,7 +68,9 @@ FileObject<LogCollection> LogFileManager::readBatch(
   std::list<FileManagement::DataToken> data_tokens;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
   size_t actual_batch_size = 0;
+
   std::priority_queue<std::tuple<long, Aws::CloudWatchLogs::Model::InputLogEvent, FileManagement::DataToken> pq;
+  long maxTime = 0;
 
   //loop through the batch and add each entry to log_set and data_tokens
   for (size_t i = 0; i < batch_size; ++i) {
@@ -81,9 +83,12 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Aws::Utils::Json::JsonValue value(aws_line);
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
     actual_batch_size++;
-    log_set.insert(input_event);
-    data_tokens.push_back(data_token);
-    pq.insert({input_event.GetTimestamp(), input_event, data_token});
+    //log_set.insert(input_event);
+    //data_tokens.push_back(data_token);
+    pq.insert(std::makeTuple(input_event.GetTimestamp(), input_event, data_token));
+    if(input_event.GetTimestamp() > maxTime){
+      maxTime = input_event.GetTimestamp();
+    }
   }
 
   //basically we want to assign a timestampt to log_set and data_token
@@ -99,6 +104,13 @@ FileObject<LogCollection> LogFileManager::readBatch(
   //by the log_comparison insertion sort
 
   //addValidData(log_set);
+
+  for(int i = 0; i < (int)pq.size(); ++i){
+    if(maxTime - pq.top() < 86400000){
+      log_set.insert(std::get<1>(pq.top()));
+      data_tokens.push_back(std::get<2>(pq.top()));
+    }
+  }
 
   LogCollection log_data(log_set.begin(), log_set.end());
   FileObject<LogCollection> file_object;
