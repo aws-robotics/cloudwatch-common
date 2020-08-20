@@ -30,6 +30,7 @@ namespace CloudWatchLogs {
 namespace Utils {
 
 //validate that the time between the oldest logand the newest log does not exceed 24 hours
+/*
 bool validateLogTime(const LogType & log1, const LogType & log2) {
   //LogType.GetTimestamp returns time in milliseconds
   //There are 86400000 milliseconds in 24 hours
@@ -37,6 +38,19 @@ bool validateLogTime(const LogType & log1, const LogType & log2) {
     return false;
   }
   return true;
+}
+*/
+
+//validate that the time between the oldest logand the newest log does not exceed 24 hours
+void addValidData(std::set<LogType, decltype(log_comparison)> log_set) {
+  //save the latest time
+  //const LogType final = log_set.end();
+
+  //LogType.GetTimestamp returns time in milliseconds
+  //There are 86400000 milliseconds in 24 hours
+  for(std::set<LogType, decltype(log_comprison)>::iterator it = log_set->begin(); it != log_set.end(); ++it){
+    data_tokens.push_back(data_token);
+  }
 }
 
 FileObject<LogCollection> LogFileManager::readBatch(
@@ -63,19 +77,21 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
     actual_batch_size++;
     log_set.insert(input_event);
-    data_tokens.push_back(data_token);
+
+    //move to addValidData
+    //data_tokens.push_back(data_token);
   }
 
+  /*
   if(!validateLogTime(*log_set.begin(), *log_set.end())){
     AWS_LOGSTREAM_ERROR(__func__, "The logs in this batch exceed a 24 hour time duration.");
   }
+  */
 
   //at this point log_set has been sorted
   //by the log_comparison insertion sort
 
-  for(int i = 0; i < log_set.size(); i++){
-    cout << i << endl;
-  }
+  addValidData(log_set);
 
   LogCollection log_data(log_set.begin(), log_set.end());
   FileObject<LogCollection> file_object;
