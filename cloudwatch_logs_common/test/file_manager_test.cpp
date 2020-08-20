@@ -31,6 +31,8 @@
 #include <file_management/file_upload/file_manager_strategy.h>
 #include <cloudwatch_logs_common/utils/log_file_manager.h>
 
+#include <dataflow_lite/utils/waiter.h>
+
 using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::FileManagement;
@@ -49,6 +51,36 @@ public:
 
 protected:
   FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024};
+};
+
+/**
+ * Test File Manager
+ */
+class TestLogFileManager : public FileManager<LogCollection>, public Waiter
+{
+public:
+
+    TestLogFileManager() : FileManager(nullptr) {
+      written_count.store(0);
+    }
+
+    void write(const LogCollection & data) override {
+      last_data_size = data.size();
+      written_count++;
+      this->notify();
+    };
+
+    FileObject<LogCollection> readBatch(size_t batch_size) override {
+      // do nothing
+      FileObject<LogCollection> testFile;
+      testFile.batch_size = batch_size;
+      return testFile;
+    }
+
+    std::atomic<int> written_count{};
+    std::atomic<size_t> last_data_size{};
+    std::condition_variable cv;
+    mutable std::mutex mtx;
 };
 
 //Test that logs in a batch separated by < 24 hours produce no error message
