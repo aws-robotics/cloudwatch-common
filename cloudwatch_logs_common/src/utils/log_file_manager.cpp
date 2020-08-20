@@ -41,6 +41,9 @@ bool validateLogTime(const LogType & log1, const LogType & log2) {
 }
 */
 
+auto log_comparison = [](const LogType & log1, const LogType & log2)
+  { return log1.GetTimestamp() < log2.GetTimestamp(); };
+
 //validate that the time between the oldest logand the newest log does not exceed 24 hours
 void addValidData(std::set<LogType, decltype(log_comparison)> log_set) {
   //save the latest time
@@ -59,13 +62,15 @@ FileObject<LogCollection> LogFileManager::readBatch(
   /* We must sort the log data chronologically because it is not guaranteed
      to be ordered chronologically in the file, but CloudWatch requires all
      puts in a single batch to be sorted chronologically */
-  auto log_comparison = [](const LogType & log1, const LogType & log2)
-    { return log1.GetTimestamp() < log2.GetTimestamp(); };
+
   std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
   FileManagement::DataToken data_token;
   std::list<FileManagement::DataToken> data_tokens;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
   size_t actual_batch_size = 0;
+  std::priority_queue<std::tuple<long, Aws::CloudWatchLogs::Model::InputLogEvent, FileManagement::DataToken> pq;
+
+  //loop through the batch and add each entry to log_set and data_tokens
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line;
     if (!file_manager_strategy_->isDataAvailable()) {
@@ -77,10 +82,12 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
     actual_batch_size++;
     log_set.insert(input_event);
-
-    //move to addValidData
-    //data_tokens.push_back(data_token);
+    data_tokens.push_back(data_token);
+    pq.insert({input_event.GetTimestamp(), input_event, data_token});
   }
+
+  //basically we want to assign a timestampt to log_set and data_token
+  //we go backwards and rebuild log_set and data_token using valid values
 
   /*
   if(!validateLogTime(*log_set.begin(), *log_set.end())){
@@ -91,7 +98,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
   //at this point log_set has been sorted
   //by the log_comparison insertion sort
 
-  addValidData(log_set);
+  //addValidData(log_set);
 
   LogCollection log_data(log_set.begin(), log_set.end());
   FileObject<LogCollection> file_object;
