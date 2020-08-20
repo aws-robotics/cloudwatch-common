@@ -53,7 +53,7 @@ protected:
 
 //Test that logs in a batch separated by < 24 hours produce no error message
 
-TEST_F(FileManagerTestNew, file_manager_old_logs) {
+TEST_F(FileManagerTest, file_manager_old_logs) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   LogFileManager file_manager(file_manager_strategy);
   LogCollection log_data;
