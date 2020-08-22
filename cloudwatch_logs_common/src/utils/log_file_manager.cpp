@@ -33,34 +33,8 @@ namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
-//validate that the time between the oldest logand the newest log does not exceed 24 hours
-/*
-bool validateLogTime(const LogType & log1, const LogType & log2) {
-  //LogType.GetTimestamp returns time in milliseconds
-  //There are 86400000 milliseconds in 24 hours
-  if(log1.GetTimestamp() - log2.GetTimestamp() >= 86400000){
-    return false;
-  }
-  return true;
-}
-*/
-
 auto log_comparison = [](const LogType & log1, const LogType & log2)
   { return log1.GetTimestamp() < log2.GetTimestamp(); };
-
-//validate that the time between the oldest logand the newest log does not exceed 24 hours
-/*
-void addValidData(std::set<LogType, decltype(log_comparison)> log_set) {
-  //save the latest time
-  //const LogType final = log_set.end();
-
-  //LogType.GetTimestamp returns time in milliseconds
-  //There are 86400000 milliseconds in 24 hours
-  for(std::set<LogType, decltype(log_comparison)>::iterator it = log_set.begin(); it != log_set.end(); ++it){
-    //data_tokens.push_back(data_token);
-  }
-}
-*/
 
 FileObject<LogCollection> LogFileManager::readBatch(
   size_t batch_size)
@@ -71,9 +45,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
 
   FileManagement::DataToken data_token;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
-
-  //std::priority_queue<std::tuple<long, Aws::CloudWatchLogs::Model::InputLogEvent, FileManagement::DataToken>> pq;
-  //std::priority_queue<std::pair<long, std::string>> pq;
+  
   std::priority_queue<std::tuple<long, std::string, uint64_t>> pq;
   long maxTime = 0;
 
@@ -95,10 +67,11 @@ FileObject<LogCollection> LogFileManager::readBatch(
   std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
   std::list<FileManagement::DataToken> data_tokens;
   size_t actual_batch_size = 0;
+  bool isOutdated = false;
   while(!pq.empty()){
-    long curTime = get<0>(pq.top());
-    std::string line = get<1>(pq.top());
-    FileManagement::DataToken new_data_token = get<2>(pq.top());
+    long curTime = std::get<0>(pq.top());
+    std::string line = std::get<1>(pq.top());
+    FileManagement::DataToken new_data_token = std::get<2>(pq.top());
     if(maxTime - curTime < 86400000){
       Aws::String aws_line(line.c_str());
       Aws::Utils::Json::JsonValue value(aws_line);
@@ -107,30 +80,15 @@ FileObject<LogCollection> LogFileManager::readBatch(
       log_set.insert(input_event);
       data_tokens.push_back(new_data_token);
     }
-  }
-
-  //basically we want to assign a timestampt to log_set and data_token
-  //we go backwards and rebuild log_set and data_token using valid values
-
-  /*
-  if(!validateLogTime(*log_set.begin(), *log_set.end())){
-    AWS_LOGSTREAM_ERROR(__func__, "The logs in this batch exceed a 24 hour time duration.");
-  }
-  */
-
-  //at this point log_set has been sorted
-  //by the log_comparison insertion sort
-
-  //addValidData(log_set);
-
-/*
-  for(int i = 0; i < (int)pq.size(); ++i){
-    if(maxTime - std::get<0>pq.top() < 86400000){
-      log_set.insert(std::get<1>(pq.top()));
-      data_tokens.push_back(std::get<2>(pq.top()));
+    else{
+      isOutdated = true;
     }
   }
-*/
+
+  if(isOutdated){
+    AWS_LOG_INFO(__func__, 
+      "Some log files were out of date (> 24 hours time difference). Please resend batch separately.");
+  }
 
   LogCollection log_data(log_set.begin(), log_set.end());
   FileObject<LogCollection> file_object;
