@@ -75,8 +75,8 @@ FileObject<LogCollection> LogFileManager::readBatch(
   AWS_LOG_INFO(__func__, "Reading Logbatch");
   size_t actual_batch_size = 0;
 
-  //std::priority_queue<std::tuple<long, Aws::CloudWatchLogs::Model::InputLogEvent, FileManagement::DataToken> pq;
-  std::priority_queue<std::pair<long, Aws::CloudWatchLogs::Model::InputLogEvent> pq;
+  //std::priority_queue<std::tuple<long, Aws::CloudWatchLogs::Model::InputLogEvent, FileManagement::DataToken>> pq;
+  std::priority_queue<std::pair<long, std::string>> pq;
   long maxTime = 0;
 
   //loop through the batch and add each entry to log_set and data_tokens
@@ -89,12 +89,32 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Aws::String aws_line(line.c_str());
     Aws::Utils::Json::JsonValue value(aws_line);
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
+    //start - to be replaced
     actual_batch_size++;
     log_set.insert(input_event);
     data_tokens.push_back(data_token);
-    pq.push(std::make_pair(input_event.GetTimestamp(), input_event));
+    //end
+    pq.push(std::make_pair(input_event.GetTimestamp(), line));
     if(input_event.GetTimestamp() > maxTime){
       maxTime = input_event.GetTimestamp();
+    }
+  }
+
+  std::set<LogType, decltype(log_comparison)> new_log_set(log_comparison);
+  FileManagement::DataToken new_data_token;
+  std::list<FileManagement::DataToken> new_data_tokens;
+  size_t new_batch_size = 0;
+  while(!pq.empty()){
+    long curTime = pq.top().first;
+    if(maxTime - curTime < 86400000){
+      std:string line = pq.top().second;
+      new_data_token = read(line);
+      Aws::String new_aws_line(line.c_str());
+      Aws::Utils::Json::JsonValue value(new_aws_line);
+      Aws::CloudWatchLogs::Model::InputLogEvent new_input_event(value);
+      new_batch_size++;
+      new_log_set.insert(new_input_event);
+      new_data_tokens.push_back(new_data_token);
     }
   }
 
