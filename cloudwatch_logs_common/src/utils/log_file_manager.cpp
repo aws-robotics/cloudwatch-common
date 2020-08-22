@@ -19,6 +19,10 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <queue>
+#include <tuple>
+#include <utility>      // std::pair, std::make_pair
+
 #include "cloudwatch_logs_common/utils/log_file_manager.h"
 #include "file_management/file_upload/file_manager_strategy.h"
 #include <aws/core/utils/json/JsonSerializer.h>
@@ -45,16 +49,18 @@ auto log_comparison = [](const LogType & log1, const LogType & log2)
   { return log1.GetTimestamp() < log2.GetTimestamp(); };
 
 //validate that the time between the oldest logand the newest log does not exceed 24 hours
+/*
 void addValidData(std::set<LogType, decltype(log_comparison)> log_set) {
   //save the latest time
   //const LogType final = log_set.end();
 
   //LogType.GetTimestamp returns time in milliseconds
   //There are 86400000 milliseconds in 24 hours
-  for(std::set<LogType, decltype(log_comprison)>::iterator it = log_set->begin(); it != log_set.end(); ++it){
-    data_tokens.push_back(data_token);
+  for(std::set<LogType, decltype(log_comparison)>::iterator it = log_set.begin(); it != log_set.end(); ++it){
+    //data_tokens.push_back(data_token);
   }
 }
+*/
 
 FileObject<LogCollection> LogFileManager::readBatch(
   size_t batch_size)
@@ -69,7 +75,8 @@ FileObject<LogCollection> LogFileManager::readBatch(
   AWS_LOG_INFO(__func__, "Reading Logbatch");
   size_t actual_batch_size = 0;
 
-  std::priority_queue<std::tuple<long, Aws::CloudWatchLogs::Model::InputLogEvent, FileManagement::DataToken> pq;
+  //std::priority_queue<std::tuple<long, Aws::CloudWatchLogs::Model::InputLogEvent, FileManagement::DataToken> pq;
+  std::priority_queue<std::pair<long, Aws::CloudWatchLogs::Model::InputLogEvent> pq;
   long maxTime = 0;
 
   //loop through the batch and add each entry to log_set and data_tokens
@@ -83,9 +90,9 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Aws::Utils::Json::JsonValue value(aws_line);
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
     actual_batch_size++;
-    //log_set.insert(input_event);
-    //data_tokens.push_back(data_token);
-    pq.insert(std::makeTuple(input_event.GetTimestamp(), input_event, data_token));
+    log_set.insert(input_event);
+    data_tokens.push_back(data_token);
+    pq.push(std::make_pair(input_event.GetTimestamp(), input_event));
     if(input_event.GetTimestamp() > maxTime){
       maxTime = input_event.GetTimestamp();
     }
@@ -105,12 +112,14 @@ FileObject<LogCollection> LogFileManager::readBatch(
 
   //addValidData(log_set);
 
+/*
   for(int i = 0; i < (int)pq.size(); ++i){
-    if(maxTime - pq.top() < 86400000){
+    if(maxTime - std::get<0>pq.top() < 86400000){
       log_set.insert(std::get<1>(pq.top()));
       data_tokens.push_back(std::get<2>(pq.top()));
     }
   }
+*/
 
   LogCollection log_data(log_set.begin(), log_set.end());
   FileObject<LogCollection> file_object;
