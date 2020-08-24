@@ -46,9 +46,11 @@ FileObject<LogCollection> LogFileManager::readBatch(
   FileManagement::DataToken data_token;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
   
+  //go through the batch
+  //store the batch contents in a priority queue
+  //each element is a tuple with timestamp, line, data_token
   std::priority_queue<std::tuple<long, std::string, uint64_t>> pq;
-  long maxTime = 0;
-
+  long latestTime = 0;
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line;
     if (!file_manager_strategy_->isDataAvailable()) {
@@ -59,11 +61,15 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Aws::Utils::Json::JsonValue value(aws_line);
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
     pq.push(std::make_tuple(input_event.GetTimestamp(), line, data_token));
-    if(input_event.GetTimestamp() > maxTime){
-      maxTime = input_event.GetTimestamp();
+    if(input_event.GetTimestamp() > latestTime){
+      latestTime = input_event.GetTimestamp();
     }
   }
 
+  //go through the priority queue
+  //ignore logs > 24 hours older than latest
+  //only count < 24 hours logs for acutal_batch-size
+  //build log_set and data_tokens using only new logs
   std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
   std::list<FileManagement::DataToken> data_tokens;
   size_t actual_batch_size = 0;
@@ -72,7 +78,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
     long curTime = std::get<0>(pq.top());
     std::string line = std::get<1>(pq.top());
     FileManagement::DataToken new_data_token = std::get<2>(pq.top());
-    if(maxTime - curTime < 86400000){
+    if(latestTime - curTime < 86400000){
       Aws::String aws_line(line.c_str());
       Aws::Utils::Json::JsonValue value(aws_line);
       Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
@@ -85,9 +91,10 @@ FileObject<LogCollection> LogFileManager::readBatch(
     }
   }
 
+  //notify user some logs are out of date and won't be store.
   if(isOutdated){
     AWS_LOG_INFO(__func__, 
-      "Some log files were out of date (> 24 hours time difference). Please resend batch separately.");
+      "Some log files were out of date (> 24 hours time difference).");
   }
 
   LogCollection log_data(log_set.begin(), log_set.end());
