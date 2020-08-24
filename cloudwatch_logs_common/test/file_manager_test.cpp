@@ -230,9 +230,9 @@ TEST_F(FileManagerTest, file_manager_old_logs) {
   input_event.SetTimestamp(1);
   input_event.SetMessage("Slightly newer message");
   log_data.push_back(input_event);
-  file_manager.write(log_data);
+  file_manager->write(log_data);
   std::string line;
-  //file_manager.readBatch(1);
+  auto batch = file_manager->readBatch(1);
   //ASSERT_EQ(2u, batch.batch_data.size());
 }
 
