@@ -171,10 +171,57 @@ public:
     };
 
     FileObject<LogCollection> readBatch(size_t batch_size) override {
-      // do nothing
-      FileObject<LogCollection> testFile;
-      testFile.batch_size = batch_size;
-      return testFile;
+
+      FileManagement::DataToken data_token;
+      
+      std::priority_queue<std::tuple<long, std::string, uint64_t>> pq;
+      long latestTime = 0;
+      std::list<std::string> lines;
+      lines.push_back("")
+      for (size_t i = 0; i < batch_size; ++i) {
+        std::string line;
+        if (!file_manager_strategy_->isDataAvailable()) {
+          break;
+        }
+        data_token = read(line);
+        Aws::String aws_line(line.c_str());
+        Aws::Utils::Json::JsonValue value(aws_line);
+        Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
+        pq.push(std::make_tuple(input_event.GetTimestamp(), line, data_token));
+        if(input_event.GetTimestamp() > latestTime){
+          latestTime = input_event.GetTimestamp();
+        }
+      }
+
+      std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
+      std::list<FileManagement::DataToken> data_tokens;
+      size_t actual_batch_size = 0;
+      bool isOutdated = false;
+      while(!pq.empty()){
+        long curTime = std::get<0>(pq.top());
+        std::string line = std::get<1>(pq.top());
+        FileManagement::DataToken new_data_token = std::get<2>(pq.top());
+        if(latestTime - curTime < 86400000){
+          Aws::String aws_line(line.c_str());
+          Aws::Utils::Json::JsonValue value(aws_line);
+          Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
+          actual_batch_size++;
+          log_set.insert(input_event);
+          data_tokens.push_back(new_data_token);
+        }
+        else{
+          isOutdated = true;
+        }
+      }
+
+      std::cout << "Some log files were out of date (> 24 hours time difference).";
+
+      LogCollection log_data(log_set.begin(), log_set.end());
+      FileObject<LogCollection> file_object;
+      file_object.batch_data = log_data;
+      file_object.batch_size = actual_batch_size;
+      file_object.data_tokens = data_tokens;
+      return file_object;
     }
 
     std::atomic<int> written_count{};
@@ -232,15 +279,10 @@ TEST_F(FileManagerTest, file_manager_old_logs) {
   log_data.push_back(input_event);
   file_manager.write(log_data);
   std::string line;
-  //auto batch = file_manager.readBatch(1);
-  //ASSERT_EQ(2u, batch.batch_data.size());
+  auto batch = file_manager.readBatch(1);
+  ASSERT_EQ(2u, batch.batch_data.size());
 }
 
-/**
- * Test that the upload complete with CW Failure goes to a file.
- */
-
-/*
 TEST_F(FileManagerTest, file_manager_write) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   LogFileManager file_manager(file_manager_strategy);
@@ -254,7 +296,22 @@ TEST_F(FileManagerTest, file_manager_write) {
   file_manager_strategy->read(line);
   EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
 }
-*/
+
+TEST_F(FileManagerTest, file_manager_old_logs_mock) {
+  std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
+  LogCollection log_data;
+  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+  input_event.SetTimestamp(0);
+  input_event.SetMessage("Old message");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(1);
+  input_event.SetMessage("Slightly newer message");
+  log_data.push_back(input_event);
+  fileManager->write(log_data);
+  std::string line;
+  auto batch = fileManager->readBatch(1);
+  ASSERT_EQ(2u, batch.batch_data.size());
+}
 
 int main(int argc, char** argv)
 {
