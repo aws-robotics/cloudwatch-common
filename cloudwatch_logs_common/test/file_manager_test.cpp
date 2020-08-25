@@ -171,19 +171,22 @@ public:
     };
 
     FileObject<LogCollection> readBatch(size_t batch_size) override {
-
       FileManagement::DataToken data_token;
+      //AWS_LOG_INFO(__func__, "Reading Logbatch");
+      std::cout << "Reading Logbatch" << std::endl;
       
       std::priority_queue<std::tuple<long, std::string, uint64_t>> pq;
       long latestTime = 0;
       std::list<std::string> lines;
-      lines.push_back("")
       for (size_t i = 0; i < batch_size; ++i) {
         std::string line;
         if (!file_manager_strategy_->isDataAvailable()) {
           break;
         }
-        data_token = read(line);
+        //data_token = read(line);
+        data_token = 0;
+        line = "test line #" + std::to_string(i);
+        std::cout << "Current Line Is: " + line << std::endl;
         Aws::String aws_line(line.c_str());
         Aws::Utils::Json::JsonValue value(aws_line);
         Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
@@ -214,7 +217,10 @@ public:
         }
       }
 
-      std::cout << "Some log files were out of date (> 24 hours time difference).";
+      if(isOutdated){
+        AWS_LOG_INFO(__func__, 
+          "Some log files were out of date (> 24 hours time difference).");
+      }
 
       LogCollection log_data(log_set.begin(), log_set.end());
       FileObject<LogCollection> file_object;
