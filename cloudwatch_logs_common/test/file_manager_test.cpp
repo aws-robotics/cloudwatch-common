@@ -37,6 +37,16 @@
 
 #include <dataflow_lite/utils/waiter.h>
 
+#include <memory>
+#include <chrono>
+#include <queue>
+#include <tuple>
+#include <utility>      // std::pair, std::make_pair
+
+#include <aws/core/utils/json/JsonSerializer.h>
+#include <aws/core/utils/logging/LogMacros.h>
+#include <cloudwatch_logs_common/definitions/definitions.h>
+
 using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::FileManagement;
