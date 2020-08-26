@@ -89,6 +89,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
     else{
       isOutdated = true;
     }
+        pq.pop();
   }
 
   //notify user some logs are out of date and won't be store.

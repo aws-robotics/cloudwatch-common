@@ -106,8 +106,8 @@ if(GMOCK_LIBRARY)
           test/pipeline_test.cpp
           )
 
-  add_common_gtest(test_file_manager
-          test/file_manager_test.cpp
+  add_common_gtest(test_log_batch
+          test/log_batch_test.cpp
           )
 
   set(LIBS_FOR_TESTS
@@ -125,6 +125,6 @@ if(GMOCK_LIBRARY)
 
   link_test_target(test_cloudwatch_logs_common)
   link_test_target(test_pipelines)
-  link_test_target(test_file_manager)
+  link_test_target(test_log_batch)
 
 endif()
