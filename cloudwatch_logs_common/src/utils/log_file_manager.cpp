@@ -60,7 +60,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
   }
   
   long latestTime = std::get<0>(pq.top());
-  LogCollection log_data();
+  LogCollection log_data;
   std::list<FileManagement::DataToken> data_tokens;
   size_t actual_batch_size = 0;
   while(!pq.empty()){
