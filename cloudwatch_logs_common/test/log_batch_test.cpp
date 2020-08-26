@@ -64,7 +64,7 @@ public:
 protected:
 };
 
-class TestDataManagerStrategy : DataManagerStrategy, public Service {
+class TestDataManagerStrategy : DataManagerStrategy {
 public:
 
   virtual DataToken read(std::string &data) override{

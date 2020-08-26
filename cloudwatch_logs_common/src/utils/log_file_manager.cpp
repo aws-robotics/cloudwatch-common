@@ -42,9 +42,6 @@ FileObject<LogCollection> LogFileManager::readBatch(
      to be ordered chronologically in the file, but CloudWatch requires all
      puts in a single batch to be sorted chronologically */
 
-  auto log_comparison = [](const LogType & log1, const LogType & log2)
-    { return log1.GetTimestamp() < log2.GetTimestamp(); };
-
   FileManagement::DataToken data_token;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
 
@@ -63,7 +60,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
   }
   
   long latestTime = std::get<0>(pq.top());
-  std::set<LogType> log_set;
+  LogCollection log_data();
   std::list<FileManagement::DataToken> data_tokens;
   size_t actual_batch_size = 0;
   while(!pq.empty()){
@@ -75,13 +72,12 @@ FileObject<LogCollection> LogFileManager::readBatch(
       Aws::Utils::Json::JsonValue value(aws_line);
       Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
       actual_batch_size++;
-      log_set.insert(input_event);
+      log_data.push_front(input_event);
       data_tokens.push_back(new_data_token);
     }
     pq.pop();
   }
 
-  LogCollection log_data(log_set.begin(), log_set.end());
   FileObject<LogCollection> file_object;
   file_object.batch_data = log_data;
   file_object.batch_size = actual_batch_size;
