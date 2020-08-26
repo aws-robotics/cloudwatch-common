@@ -28,7 +28,7 @@
 #include <aws/core/utils/logging/AWSLogging.h>
 
 #include <file_management/file_upload/file_manager.h>
-#include <file_management/file_upload/file_manager_strategy.h>
+#include "file_management/file_upload/file_manager_strategy.h"
 
 #include <cloudwatch_logs_common/log_service.h>
 #include <cloudwatch_logs_common/log_batcher.h>
@@ -46,6 +46,7 @@
 #include <aws/core/utils/json/JsonSerializer.h>
 #include <aws/core/utils/logging/LogMacros.h>
 #include <cloudwatch_logs_common/definitions/definitions.h>
+#include "file_management/file_upload/file_manager_strategy.h"
 
 using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
@@ -181,7 +182,7 @@ public:
     };
 
     FileObject<LogCollection> readBatch(size_t batch_size) override {
-      FileManagement::DataToken data_token;
+      //FileManagement::DataToken data_token;
       //AWS_LOG_INFO(__func__, "Reading Logbatch");
       std::cout << "Reading Logbatch" << std::endl;
       
@@ -194,33 +195,32 @@ public:
           break;
         }
         //data_token = read(line);
-        data_token = 0;
         line = "test line #" + std::to_string(i);
         std::cout << "Current Line Is: " + line << std::endl;
         Aws::String aws_line(line.c_str());
         Aws::Utils::Json::JsonValue value(aws_line);
         Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
-        pq.push(std::make_tuple(input_event.GetTimestamp(), line, data_token));
+        pq.push(std::make_tuple(input_event.GetTimestamp(), line, 0));
         if(input_event.GetTimestamp() > latestTime){
           latestTime = input_event.GetTimestamp();
         }
       }
 
       std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
-      std::list<FileManagement::DataToken> data_tokens;
+      //std::list<FileManagement::DataToken> data_tokens;
       size_t actual_batch_size = 0;
       bool isOutdated = false;
       while(!pq.empty()){
         long curTime = std::get<0>(pq.top());
         std::string line = std::get<1>(pq.top());
-        FileManagement::DataToken new_data_token = std::get<2>(pq.top());
+        //FileManagement::DataToken new_data_token = std::get<2>(pq.top());
         if(latestTime - curTime < 86400000){
           Aws::String aws_line(line.c_str());
           Aws::Utils::Json::JsonValue value(aws_line);
           Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
           actual_batch_size++;
           log_set.insert(input_event);
-          data_tokens.push_back(new_data_token);
+          //data_tokens.push_back(new_data_token);
         }
         else{
           isOutdated = true;
@@ -236,7 +236,7 @@ public:
       FileObject<LogCollection> file_object;
       file_object.batch_data = log_data;
       file_object.batch_size = actual_batch_size;
-      file_object.data_tokens = data_tokens;
+      //file_object.data_tokens = data_tokens;
       return file_object;
     }
 
