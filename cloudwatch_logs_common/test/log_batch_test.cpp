@@ -181,14 +181,10 @@ public:
     };
 
     FileObject<LogCollection> readBatch(size_t batch_size) override {
-      std::cout << "Reading Logbatch" << std::endl;
-      
       std::priority_queue<std::tuple<long, std::string, uint64_t>> pq;
       long latestTime = 0;
-      std::list<std::string> lines;
       for (size_t i = 0; i < batch_size; ++i) {
-        std::string line;
-        line = "{\"timestamp\":0,\"message\":\"Testing batch file\"}" + std::to_string(i);
+        std::string line = "{\"timestamp\":" + std::to_string(i) + ",\"message\":\"Testing batch file\"}";
         Aws::String aws_line(line.c_str());
         Aws::Utils::Json::JsonValue value(aws_line);
         Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
@@ -201,7 +197,6 @@ public:
       std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
       //std::list<FileManagement::DataToken> data_tokens;
       size_t actual_batch_size = 0;
-      bool isOutdated = false;
       while(!pq.empty()){
         long curTime = std::get<0>(pq.top());
         std::string line = std::get<1>(pq.top());
