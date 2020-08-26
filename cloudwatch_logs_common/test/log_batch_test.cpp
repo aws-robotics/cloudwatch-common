@@ -164,6 +164,9 @@ TEST_F(LogBatchTest, Sanity) {
   ASSERT_TRUE(true);
 }
 
+auto log_comparison = [](const LogType & log1, const LogType & log2)
+  { return log1.GetTimestamp() < log2.GetTimestamp(); };
+  
 /**
  * Test File Manager
  */
@@ -293,7 +296,7 @@ TEST_F(LogBatchTest, file_manager_old_logs_mock) {
   log_data.push_back(input_event);
   fileManager->write(log_data);
   std::string line;
-  auto batch = fileManager->readBatch(1);
+  auto batch = fileManager->readBatch(2);
   ASSERT_EQ(2u, batch.batch_data.size());
 }
 
