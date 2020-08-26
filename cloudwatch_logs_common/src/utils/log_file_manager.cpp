@@ -73,7 +73,6 @@ FileObject<LogCollection> LogFileManager::readBatch(
   std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
   std::list<FileManagement::DataToken> data_tokens;
   size_t actual_batch_size = 0;
-  bool isOutdated = false;
   while(!pq.empty()){
     long curTime = std::get<0>(pq.top());
     std::string line = std::get<1>(pq.top());
@@ -86,16 +85,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
       log_set.insert(input_event);
       data_tokens.push_back(new_data_token);
     }
-    else{
-      isOutdated = true;
-    }
-        pq.pop();
-  }
-
-  //notify user some logs are out of date and won't be store.
-  if(isOutdated){
-    AWS_LOG_INFO(__func__, 
-      "Some log files were out of date (> 24 hours time difference).");
+    pq.pop();
   }
 
   LogCollection log_data(log_set.begin(), log_set.end());
