@@ -64,38 +64,14 @@ public:
 protected:
 };
 
-auto log_comparison = [](const LogType & log1, const LogType & log2)
-  { return log1.GetTimestamp() < log2.GetTimestamp(); };
-
-/**
- * Test File Manager
- */
-class TestLogFileManager : public FileManager<LogCollection>, public Waiter
-{
-public:
-
-    TestLogFileManager() : FileManager(nullptr) {
-      written_count.store(0);
-    }
-
-    void write(const LogCollection & data) override {
-      last_data_size = data.size();
-      written_count++;
-      this->notify();
-    };
-
-    std::atomic<int> written_count{};
-    std::atomic<size_t> last_data_size{};
-    std::condition_variable cv;
-    mutable std::mutex mtx;
-};
-
 class TestDataManagerStrategy : DataManagerStrategy, public Service {
 public:
-  DataManagerStrategy() = default;
-  ~DataManagerStrategy() override = default;
 
-  virtual DataToken read(std::string &data) = 0;
+  virtual DataToken read(std::string &data) override{
+    data = "test";
+    std::cout << "Testing: " + data << std ::endl;
+    return 0;
+  };
 };
 
 TEST_F(LogBatchTest, Sanity) {
@@ -106,7 +82,7 @@ TEST_F(LogBatchTest, Sanity) {
  * Expect one of them to be within 24 hour interval
  */
 TEST_F(LogBatchTest, batch_test_24hours) {
-  std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
+  std::shared_ptr<LogFileManager> fileManager = std::make_shared<LogFileManager>();
   auto batch = fileManager->readBatch(5);
   ASSERT_EQ(1u, batch.batch_size);
 }
