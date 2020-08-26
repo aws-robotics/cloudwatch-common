@@ -181,8 +181,6 @@ public:
     };
 
     FileObject<LogCollection> readBatch(size_t batch_size) override {
-      //FileManagement::DataToken data_token;
-      //AWS_LOG_INFO(__func__, "Reading Logbatch");
       std::cout << "Reading Logbatch" << std::endl;
       
       std::priority_queue<std::tuple<long, std::string, uint64_t>> pq;
@@ -190,14 +188,7 @@ public:
       std::list<std::string> lines;
       for (size_t i = 0; i < batch_size; ++i) {
         std::string line;
-        /*
-        if (!file_manager_strategy_->isDataAvailable()) {
-          break;
-        }
-        */
-        //data_token = read(line);
-        line = "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}" + std::to_string(i);
-        std::cout << "Current Line Is: " + line << std::endl;
+        line = "{\"timestamp\":0,\"message\":\"Testing batch file\"}" + std::to_string(i);
         Aws::String aws_line(line.c_str());
         Aws::Utils::Json::JsonValue value(aws_line);
         Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
@@ -214,33 +205,20 @@ public:
       while(!pq.empty()){
         long curTime = std::get<0>(pq.top());
         std::string line = std::get<1>(pq.top());
-        //FileManagement::DataToken new_data_token = std::get<2>(pq.top());
         if(latestTime - curTime < 86400000){
           Aws::String aws_line(line.c_str());
           Aws::Utils::Json::JsonValue value(aws_line);
           Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
           actual_batch_size++;
           log_set.insert(input_event);
-          //data_tokens.push_back(new_data_token);
-        }
-        else{
-          isOutdated = true;
         }
         pq.pop();
-      }
-
-      if(isOutdated){
-        AWS_LOG_INFO(__func__, 
-          "Some log files were out of date (> 24 hours time difference).");
       }
 
       LogCollection log_data(log_set.begin(), log_set.end());
       FileObject<LogCollection> file_object;
       file_object.batch_data = log_data;
       file_object.batch_size = actual_batch_size;
-      //file_object.data_tokens = data_tokens;
-      std::cout << "Actual batch size is: " + std::to_string(actual_batch_size) << std::endl;
-      std::cout << "file_object.batch_size: " + std::to_string(file_object.batch_size) << std::endl;
       return file_object;
     }
 
@@ -254,55 +232,10 @@ TEST_F(LogBatchTest, Sanity) {
   ASSERT_TRUE(true);
 }
 
-/**
- * Test that the upload complete with CW Failure goes to a file.
- */
-TEST_F(LogBatchTest, file_manager_write) {
-  std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
-  LogFileManager file_manager(file_manager_strategy);
-  LogCollection log_data;
-  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Hello my name is foo");
-  log_data.push_back(input_event);
-  file_manager.write(log_data);
-  std::string line;
-  //file_manager_strategy->read(line);
-  //EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
-}
-
-/**
- * Test that logs in a batch separated by < 24 hours produce no error message
- */
-TEST_F(LogBatchTest, file_manager_old_logs) {
-  std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
-  LogFileManager file_manager(file_manager_strategy);
-  LogCollection log_data;
-  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Time Elapsed: 0");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(1);
-  input_event.SetMessage("Time Elapsed: 1");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(86400000);
-  input_event.SetMessage("Time Elapsed: 86400000");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(86400001);
-  input_event.SetMessage("Time Elapsed: 86400001");
-  log_data.push_back(input_event);
-  file_manager.write(log_data);
-  std::string line;
-  auto batch = file_manager.readBatch(3);
-  std::cout << "file_object.batch_size: " + std::to_string(batch.batch_size) << std::endl;
-  ASSERT_EQ(2u, batch.batch_size);
-}
-
 TEST_F(LogBatchTest, file_manager_old_logs_mock) {
   std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
   auto batch = fileManager->readBatch(2);
-  std::cout << "file_object.batch_size: " + std::to_string(batch.batch_size) << std::endl;
-  //ASSERT_EQ(2u, batch.batch_data.size());
+  ASSERT_EQ(2u, batch.batch_size);
 }
 
 int main(int argc, char** argv)
