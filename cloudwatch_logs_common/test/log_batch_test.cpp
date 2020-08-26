@@ -186,10 +186,10 @@ public:
       for (size_t i = 0; i < batch_size; ++i) {
         std::string line;
         if(i == batch_size-1){
-            line =  = "{\"timestamp\":" + std::to_string(i + 86400000) + ",\"message\":\"Last log in batch file\"}";
+            line = "{\"timestamp\":" + std::to_string(i + 86400000) + ",\"message\":\"Last log in batch file\"}";
         }
         else{
-            line =  = "{\"timestamp\":" + std::to_string(i) + ",\"message\":\"Testing batch file\"}";
+            line = "{\"timestamp\":" + std::to_string(i) + ",\"message\":\"Testing batch file\"}";
         }
         Aws::String aws_line(line.c_str());
         Aws::Utils::Json::JsonValue value(aws_line);
