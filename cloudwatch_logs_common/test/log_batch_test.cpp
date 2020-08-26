@@ -37,8 +37,8 @@
 
 #include <dataflow_lite/utils/waiter.h>
 
-#include <memory>
 #include <chrono>
+#include <memory>
 #include <queue>
 #include <tuple>
 
@@ -51,112 +51,19 @@ using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::FileManagement;
 
-/**
- * Test the publisher interface while ignoring all of the CloudWatch specific infrastructure.
- */
-class TestPublisher : public Publisher<std::list<Aws::CloudWatchLogs::Model::InputLogEvent>>, public Waiter
-{
-public:
-  TestPublisher() : Publisher() {
-    force_failure = false;
-    force_invalid_data_failure = false;
-    last_upload_status = Aws::DataFlow::UploadStatus::UNKNOWN;
-  };
-  ~TestPublisher() override = default;
-
-  bool start() override {
-    return Publisher::start();
-  }
-
-  // notify just in case anyone is waiting
-  bool shutdown() override {
-    bool is_shutdown = Publisher::shutdown();
-    this->notify(); //don't leave anyone blocking
-    return is_shutdown;
-  };
-
-  void setForceFailure(bool nv) {
-    force_failure = nv;
-  }
-
-  void setForceInvalidDataFailure(bool nv) {
-    force_invalid_data_failure = nv;
-  }
-
-  Aws::DataFlow::UploadStatus getLastUploadStatus() {
-    return last_upload_status;
-  }
-
-protected:
-
-  // override so we can notify when internal state changes, as attemptPublish sets state
-  Aws::DataFlow::UploadStatus attemptPublish(std::list<Aws::CloudWatchLogs::Model::InputLogEvent> &data) override {
-    last_upload_status = Publisher::attemptPublish(data);
-    {
-      this->notify();
-    }
-    return last_upload_status;
-  }
-
-  Aws::DataFlow::UploadStatus publishData(std::list<Aws::CloudWatchLogs::Model::InputLogEvent>&) override {
-
-    if (force_failure) {
-      return Aws::DataFlow::UploadStatus::FAIL;
-
-    } else if (force_invalid_data_failure) {
-      return Aws::DataFlow::UploadStatus::INVALID_DATA;
-
-    } else {
-      return Aws::DataFlow::UploadStatus::SUCCESS;
-    }
-  }
-
-  bool force_failure;
-  bool force_invalid_data_failure;
-  Aws::DataFlow::UploadStatus last_upload_status;
-};
+#define 24HOURS 86400000
 
 class LogBatchTest : public ::testing::Test {
 public:
   void SetUp() override
   {
-      test_publisher = std::make_shared<TestPublisher>();
-      batcher = std::make_shared<LogBatcher>();
-
-      //  log service owns the streamer, batcher, and publisher
-      cw_service = std::make_shared<LogService>(test_publisher, batcher);
-
-      stream_data_queue = std::make_shared<TaskObservedQueue<LogCollection>>();
-      queue_monitor = std::make_shared<Aws::DataFlow::QueueMonitor<TaskPtr<LogCollection>>>();
-
-      // create pipeline
-      batcher->setSink(stream_data_queue);
-      queue_monitor->addSource(stream_data_queue, Aws::DataFlow::PriorityOptions{Aws::DataFlow::HIGHEST_PRIORITY});
-      cw_service->setSource(queue_monitor);
-
-      cw_service->start(); //this starts the worker thread
-      EXPECT_EQ(Aws::DataFlow::UploadStatus::UNKNOWN, test_publisher->getLastUploadStatus());
   }
 
   void TearDown() override
   {
-      if (cw_service) {
-        cw_service->shutdown();
-        cw_service->join();
-      }
-    //std::experimental::filesystem::path storage_path(options.storage_directory);
-    //std::experimental::filesystem::remove_all(storage_path);
   }
 
 protected:
-  FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024};
-
-  std::shared_ptr<TestPublisher> test_publisher;
-  std::shared_ptr<LogBatcher> batcher;
-  std::shared_ptr<LogService> cw_service;
-
-  std::shared_ptr<TaskObservedQueue<LogCollection>> stream_data_queue;
-  std::shared_ptr<Aws::DataFlow::QueueMonitor<TaskPtr<LogCollection>>>queue_monitor;
 };
 
 auto log_comparison = [](const LogType & log1, const LogType & log2)
@@ -205,7 +112,7 @@ public:
       while(!pq.empty()){
         long curTime = std::get<0>(pq.top());
         std::string line = std::get<1>(pq.top());
-        if(latestTime - curTime < 86400000){
+        if(latestTime - curTime < 24HOURS){
           Aws::String aws_line(line.c_str());
           Aws::Utils::Json::JsonValue value(aws_line);
           Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);

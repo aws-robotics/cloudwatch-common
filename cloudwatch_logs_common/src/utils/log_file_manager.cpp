@@ -15,13 +15,12 @@
 
 
 
-#include <memory>
-#include <iostream>
-#include <fstream>
 #include <chrono>
+#include <fstream>
+#include <iostream>
+#include <memory>
 #include <queue>
 #include <tuple>
-#include <utility>      // std::pair, std::make_pair
 
 #include "cloudwatch_logs_common/utils/log_file_manager.h"
 #include "file_management/file_upload/file_manager_strategy.h"
@@ -29,12 +28,12 @@
 #include <aws/core/utils/logging/LogMacros.h>
 #include <cloudwatch_logs_common/definitions/definitions.h>
 
+#define 24HOURS 86400000
+
 namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
-auto log_comparison = [](const LogType & log1, const LogType & log2)
-  { return log1.GetTimestamp() < log2.GetTimestamp(); };
 
 FileObject<LogCollection> LogFileManager::readBatch(
   size_t batch_size)
@@ -43,11 +42,14 @@ FileObject<LogCollection> LogFileManager::readBatch(
      to be ordered chronologically in the file, but CloudWatch requires all
      puts in a single batch to be sorted chronologically */
 
+  auto log_comparison = [](const LogType & log1, const LogType & log2)
+    { return log1.GetTimestamp() < log2.GetTimestamp(); };
+
   FileManagement::DataToken data_token;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
 
+  //long = timestamp, string = log entry, uint64_t = data token
   std::priority_queue<std::tuple<long, std::string, uint64_t>> pq;
-  long latestTime = 0;
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line;
     if (!file_manager_strategy_->isDataAvailable()) {
@@ -58,19 +60,17 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Aws::Utils::Json::JsonValue value(aws_line);
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
     pq.push(std::make_tuple(input_event.GetTimestamp(), line, data_token));
-    if(input_event.GetTimestamp() > latestTime){
-      latestTime = input_event.GetTimestamp();
-    }
   }
   
-  std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
+  long latestTime = std::get<0>(pq.top());
+  std::set<LogType> log_set;
   std::list<FileManagement::DataToken> data_tokens;
   size_t actual_batch_size = 0;
   while(!pq.empty()){
     long curTime = std::get<0>(pq.top());
     std::string line = std::get<1>(pq.top());
     FileManagement::DataToken new_data_token = std::get<2>(pq.top());
-    if(latestTime - curTime < 86400000){
+    if(latestTime - curTime < 24HOURS){
       Aws::String aws_line(line.c_str());
       Aws::Utils::Json::JsonValue value(aws_line);
       Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
@@ -86,7 +86,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
   file_object.batch_data = log_data;
   file_object.batch_size = actual_batch_size;
   file_object.data_tokens = data_tokens;
-  
+
   return file_object;
 }
 
