@@ -180,11 +180,18 @@ public:
       this->notify();
     };
 
+    //test that the readBatch function works with 24 hour interval
     FileObject<LogCollection> readBatch(size_t batch_size) override {
       std::priority_queue<std::tuple<long, std::string, uint64_t>> pq;
       long latestTime = 0;
       for (size_t i = 0; i < batch_size; ++i) {
-        std::string line = "{\"timestamp\":" + std::to_string(i) + ",\"message\":\"Testing batch file\"}";
+        std::string line;
+        if(i == batch_size-1){
+            line =  = "{\"timestamp\":" + std::to_string(i + 86400000) + ",\"message\":\"Last log in batch file\"}";
+        }
+        else{
+            line =  = "{\"timestamp\":" + std::to_string(i) + ",\"message\":\"Testing batch file\"}";
+        }
         Aws::String aws_line(line.c_str());
         Aws::Utils::Json::JsonValue value(aws_line);
         Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
@@ -195,7 +202,6 @@ public:
       }
 
       std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
-      //std::list<FileManagement::DataToken> data_tokens;
       size_t actual_batch_size = 0;
       while(!pq.empty()){
         long curTime = std::get<0>(pq.top());
@@ -227,10 +233,10 @@ TEST_F(LogBatchTest, Sanity) {
   ASSERT_TRUE(true);
 }
 
-TEST_F(LogBatchTest, file_manager_old_logs_mock) {
+TEST_F(LogBatchTest, batch_test_24hours) {
   std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
-  auto batch = fileManager->readBatch(2);
-  ASSERT_EQ(2u, batch.batch_size);
+  auto batch = fileManager->readBatch(5);
+  ASSERT_EQ(1u, batch.batch_size);
 }
 
 int main(int argc, char** argv)
