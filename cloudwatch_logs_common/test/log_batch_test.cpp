@@ -41,7 +41,6 @@
 #include <chrono>
 #include <queue>
 #include <tuple>
-#include <utility>      // std::pair, std::make_pair
 
 #include <aws/core/utils/json/JsonSerializer.h>
 #include <aws/core/utils/logging/LogMacros.h>
