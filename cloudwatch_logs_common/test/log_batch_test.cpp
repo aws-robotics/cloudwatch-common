@@ -51,8 +51,6 @@ using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::FileManagement;
 
-#define 24HOURS 86400000
-
 class LogBatchTest : public ::testing::Test {
 public:
   void SetUp() override
@@ -86,59 +84,27 @@ public:
       this->notify();
     };
 
-    //test that the readBatch function works with 24 hour interval
-    FileObject<LogCollection> readBatch(size_t batch_size) override {
-      std::priority_queue<std::tuple<long, std::string, uint64_t>> pq;
-      long latestTime = 0;
-      for (size_t i = 0; i < batch_size; ++i) {
-        std::string line;
-        if(i == batch_size-1){
-            line = "{\"timestamp\":" + std::to_string(i + 86400000) + ",\"message\":\"Last log in batch file\"}";
-        }
-        else{
-            line = "{\"timestamp\":" + std::to_string(i) + ",\"message\":\"Testing batch file\"}";
-        }
-        Aws::String aws_line(line.c_str());
-        Aws::Utils::Json::JsonValue value(aws_line);
-        Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
-        pq.push(std::make_tuple(input_event.GetTimestamp(), line, 0));
-        if(input_event.GetTimestamp() > latestTime){
-          latestTime = input_event.GetTimestamp();
-        }
-      }
-
-      std::set<LogType, decltype(log_comparison)> log_set(log_comparison);
-      size_t actual_batch_size = 0;
-      while(!pq.empty()){
-        long curTime = std::get<0>(pq.top());
-        std::string line = std::get<1>(pq.top());
-        if(latestTime - curTime < 24HOURS){
-          Aws::String aws_line(line.c_str());
-          Aws::Utils::Json::JsonValue value(aws_line);
-          Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
-          actual_batch_size++;
-          log_set.insert(input_event);
-        }
-        pq.pop();
-      }
-
-      LogCollection log_data(log_set.begin(), log_set.end());
-      FileObject<LogCollection> file_object;
-      file_object.batch_data = log_data;
-      file_object.batch_size = actual_batch_size;
-      return file_object;
-    }
-
     std::atomic<int> written_count{};
     std::atomic<size_t> last_data_size{};
     std::condition_variable cv;
     mutable std::mutex mtx;
 };
 
+class TestDataManagerStrategy : DataManagerStrategy, public Service {
+public:
+  DataManagerStrategy() = default;
+  ~DataManagerStrategy() override = default;
+
+  virtual DataToken read(std::string &data) = 0;
+};
+
 TEST_F(LogBatchTest, Sanity) {
   ASSERT_TRUE(true);
 }
-
+/**
+ * Read 5 logs in batch
+ * Expect one of them to be within 24 hour interval
+ */
 TEST_F(LogBatchTest, batch_test_24hours) {
   std::shared_ptr<TestLogFileManager> fileManager = std::make_shared<TestLogFileManager>();
   auto batch = fileManager->readBatch(5);
