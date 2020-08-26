@@ -260,7 +260,7 @@ TEST_F(LogBatchTest, Sanity) {
 TEST_F(LogBatchTest, file_manager_write) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   LogFileManager file_manager(file_manager_strategy);
-  LogEventCollection log_data;
+  LogCollection log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
   input_event.SetTimestamp(0);
   input_event.SetMessage("Hello my name is foo");
@@ -274,20 +274,6 @@ TEST_F(LogBatchTest, file_manager_write) {
 /**
  * Test that logs in a batch separated by < 24 hours produce no error message
  */
-TEST_F(LogBatchTest, file_manager_write) {
-  std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
-  LogFileManager file_manager(file_manager_strategy);
-  LogEventCollection log_data;
-  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Hello my name is foo");
-  log_data.push_back(input_event);
-  file_manager.write(log_data);
-  std::string line;
-  //file_manager_strategy->read(line);
-  //EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
-}
-
 TEST_F(LogBatchTest, file_manager_old_logs) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   LogFileManager file_manager(file_manager_strategy);
