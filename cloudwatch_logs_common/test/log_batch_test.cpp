@@ -62,20 +62,25 @@ protected:
   FileManagerStrategyOptions options_;
 };
 
-class LogBatchTest{
-protected:
+class LogBatchTest : public ::testing::Test{
+public:
   void SetUp() override {
-    //use test_strategy to mock read/write functions from data_manager_strategy
-    std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
-    LogFileManager file_manager(test_strategy);
-    LogCollection log_data;
-    Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+    test_strategy = std::make_shared<TestStrategy>();
+    file_manager = new LogFileManager(test_strategy);
   }
-  
+
   void TearDown() override {
-    
+    log_data.clear();
+    delete file_manager;
   }
+
+  //use test_strategy to mock read/write functions from data_manager_strategy
+  std::shared_ptr<TestStrategy> test_strategy;
+  LogFileManager *file_manager;
+  LogCollection log_data;
+  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
 };
+
 
 /**
  * Test that the upload complete with CW Failure goes to a file.
@@ -100,10 +105,10 @@ TEST_F(LogBatchTest, test_readBatch_3_of_6_pass) {
   input_event.SetTimestamp(ONE_DAY_IN_SEC);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
-  file_manager.write(log_data);
+  file_manager->write(log_data);
 
   //read the batch
-  auto batch = file_manager.readBatch(test_strategy->logs.size());
+  auto batch = file_manager->readBatch(test_strategy->logs.size());
 
   //only the latest logs should be included in batch
   ASSERT_EQ(3u, batch.batch_size);
@@ -138,10 +143,10 @@ TEST_F(LogBatchTest, test_readBatch_6_of_6_pass) {
   input_event.SetTimestamp(ONE_DAY_IN_SEC-1);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
-  file_manager.write(log_data);
+  file_manager->write(log_data);
 
   //read the batch
-  auto batch = file_manager.readBatch(test_strategy->logs.size());
+  auto batch = file_manager->readBatch(test_strategy->logs.size());
 
   //only the latest logs should be included in batch
   ASSERT_EQ(6u, batch.batch_size);
@@ -182,10 +187,10 @@ TEST_F(LogBatchTest, test_readBatch_1_of_6_pass) {
   input_event.SetTimestamp(3);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
-  file_manager.write(log_data);
+  file_manager->write(log_data);
 
   //read the batch
-  auto batch = file_manager.readBatch(test_strategy->logs.size());
+  auto batch = file_manager->readBatch(test_strategy->logs.size());
 
   //only the latest logs should be included in batch
   ASSERT_EQ(1u, batch.batch_size);

@@ -89,9 +89,8 @@ FileObject<LogCollection> LogFileManager::readBatch(
     }
     else{
       AWS_LOG_INFO(__func__, "Some logs were not batched since the time"
-        + " difference was > 24 hours. Will try again in a separate batch./n"
-        + "Logs read: " + std::to_string(batch_size)
-        + ", Logs batched: " + std::to_string(log_data.size())
+        " difference was > 24 hours. Will try again in a separate batch./n"
+        "Logs read: %d, Logs batched: %d", batch_size, log_data.size()
         );
       break;
     }
