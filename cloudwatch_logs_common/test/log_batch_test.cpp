@@ -76,12 +76,12 @@ public:
   DataToken read(std::string &data) override{
     std::cout << "Entering fake read function." << std::endl;
           data = "test";
-
     timestamp += ONE_DAY_IN_SEC/2;
-
+    std::cout << "Current time is: " + std::to_string(timestamp) << std::endl;
+    data = "{\"timestamp\":" + std::to_string(timestamp) + ",\"message\":\"Hello my name is foo\"}";
     return timestamp;
   }
-  
+
   void write(const std::string &data){
     std::cout << "Entering fake write function." << std::endl;
           if(!data.empty())
@@ -107,28 +107,10 @@ protected:
   FileManagerStrategyOptions options_;
 };
 
-
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
 TEST_F(LogBatchTest, file_manager_write) {
-  std::shared_ptr<TestFileManagerStrategy> file_manager_strategy = std::make_shared<TestFileManagerStrategy>();
-  LogFileManager file_manager(file_manager_strategy);
-  LogCollection log_data;
-  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Hello my name is foo");
-  log_data.push_back(input_event);
-  file_manager.write(log_data);
-  std::string line;
-  file_manager_strategy->read(line);
-  EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
-}
-
-/**
- * Test that the upload complete with CW Failure goes to a file.
- */
-TEST_F(LogBatchTest, 24_hour_interval) {
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
   //LogFileManager file_manager(file_manager_strategy);
@@ -141,6 +123,8 @@ TEST_F(LogBatchTest, 24_hour_interval) {
   file_manager.write(log_data);
   std::string line;
   test_strategy->read(line);
+  auto batch = file_manager.readBatch(5);
+ ASSERT_EQ(2u, batch.batch_size);
   //file_manager_strategy->read(line);
   //EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
 }

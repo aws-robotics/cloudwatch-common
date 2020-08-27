@@ -28,7 +28,7 @@
 #include <aws/core/utils/logging/LogMacros.h>
 #include <cloudwatch_logs_common/definitions/definitions.h>
 
-#define HOURS24 86400000
+const long ONE_DAY_IN_SEC = 86400000;
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -67,7 +67,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
     long curTime = std::get<0>(pq.top());
     std::string line = std::get<1>(pq.top());
     FileManagement::DataToken new_data_token = std::get<2>(pq.top());
-    if(latestTime - curTime < HOURS24){
+    if(latestTime - curTime < ONE_DAY_IN_SEC){
       Aws::String aws_line(line.c_str());
       Aws::Utils::Json::JsonValue value(aws_line);
       Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
