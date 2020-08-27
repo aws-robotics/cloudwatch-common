@@ -95,12 +95,14 @@ protected:
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
-TEST(3PASS) {
+TEST(log_batch_test, 3PASS) {
+  //use test_strategy to mock read/write functions from data_manager_strategy
   std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
   LogFileManager file_manager(test_strategy);
-
   LogCollection log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+
+  //add test data to logs
   input_event.SetTimestamp(0);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
@@ -121,15 +123,30 @@ TEST(3PASS) {
   log_data.push_back(input_event);
   file_manager.write(log_data);
 
+  //read the batch
   auto batch = file_manager.readBatch(test_strategy->logs.size());
+
+  //only the latest logs should be included in batch
   ASSERT_EQ(3u, batch.batch_size);
+
+  //iterate through the logs in batch
+  auto it = batch.batch_data.begin();
+
+  //validate that they are the latest timestamps
+  ASSERT_EQ(ONE_DAY_IN_SEC, (*it).GetTimestamp());
+  it++;
+  ASSERT_EQ(ONE_DAY_IN_SEC+1, (*it).GetTimestamp());
+  it++;
+  ASSERT_EQ(ONE_DAY_IN_SEC+2, (*it).GetTimestamp());
 }
-TEST(ALLPASS) {
+TEST(log_batch_test, ALLPASS) {
+  //use test_strategy to mock read/write functions from data_manager_strategy
   std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
   LogFileManager file_manager(test_strategy);
-
   LogCollection log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+
+  //add test data to logs
   input_event.SetTimestamp(0);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
@@ -150,15 +167,36 @@ TEST(ALLPASS) {
   log_data.push_back(input_event);
   file_manager.write(log_data);
 
+  //read the batch
   auto batch = file_manager.readBatch(test_strategy->logs.size());
+
+  //only the latest logs should be included in batch
   ASSERT_EQ(6u, batch.batch_size);
+
+  //iterate through the logs in batch
+  auto it = batch.batch_data.begin();
+
+  //validate that they are the latest timestamps
+  ASSERT_EQ(0, (*it).GetTimestamp());
+  it++;
+  ASSERT_EQ(1, (*it).GetTimestamp());
+  it++;
+  ASSERT_EQ(2, (*it).GetTimestamp());
+  it++;
+  ASSERT_EQ(3, (*it).GetTimestamp());
+  it++;
+  ASSERT_EQ(4, (*it).GetTimestamp());
+  it++;
+  ASSERT_EQ(ONE_DAY_IN_SEC-1, (*it).GetTimestamp());
 }
-TEST(ONEPASS) {
+TEST(log_batch_test, ONEPASS) {
+  //use test_strategy to mock read/write functions from data_manager_strategy
   std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
   LogFileManager file_manager(test_strategy);
-
   LogCollection log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+
+  //add test data to logs
   input_event.SetTimestamp(0);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
@@ -179,8 +217,17 @@ TEST(ONEPASS) {
   log_data.push_back(input_event);
   file_manager.write(log_data);
 
+  //read the batch
   auto batch = file_manager.readBatch(test_strategy->logs.size());
+
+  //only the latest logs should be included in batch
   ASSERT_EQ(1u, batch.batch_size);
+
+  //iterate through the logs in batch
+  auto it = batch.batch_data.begin();
+
+  //validate that they are the latest timestamps
+  ASSERT_EQ(ONE_DAY_IN_SEC+5, (*it).GetTimestamp());
 }
 
 int main(int argc, char** argv)

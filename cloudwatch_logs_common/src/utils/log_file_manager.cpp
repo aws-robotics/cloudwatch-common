@@ -97,8 +97,8 @@ FileObject<LogCollection> LogFileManager::readBatch(
   }
 
   if(actual_batch_size != batch_size){
-    AWS_LOG_INFO(__func__, "Some logs were not read in this batch since the 
-      time difference was > 24 hours. Will try again in a separate batch.");
+    AWS_LOG_INFO(__func__, "Some logs were not read in this batch since the "
+      "time difference was > 24 hours. Will try again in a separate batch.");
   }
 
 
