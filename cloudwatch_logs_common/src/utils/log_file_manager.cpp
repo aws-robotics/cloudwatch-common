@@ -33,26 +33,24 @@ namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
+/*  
+  AWSClient will return 'InvalidParameterException' error when the log events in a
+  single batch span more than 24 hours. Therefore the readBatch function will only
+  return as many logs as can fit within the 24 hour span and the actual number of 
+  logs batched may end up being less than the original batch_size.
 
+  We must sort the log data chronologically because it is not guaranteed
+  to be ordered chronologically in the file, but CloudWatch requires all
+  puts in a single batch to be sorted chronologically
+*/
 FileObject<LogCollection> LogFileManager::readBatch(
   size_t batch_size)
 {
-  /* We must sort the log data chronologically because it is not guaranteed
-     to be ordered chronologically in the file, but CloudWatch requires all
-     puts in a single batch to be sorted chronologically */
-
   FileManagement::DataToken data_token;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
 
-  /*  
-    Read each line from the batch
-    Store {timestamp, log, data token} in priority queue
-    Priority queue is sorted by timestamp
-  */
-
   using Timestamp = long;
-  //Timestamp = log timestamp, string = log entry, uint64_t = data token
-  std::priority_queue<std::tuple<Timestamp, std::string, uint64_t>> pq;
+  std::priority_queue<std::tuple<Timestamp, std::string, FileManagement::DataToken>> pq;
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line;
     if (!file_manager_strategy_->isDataAvailable()) {
@@ -64,14 +62,6 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
     pq.push(std::make_tuple(input_event.GetTimestamp(), line, data_token));
   }
-  
-  /*  
-    Set latest timestamp to top of pq
-    Go through the entire pq
-    Only store logs with < 24 hours diff from latest time
-    Count these logs as actual_batch_size
-    The older logs will be uploaded on the next readBatch command
-  */
 
   Timestamp latestTime = std::get<0>(pq.top());
   LogCollection log_data;

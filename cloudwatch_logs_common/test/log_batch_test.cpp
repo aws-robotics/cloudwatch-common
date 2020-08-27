@@ -30,8 +30,8 @@ public:
 
   DataToken read(std::string &data) override{
     if(!logs.empty()){
-        data = logs.front();
-        logs.pop_front();
+        data = logs.back();
+        logs.pop_back();
     }
 
     data_token++;
@@ -50,7 +50,7 @@ public:
     return;
   }
 
-  std::list<std::string> logs;
+  std::vector<std::string> logs;
 
 protected:
 
@@ -66,140 +66,68 @@ class LogBatchTest : public ::testing::Test{
 public:
   void SetUp() override {
     test_strategy = std::make_shared<TestStrategy>();
-    file_manager = new LogFileManager(test_strategy);
+    file_manager = std::make_unique<LogFileManager>(test_strategy);
   }
 
   void TearDown() override {
     log_data.clear();
-    delete file_manager;
+    timestamps.clear();
+  }
+
+  void createLogs(const std::vector<long> & timestamps){
+    for (auto ts : timestamps){
+        input_event.SetTimestamp(ts);
+        input_event.SetMessage("Testing readBatch");
+        log_data.push_back(input_event);
+    }
+  }
+
+  void validateBatch(const std::vector<long> & timestamps){
+    auto it = batch.batch_data.begin();
+    for (auto ts : timestamps){
+        ASSERT_EQ(ts, (*it).GetTimestamp());
+        it++;
+    }
   }
 
   //use test_strategy to mock read/write functions from data_manager_strategy
   std::shared_ptr<TestStrategy> test_strategy;
-  LogFileManager *file_manager;
+  std::unique_ptr<LogFileManager> file_manager;
   LogCollection log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+  std::vector<long> timestamps;
+  FileObject<LogCollection> batch;
 };
-
 
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
 TEST_F(LogBatchTest, test_readBatch_3_of_6_pass) {
-  //add test data to logs
-  input_event.SetTimestamp(ONE_DAY_IN_SEC+1);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(2);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(ONE_DAY_IN_SEC+2);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(1);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(ONE_DAY_IN_SEC);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
+  timestamps = {ONE_DAY_IN_SEC+1, 2, ONE_DAY_IN_SEC+2, 1, 0, ONE_DAY_IN_SEC};
+  createLogs(timestamps);
   file_manager->write(log_data);
-
-  //read the batch
-  auto batch = file_manager->readBatch(test_strategy->logs.size());
-
-  //only the latest logs should be included in batch
+  batch = file_manager->readBatch(test_strategy->logs.size());
   ASSERT_EQ(3u, batch.batch_size);
-
-  //iterate through the logs in batch
-  auto it = batch.batch_data.begin();
-
-  //validate that they are the latest timestamps
-  ASSERT_EQ(ONE_DAY_IN_SEC, (*it).GetTimestamp());
-  it++;
-  ASSERT_EQ(ONE_DAY_IN_SEC+1, (*it).GetTimestamp());
-  it++;
-  ASSERT_EQ(ONE_DAY_IN_SEC+2, (*it).GetTimestamp());
+  timestamps = {ONE_DAY_IN_SEC, ONE_DAY_IN_SEC+1, ONE_DAY_IN_SEC+2};
+  validateBatch(timestamps);
 }
 TEST_F(LogBatchTest, test_readBatch_6_of_6_pass) {
-  //add test data to logs
-  input_event.SetTimestamp(1);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(3);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(4);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(2);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(ONE_DAY_IN_SEC-1);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
+  timestamps = {1, 3, 0, ONE_DAY_IN_SEC-1, 4, 2};
+  createLogs(timestamps);
   file_manager->write(log_data);
-
-  //read the batch
-  auto batch = file_manager->readBatch(test_strategy->logs.size());
-
-  //only the latest logs should be included in batch
+  batch = file_manager->readBatch(test_strategy->logs.size());
   ASSERT_EQ(6u, batch.batch_size);
-
-  //iterate through the logs in batch
-  auto it = batch.batch_data.begin();
-
-  //validate that they are the latest timestamps
-  ASSERT_EQ(0, (*it).GetTimestamp());
-  it++;
-  ASSERT_EQ(1, (*it).GetTimestamp());
-  it++;
-  ASSERT_EQ(2, (*it).GetTimestamp());
-  it++;
-  ASSERT_EQ(3, (*it).GetTimestamp());
-  it++;
-  ASSERT_EQ(4, (*it).GetTimestamp());
-  it++;
-  ASSERT_EQ(ONE_DAY_IN_SEC-1, (*it).GetTimestamp());
+  timestamps = {0, 1, 2, 3, 4, ONE_DAY_IN_SEC-1};
+  validateBatch(timestamps);
 }
 TEST_F(LogBatchTest, test_readBatch_1_of_6_pass) {
-  //add test data to logs
-  input_event.SetTimestamp(1);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(ONE_DAY_IN_SEC+5);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(4);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(2);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(3);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
+  timestamps = {1, ONE_DAY_IN_SEC+5, 4, 2, 0, 3};
+  createLogs(timestamps);
   file_manager->write(log_data);
-
-  //read the batch
-  auto batch = file_manager->readBatch(test_strategy->logs.size());
-
-  //only the latest logs should be included in batch
+  batch = file_manager->readBatch(test_strategy->logs.size());
   ASSERT_EQ(1u, batch.batch_size);
-
-  //iterate through the logs in batch
-  auto it = batch.batch_data.begin();
-
-  //validate that they are the latest timestamps
-  ASSERT_EQ(ONE_DAY_IN_SEC+5, (*it).GetTimestamp());
+  timestamps = {ONE_DAY_IN_SEC+5};
+  validateBatch(timestamps);
 }
 
 int main(int argc, char** argv)
