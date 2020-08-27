@@ -50,7 +50,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Priority queue is sorted by timestamp
   */
 
-  typedef long Timestamp;
+  using Timestamp = long;
   //Timestamp = log timestamp, string = log entry, uint64_t = data token
   std::priority_queue<std::tuple<Timestamp, std::string, uint64_t>> pq;
   for (size_t i = 0; i < batch_size; ++i) {
@@ -76,7 +76,6 @@ FileObject<LogCollection> LogFileManager::readBatch(
   Timestamp latestTime = std::get<0>(pq.top());
   LogCollection log_data;
   std::list<FileManagement::DataToken> data_tokens;
-  size_t actual_batch_size = 0;
   while(!pq.empty()){
     Timestamp curTime = std::get<0>(pq.top());
     std::string line = std::get<1>(pq.top());
@@ -85,25 +84,23 @@ FileObject<LogCollection> LogFileManager::readBatch(
       Aws::String aws_line(line.c_str());
       Aws::Utils::Json::JsonValue value(aws_line);
       Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
-      actual_batch_size++;
       log_data.push_front(input_event);
       data_tokens.push_back(new_data_token);
     }
     else{
+      AWS_LOG_INFO(__func__, "Some logs were not batched since the time"
+        + " difference was > 24 hours. Will try again in a separate batch./n"
+        + "Logs read: " + std::to_string(batch_size)
+        + ", Logs batched: " + std::to_string(log_data.size())
+        );
       break;
     }
     pq.pop();
   }
 
-  if(actual_batch_size != batch_size){
-    AWS_LOG_INFO(__func__, "Some logs were not read in this batch since the "
-      "time difference was > 24 hours. Will try again in a separate batch.");
-  }
-
-
   FileObject<LogCollection> file_object;
   file_object.batch_data = log_data;
-  file_object.batch_size = actual_batch_size;
+  file_object.batch_size = log_data.size();
   file_object.data_tokens = data_tokens;
   return file_object;
 }

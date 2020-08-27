@@ -62,21 +62,27 @@ protected:
   FileManagerStrategyOptions options_;
 };
 
+class LogBatchTest{
+protected:
+  void SetUp() override {
+    //use test_strategy to mock read/write functions from data_manager_strategy
+    std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
+    LogFileManager file_manager(test_strategy);
+    LogCollection log_data;
+    Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+  }
+  
+  void TearDown() override {
+    
+  }
+};
+
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
-TEST(log_batch_test, 3PASS) {
-  //use test_strategy to mock read/write functions from data_manager_strategy
-  std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
-  LogFileManager file_manager(test_strategy);
-  LogCollection log_data;
-  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
-
+TEST_F(LogBatchTest, test_readBatch_3_of_6_pass) {
   //add test data to logs
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(1);
+  input_event.SetTimestamp(ONE_DAY_IN_SEC+1);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
   input_event.SetTimestamp(2);
@@ -85,7 +91,10 @@ TEST(log_batch_test, 3PASS) {
   input_event.SetTimestamp(ONE_DAY_IN_SEC+2);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
-  input_event.SetTimestamp(ONE_DAY_IN_SEC+1);
+  input_event.SetTimestamp(1);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(0);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
   input_event.SetTimestamp(ONE_DAY_IN_SEC);
@@ -109,27 +118,21 @@ TEST(log_batch_test, 3PASS) {
   it++;
   ASSERT_EQ(ONE_DAY_IN_SEC+2, (*it).GetTimestamp());
 }
-TEST(log_batch_test, ALLPASS) {
-  //use test_strategy to mock read/write functions from data_manager_strategy
-  std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
-  LogFileManager file_manager(test_strategy);
-  LogCollection log_data;
-  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
-
+TEST_F(LogBatchTest, test_readBatch_6_of_6_pass) {
   //add test data to logs
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
   input_event.SetTimestamp(1);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
-  input_event.SetTimestamp(2);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
   input_event.SetTimestamp(3);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
+  input_event.SetTimestamp(0);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
   input_event.SetTimestamp(4);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(2);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
   input_event.SetTimestamp(ONE_DAY_IN_SEC-1);
@@ -159,30 +162,24 @@ TEST(log_batch_test, ALLPASS) {
   it++;
   ASSERT_EQ(ONE_DAY_IN_SEC-1, (*it).GetTimestamp());
 }
-TEST(log_batch_test, ONEPASS) {
-  //use test_strategy to mock read/write functions from data_manager_strategy
-  std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
-  LogFileManager file_manager(test_strategy);
-  LogCollection log_data;
-  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
-
+TEST_F(LogBatchTest, test_readBatch_1_of_6_pass) {
   //add test data to logs
-  input_event.SetTimestamp(0);
-  input_event.SetMessage("Testing readBatch");
-  log_data.push_back(input_event);
   input_event.SetTimestamp(1);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
   input_event.SetTimestamp(ONE_DAY_IN_SEC+5);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
+  input_event.SetTimestamp(4);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
   input_event.SetTimestamp(2);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
-  input_event.SetTimestamp(3);
+  input_event.SetTimestamp(0);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
-  input_event.SetTimestamp(4);
+  input_event.SetTimestamp(3);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
   file_manager.write(log_data);
