@@ -13,38 +13,8 @@
  * permissions and limitations under the License.
  */
 
-#include <iostream>
-#include <fstream>
-#include <cstdio>
-#include <experimental/filesystem>
-
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
-
-#include <aws/logs/model/InputLogEvent.h>
-#include <aws/core/utils/memory/stl/AWSString.h>
-#include <aws/core/utils/logging/ConsoleLogSystem.h>
-#include <aws/core/utils/logging/AWSLogging.h>
-
-#include <file_management/file_upload/file_manager.h>
-#include "file_management/file_upload/file_manager_strategy.h"
-
-#include <cloudwatch_logs_common/log_service.h>
-#include <cloudwatch_logs_common/log_batcher.h>
-#include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/utils/log_file_manager.h>
-
-#include <dataflow_lite/utils/waiter.h>
-
-#include <chrono>
-#include <memory>
-#include <queue>
-#include <tuple>
-
-#include <aws/core/utils/json/JsonSerializer.h>
-#include <aws/core/utils/logging/LogMacros.h>
-#include <cloudwatch_logs_common/definitions/definitions.h>
-#include "file_management/file_upload/file_manager_strategy.h"
 
 using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
