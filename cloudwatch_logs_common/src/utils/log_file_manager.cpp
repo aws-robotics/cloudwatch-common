@@ -45,6 +45,12 @@ FileObject<LogCollection> LogFileManager::readBatch(
   FileManagement::DataToken data_token;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
 
+  /*  
+    Read each line from the batch
+    Store {timestamp, log, data token} in priority queue
+    Priority queue is sorted by timestamp
+  */
+
   //long = timestamp, string = log entry, uint64_t = data token
   std::priority_queue<std::tuple<long, std::string, uint64_t>> pq;
   for (size_t i = 0; i < batch_size; ++i) {
@@ -59,6 +65,14 @@ FileObject<LogCollection> LogFileManager::readBatch(
     pq.push(std::make_tuple(input_event.GetTimestamp(), line, data_token));
   }
   
+  /*  
+    Set latest timestamp to top of pq
+    Go through the entire pq
+    Only store logs with < 24 hours diff from latest time
+    Count these logs as actual_batch_size
+    The older logs will be uploaded on the next readBatch command
+  */
+
   long latestTime = std::get<0>(pq.top());
   LogCollection log_data;
   std::list<FileManagement::DataToken> data_tokens;

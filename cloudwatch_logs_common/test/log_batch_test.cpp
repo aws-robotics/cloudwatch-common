@@ -22,7 +22,6 @@
 #include <gmock/gmock.h>
 
 #include <aws/logs/model/InputLogEvent.h>
-//#include <aws/core/Aws.h>
 #include <aws/core/utils/memory/stl/AWSString.h>
 #include <aws/core/utils/logging/ConsoleLogSystem.h>
 #include <aws/core/utils/logging/AWSLogging.h>
@@ -70,36 +69,36 @@ protected:
 class TestStrategy : public DataManagerStrategy {
 public:
   bool isDataAvailable(){
-          return true;
+    return true;
   }
 
   DataToken read(std::string &data) override{
-    std::cout << "Entering fake read function." << std::endl;
-          data = "test";
-    timestamp += ONE_DAY_IN_SEC/2;
-    std::cout << "Current time is: " + std::to_string(timestamp) << std::endl;
-    data = "{\"timestamp\":" + std::to_string(timestamp) + ",\"message\":\"Hello my name is foo\"}";
-    return timestamp;
+    if(!logs.empty()){
+        data = logs.front();
+        logs.pop_front();
+    }
+
+    data_token++;
+    return data_token;
   }
 
   void write(const std::string &data){
-    std::cout << "Entering fake write function." << std::endl;
-          if(!data.empty())
-                  return;
-          return;
+      logs.push_back(data);
   }
 
   void resolve(const DataToken &token, bool is_success){
-          if(is_success && token)
-                  return;
-          else
-                  return;
-          return;
+    if(is_success && token)
+        return;
+    else
+        return;
+    return;
   }
+
+  std::list<std::string> logs;
 
 protected:
 
-  long timestamp = 0;
+  uint64_t data_token = 0;
 
   /**
    * Options for how and where to store files, and maximum file sizes.
@@ -110,23 +109,92 @@ protected:
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
-TEST_F(LogBatchTest, file_manager_write) {
-  std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
+TEST_F(LogBatchTest, 3PASS) {
   std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
-  //LogFileManager file_manager(file_manager_strategy);
   LogFileManager file_manager(test_strategy);
+
   LogCollection log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
   input_event.SetTimestamp(0);
-  input_event.SetMessage("Hello my name is foo");
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(1);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(2);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(ONE_DAY_IN_SEC+2);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(ONE_DAY_IN_SEC+1);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(ONE_DAY_IN_SEC);
+  input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
   file_manager.write(log_data);
-  std::string line;
-  test_strategy->read(line);
-  auto batch = file_manager.readBatch(5);
- ASSERT_EQ(2u, batch.batch_size);
-  //file_manager_strategy->read(line);
-  //EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
+
+  auto batch = file_manager.readBatch(test_strategy->logs.size());
+  ASSERT_EQ(3u, batch.batch_size);
+}
+TEST_F(LogBatchTest, ALLPASS) {
+  std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
+  LogFileManager file_manager(test_strategy);
+
+  LogCollection log_data;
+  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+  input_event.SetTimestamp(0);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(1);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(2);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(3);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(4);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(ONE_DAY_IN_SEC-1);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  file_manager.write(log_data);
+
+  auto batch = file_manager.readBatch(test_strategy->logs.size());
+  ASSERT_EQ(6u, batch.batch_size);
+}
+TEST_F(LogBatchTest, ONEPASS) {
+  std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
+  LogFileManager file_manager(test_strategy);
+
+  LogCollection log_data;
+  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+  input_event.SetTimestamp(0);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(1);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(ONE_DAY_IN_SEC-5);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(2);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(3);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  input_event.SetTimestamp(4);
+  input_event.SetMessage("Testing readBatch");
+  log_data.push_back(input_event);
+  file_manager.write(log_data);
+
+  auto batch = file_manager.readBatch(test_strategy->logs.size());
+  ASSERT_EQ(1u, batch.batch_size);
 }
 
 int main(int argc, char** argv)
