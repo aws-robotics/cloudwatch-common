@@ -52,20 +52,6 @@ using namespace Aws::FileManagement;
 
 const long ONE_DAY_IN_SEC = 86400000;
 
-class LogBatchTest : public ::testing::Test {
-public:
-  void SetUp() override
-  {
-  }
-
-  void TearDown() override
-  {
-  }
-
-protected:
-  FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024};
-};
-
 class TestStrategy : public DataManagerStrategy {
 public:
   bool isDataAvailable(){
@@ -109,7 +95,7 @@ protected:
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
-TEST_F(LogBatchTest, 3PASS) {
+TEST(3PASS) {
   std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
   LogFileManager file_manager(test_strategy);
 
@@ -138,7 +124,7 @@ TEST_F(LogBatchTest, 3PASS) {
   auto batch = file_manager.readBatch(test_strategy->logs.size());
   ASSERT_EQ(3u, batch.batch_size);
 }
-TEST_F(LogBatchTest, ALLPASS) {
+TEST(ALLPASS) {
   std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
   LogFileManager file_manager(test_strategy);
 
@@ -167,7 +153,7 @@ TEST_F(LogBatchTest, ALLPASS) {
   auto batch = file_manager.readBatch(test_strategy->logs.size());
   ASSERT_EQ(6u, batch.batch_size);
 }
-TEST_F(LogBatchTest, ONEPASS) {
+TEST(ONEPASS) {
   std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
   LogFileManager file_manager(test_strategy);
 
@@ -179,7 +165,7 @@ TEST_F(LogBatchTest, ONEPASS) {
   input_event.SetTimestamp(1);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
-  input_event.SetTimestamp(ONE_DAY_IN_SEC-5);
+  input_event.SetTimestamp(ONE_DAY_IN_SEC+5);
   input_event.SetMessage("Testing readBatch");
   log_data.push_back(input_event);
   input_event.SetTimestamp(2);
