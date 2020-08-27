@@ -51,6 +51,8 @@ using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::FileManagement;
 
+const long ONE_DAY_IN_SEC = 86400000;
+
 class LogBatchTest : public ::testing::Test {
 public:
   void SetUp() override
@@ -62,26 +64,55 @@ public:
   }
 
 protected:
+  FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024};
 };
 
-class TestFileManagerStrategy : FileManagerStrategy {
+class TestStrategy : public DataManagerStrategy {
 public:
-  DataToken read(std::string &data) override{
-    data = "test";
-    std::cout << "Testing" << std::endl;
-    return 0;
+  bool isDataAvailable(){
+          return true;
   }
+
+  DataToken read(std::string &data) override{
+    std::cout << "Entering fake read function." << std::endl;
+          data = "test";
+
+    timestamp += ONE_DAY_IN_SEC/2;
+
+    return timestamp;
+  }
+  
+  void write(const std::string &data){
+    std::cout << "Entering fake write function." << std::endl;
+          if(!data.empty())
+                  return;
+          return;
+  }
+
+  void resolve(const DataToken &token, bool is_success){
+          if(is_success && token)
+                  return;
+          else
+                  return;
+          return;
+  }
+
+protected:
+
+  long timestamp = 0;
+
+  /**
+   * Options for how and where to store files, and maximum file sizes.
+   */
+  FileManagerStrategyOptions options_;
 };
 
-TEST_F(LogBatchTest, Sanity) {
-  ASSERT_TRUE(true);
-}
 
 /**
  * Test that the upload complete with CW Failure goes to a file.
  */
-TEST_F(FileManagerTest, file_manager_write) {
-  std::shared_ptr<TestFileManagerStrategy> file_manager_strategy = std::make_shared<TestFileManagerStrategy>(options);
+TEST_F(LogBatchTest, file_manager_write) {
+  std::shared_ptr<TestFileManagerStrategy> file_manager_strategy = std::make_shared<TestFileManagerStrategy>();
   LogFileManager file_manager(file_manager_strategy);
   LogCollection log_data;
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
@@ -95,14 +126,23 @@ TEST_F(FileManagerTest, file_manager_write) {
 }
 
 /**
- * Read 5 logs in batch
- * Expect one of them to be within 24 hour interval
+ * Test that the upload complete with CW Failure goes to a file.
  */
-TEST_F(LogBatchTest, batch_test_24hours) {
-  std::shared_ptr<TestFileManagerStrategy> file_manager_strategy = std::make_shared<TestFileManagerStrategy>(options);
-  LogFileManager file_manager(file_manager_strategy);
-  auto batch = fileManager->readBatch(5);
-  //ASSERT_EQ(1u, batch.batch_size);
+TEST_F(LogBatchTest, 24_hour_interval) {
+  std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
+  std::shared_ptr<TestStrategy> test_strategy = std::make_shared<TestStrategy>();
+  //LogFileManager file_manager(file_manager_strategy);
+  LogFileManager file_manager(test_strategy);
+  LogCollection log_data;
+  Aws::CloudWatchLogs::Model::InputLogEvent input_event;
+  input_event.SetTimestamp(0);
+  input_event.SetMessage("Hello my name is foo");
+  log_data.push_back(input_event);
+  file_manager.write(log_data);
+  std::string line;
+  test_strategy->read(line);
+  //file_manager_strategy->read(line);
+  //EXPECT_EQ(line, "{\"timestamp\":0,\"message\":\"Hello my name is foo\"}");
 }
 
 int main(int argc, char** argv)

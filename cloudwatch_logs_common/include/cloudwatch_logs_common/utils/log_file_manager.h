@@ -44,7 +44,7 @@ class LogFileManager :
     : FileManager(options) {
   }
 
-  explicit LogFileManager(const std::shared_ptr<FileManagerStrategy> &file_manager_strategy)
+  explicit LogFileManager(const std::shared_ptr<Aws::FileManagement::DataManagerStrategy> &file_manager_strategy)
       : FileManager(file_manager_strategy)
   {
   }
