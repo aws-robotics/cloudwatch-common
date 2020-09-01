@@ -58,6 +58,8 @@ FileObject<LogCollection> LogFileManager::readBatch(
   Timestamp latestTime = std::get<0>(pq.top());
   LogCollection log_data;
   std::list<FileManagement::DataToken> data_tokens;
+  LogCollection discard_logs;
+  std::list<FileManagement::DataToken> discard_tokens;
   while(!pq.empty()){
     Timestamp curTime = std::get<0>(pq.top());
     std::string line = std::get<1>(pq.top());
@@ -70,7 +72,11 @@ FileObject<LogCollection> LogFileManager::readBatch(
       data_tokens.push_back(new_data_token);
     }
     else if(latestTime - curTime > TWO_WEEK_IN_SEC){
-      //how to discard the old logs?
+      Aws::String aws_line(line.c_str());
+      Aws::Utils::Json::JsonValue value(aws_line);
+      Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
+      discard_logs.push_front(input_event);
+      discard_tokens.push_back(new_data_token);
     }
     pq.pop();
   }
@@ -81,6 +87,13 @@ FileObject<LogCollection> LogFileManager::readBatch(
       "Logs read: %d, Logs batched: %d", batch_size, log_data.size()
       );
   }
+
+  FileObject<LogCollection> discard_files;
+  file_object.batch_data = discard_logs;
+  file_object.batch_size = discard_logs.size();
+  file_object.data_tokens = discard_tokens;
+
+  fileUploadCompleteStatus(Aws::DataFlow::UploadStatus::SUCCESS, discard_files);
 
   FileObject<LogCollection> file_object;
   file_object.batch_data = log_data;
