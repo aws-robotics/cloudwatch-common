@@ -53,6 +53,18 @@ class LogFileManager :
 
   void write(const LogCollection & data) override;
 
+  /*  
+    AWSClient will return 'InvalidParameterException' error when the log events in a
+    single batch span more than 24 hours. Therefore the readBatch function will only
+    return as many logs as can fit within the 24 hour span and the actual number of 
+    logs batched may end up being less than the original batch_size.
+
+    If a log is over 2 weeks old from the latest time,it will be discarded.
+
+    We must sort the log data chronologically because it is not guaranteed
+    to be ordered chronologically in the file, but CloudWatch requires all
+    puts in a single batch to be sorted chronologically
+  */
   FileObject<LogCollection> readBatch(size_t batch_size) override;
 };
 

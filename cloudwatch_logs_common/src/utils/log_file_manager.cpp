@@ -28,21 +28,13 @@
 #include <cloudwatch_logs_common/definitions/definitions.h>
 
 const long ONE_DAY_IN_SEC = 86400000;
+const long TWO_WEEK_IN_SEC = 1209600000;
 
 namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
-/*  
-  AWSClient will return 'InvalidParameterException' error when the log events in a
-  single batch span more than 24 hours. Therefore the readBatch function will only
-  return as many logs as can fit within the 24 hour span and the actual number of 
-  logs batched may end up being less than the original batch_size.
 
-  We must sort the log data chronologically because it is not guaranteed
-  to be ordered chronologically in the file, but CloudWatch requires all
-  puts in a single batch to be sorted chronologically
-*/
 FileObject<LogCollection> LogFileManager::readBatch(
   size_t batch_size)
 {
@@ -77,14 +69,17 @@ FileObject<LogCollection> LogFileManager::readBatch(
       log_data.push_front(input_event);
       data_tokens.push_back(new_data_token);
     }
-    else{
-      AWS_LOG_INFO(__func__, "Some logs were not batched since the time"
-        " difference was > 24 hours. Will try again in a separate batch./n"
-        "Logs read: %d, Logs batched: %d", batch_size, log_data.size()
-        );
-      break;
+    else if(latestTime - curTime > TWO_WEEK_IN_SEC){
+      //how to discard the old logs?
     }
     pq.pop();
+  }
+
+  if(log_data.size() != batch_size){
+    AWS_LOG_INFO(__func__, "Some logs were not batched since the time"
+      " difference was > 24 hours. Will try again in a separate batch./n"
+      "Logs read: %d, Logs batched: %d", batch_size, log_data.size()
+      );
   }
 
   FileObject<LogCollection> file_object;
