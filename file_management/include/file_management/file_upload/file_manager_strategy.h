@@ -141,6 +141,8 @@ public:
 
   virtual bool isDataAvailable() = 0;
 
+  virtual bool discardOldLogs() = 0;
+
   virtual DataToken read(std::string &data) = 0;
 
   virtual void write(const std::string &data) = 0;
@@ -300,6 +302,11 @@ public:
    * @return bool if there is data available
    */
   bool isDataAvailable() override;
+
+  /**
+   * Returns true if user set the option to remove logs older than 14 days
+   */
+  bool discardOldLogs() override;
 
   /**
    * Reads a line of data from file storage. The most recent data in storage is read first. 

@@ -59,7 +59,9 @@ class LogFileManager :
     return as many logs as can fit within the 24 hour span and the actual number of 
     logs batched may end up being less than the original batch_size.
 
-    If a log is over 2 weeks old from the latest time,it will be discarded.
+    If the user cfg options for discard_old_logs and a log is over 2 weeks old from
+    the latest time,it will be discarded. This is because the AWS API for PutLogEvents
+    rejects batches with log events older than 14 days.
 
     We must sort the log data chronologically because it is not guaranteed
     to be ordered chronologically in the file, but CloudWatch requires all

@@ -58,8 +58,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
   Timestamp latestTime = std::get<0>(pq.top());
   LogCollection log_data;
   std::list<FileManagement::DataToken> data_tokens;
-  LogCollection discard_logs;
-  std::list<FileManagement::DataToken> discard_tokens;
+  int logsDiscarded = 0, logsIgnored = 0;
   while(!pq.empty()){
     Timestamp curTime = std::get<0>(pq.top());
     std::string line = std::get<1>(pq.top());
@@ -71,29 +70,29 @@ FileObject<LogCollection> LogFileManager::readBatch(
       log_data.push_front(input_event);
       data_tokens.push_back(new_data_token);
     }
-    else if(latestTime - curTime > TWO_WEEK_IN_SEC){
-      Aws::String aws_line(line.c_str());
-      Aws::Utils::Json::JsonValue value(aws_line);
-      Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
-      discard_logs.push_front(input_event);
-      discard_tokens.push_back(new_data_token);
+    else if(file_manager_strategy_->discardOldLogs() && latestTime - curTime > TWO_WEEK_IN_SEC){
+      file_manager_strategy_->resolve(new_data_token, true);
+      logsDiscarded++;
+    }
+    else{
+      logsIgnored++;
     }
     pq.pop();
   }
 
-  if(log_data.size() != batch_size){
-    AWS_LOG_INFO(__func__, "Some logs were not batched since the time"
-      " difference was > 24 hours. Will try again in a separate batch./n"
-      "Logs read: %d, Logs batched: %d", batch_size, log_data.size()
+  if(logsDiscarded > 0){
+    AWS_LOG_INFO(__func__, "Some logs were discarded since the time"
+      " difference was > 14 days./n"
+      "Logs read: %d, Logs discarded: %d", batch_size, logsDiscarded
       );
   }
 
-  FileObject<LogCollection> discard_files;
-  file_object.batch_data = discard_logs;
-  file_object.batch_size = discard_logs.size();
-  file_object.data_tokens = discard_tokens;
-
-  fileUploadCompleteStatus(Aws::DataFlow::UploadStatus::SUCCESS, discard_files);
+  if(logsIgnored > 0){
+    AWS_LOG_INFO(__func__, "Some logs were not batched since the time"
+      " difference was > 24 hours. Will try again in a separate batch./n"
+      "Logs read: %d, Logs batched: %d", batch_size, logsIgnored
+      );
+  }
 
   FileObject<LogCollection> file_object;
   file_object.batch_data = log_data;
