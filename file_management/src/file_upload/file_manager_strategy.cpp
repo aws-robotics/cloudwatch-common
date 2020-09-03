@@ -274,7 +274,7 @@ bool FileManagerStrategy::isDataAvailable() {
 }
 
 bool FileManagerStrategy::discardOldLogs() {
-  return options_.discard_2_week_logs;
+  return options_.discard_old_logs;
 }
 
 void FileManagerStrategy::write(const std::string &data) {

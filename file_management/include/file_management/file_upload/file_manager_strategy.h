@@ -304,7 +304,7 @@ public:
   bool isDataAvailable() override;
 
   /**
-   * Returns true if user set the option to remove logs older than 14 days
+   * Returns true if user set the option to remove older logs
    */
   bool discardOldLogs() override;
 

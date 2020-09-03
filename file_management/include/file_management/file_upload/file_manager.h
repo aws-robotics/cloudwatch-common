@@ -69,6 +69,10 @@ public:
     const FileObject<T> &log_messages) = 0;
 
   virtual void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
+
+  virtual void discardFiles(){
+    
+  };
 };
 
 /**

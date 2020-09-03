@@ -20,9 +20,6 @@ using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
 using namespace Aws::FileManagement;
 
-const long ONE_DAY_IN_SEC = 86400000;
-const long TWO_WEEK_IN_SEC = 1209600000;
-
 class TestStrategy : public DataManagerStrategy {
 public:
   TestStrategy(const FileManagerStrategyOptions &options) {
@@ -34,7 +31,7 @@ public:
   }
 
   bool discardOldLogs(){
-    return options_.discard_2_week_logs;
+    return options_.discard_old_logs;
   }
 
   DataToken read(std::string &data) override{
@@ -98,6 +95,7 @@ public:
       test_strategy->it = 0;
       batch = file_manager->readBatch(test_strategy->logs.size());
       resolveBatch();
+      file_manager->discardFiles();
       ASSERT_TRUE(validateBatch());
     }
   }
@@ -134,12 +132,19 @@ public:
   Aws::CloudWatchLogs::Model::InputLogEvent input_event;
   std::vector<long> timestamps;
   FileObject<LogCollection> batch;
+
+  //FileManagerStrategyOptions includes a new option "discard_2_week_logs" which we will
+  //set to true for testing
   FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024, true};
+
+  //the expecteTimeStamps will hold the log batch results we expect from completion of
+  //the readBatch function
   std::vector<std::vector<long>> expectedTimeStamps;
 };
 
 /**
- * Test that the upload complete with CW Failure goes to a file.
+ * This test will group all logs into one batch since they are all
+ * within 24 hours of each other
  */
 TEST_F(LogBatchTest, test_readBatch_1_batch) {
   timestamps = {1, 3, 0, ONE_DAY_IN_SEC-1, 4, 2};
@@ -148,6 +153,10 @@ TEST_F(LogBatchTest, test_readBatch_1_batch) {
   file_manager->write(log_data);
   readLogs();
 }
+/**
+ * This test will group half the logs into one batch and half into another
+ * since there is > 24 hour difference from ONE_DAY_IN_SEC+2 and 2
+ */
 TEST_F(LogBatchTest, test_readBatch_2_batches) {
   timestamps = {ONE_DAY_IN_SEC+1, 2, ONE_DAY_IN_SEC+2, 1, 0, ONE_DAY_IN_SEC};
   expectedTimeStamps = {{ONE_DAY_IN_SEC+2, ONE_DAY_IN_SEC+1, ONE_DAY_IN_SEC}, {2, 1, 0}};
@@ -155,6 +164,10 @@ TEST_F(LogBatchTest, test_readBatch_2_batches) {
   file_manager->write(log_data);
   readLogs();
 }
+/**
+ * This test will group three different batches since ONE_DAY_IN_SEC*2+10, 
+ * ONE_DAY_IN_SEC+5, and 4 are all > 24 hours apart
+ */
 TEST_F(LogBatchTest, test_readBatch_3_batches) {
   timestamps = {1, ONE_DAY_IN_SEC+5, 4, 2, 0, ONE_DAY_IN_SEC*2+10};
   expectedTimeStamps = {{ONE_DAY_IN_SEC*2+10}, {ONE_DAY_IN_SEC+5},{4, 2, 1, 0}};
@@ -162,6 +175,12 @@ TEST_F(LogBatchTest, test_readBatch_3_batches) {
   file_manager->write(log_data);
   readLogs();
 }
+/**
+ * We defined discard_2_week_logs as true in our FileManagerStrategyOptions
+ * In this test we expect that there will be two separate batches
+ * separated by > 24 hours and we expect that timestamp 0 will be discarded
+ * since it is > 14 days old.
+ */
 TEST_F(LogBatchTest, test_2_week_discard_1_of_6) {
   timestamps = {15, ONE_DAY_IN_SEC, 0, TWO_WEEK_IN_SEC+5, TWO_WEEK_IN_SEC+1, 10};
   expectedTimeStamps = {{TWO_WEEK_IN_SEC+5, TWO_WEEK_IN_SEC+1}, {ONE_DAY_IN_SEC, 15, 10}};
@@ -169,6 +188,12 @@ TEST_F(LogBatchTest, test_2_week_discard_1_of_6) {
   file_manager->write(log_data);
   readLogs();
 }
+/**
+ * We defined discard_2_week_logs as true in our FileManagerStrategyOptions
+ * In this test we expect that there will be two separate batches
+ * separated by > 24 hours and we expect that timestamp 0, 1, 3, 4  will be
+ * discarded since it is > 14 days old.
+ */
 TEST_F(LogBatchTest, test_2_week_discard_4_of_6) {
   timestamps = {1, ONE_DAY_IN_SEC, 4, TWO_WEEK_IN_SEC+5, 0, 3};
   expectedTimeStamps = {{TWO_WEEK_IN_SEC+5}, {ONE_DAY_IN_SEC}};
@@ -176,6 +201,12 @@ TEST_F(LogBatchTest, test_2_week_discard_4_of_6) {
   file_manager->write(log_data);
   readLogs();
 }
+/**
+ * We defined discard_old_logs as true in our FileManagerStrategyOptions
+ * In this test we expect that there will be two separate batches
+ * separated by > 24 hours and we expect that timestamp 0, 1, 3, 4, and
+ * ONE_DAY_IN_SEC will be discarded since it is > 14 days old.
+ */
 TEST_F(LogBatchTest, test_2_week_discard_5_of_6) {
   timestamps = {1, ONE_DAY_IN_SEC, 4, TWO_WEEK_IN_SEC+ONE_DAY_IN_SEC+5, 0, 3};
   expectedTimeStamps = {{TWO_WEEK_IN_SEC+ONE_DAY_IN_SEC+5}};
@@ -183,13 +214,39 @@ TEST_F(LogBatchTest, test_2_week_discard_5_of_6) {
   file_manager->write(log_data);
   readLogs();
 }
+/**
+ * We defined discard_old_logs as true in our FileManagerStrategyOptions
+ * In this test, we set the option discard_2_week_logs to false and expect
+ * that none of the logs will be discarded. We expect three batches separated
+ * by > 24 hours
+ */
 TEST_F(LogBatchTest, test_2_week_no_discard) {
-  test_strategy->options_.discard_2_week_logs = false;
+  test_strategy->options_.discard_old_logs = false;
   timestamps = {1, ONE_DAY_IN_SEC, 4, TWO_WEEK_IN_SEC+5, 0, 3};
   expectedTimeStamps = {{TWO_WEEK_IN_SEC+5},{ONE_DAY_IN_SEC, 4, 3, 1}, {0}};
   createLogs(timestamps);
   file_manager->write(log_data);
   readLogs();
+}
+/**
+ * FileManagerStrategyOptions defined with discard_old_logs set to true.
+ * We expect discardOldLogs will return true.
+ */
+TEST(DiscardOptionTest, file_manager_discard_true) {
+  FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024, true};
+  std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
+  LogFileManager file_manager(file_manager_strategy);
+  ASSERT_TRUE(file_manager_strategy->discardOldLogs());
+}
+/**
+ * FileManagerStrategyOptions defined with discard_old_logs set to false.
+ * We expect discardOldLogs will return false.
+ */
+TEST(DiscardOptionTest, file_manager_discard_false) {
+  FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024, false};
+  std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
+  LogFileManager file_manager(file_manager_strategy);
+  ASSERT_FALSE(file_manager_strategy->discardOldLogs());
 }
 
 int main(int argc, char** argv)

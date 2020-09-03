@@ -14,6 +14,8 @@
  */
 
 #pragma once
+#include <queue>
+#include <tuple>
 #include <aws/logs/model/InputLogEvent.h>
 
 #include <cloudwatch_logs_common/definitions/ros_cloudwatch_logs_errors.h>
@@ -59,17 +61,27 @@ class LogFileManager :
     return as many logs as can fit within the 24 hour span and the actual number of 
     logs batched may end up being less than the original batch_size.
 
-    If the user cfg options for discard_old_logs and a log is over 2 weeks old from
-    the latest time,it will be discarded. This is because the AWS API for PutLogEvents
-    rejects batches with log events older than 14 days.
-
     We must sort the log data chronologically because it is not guaranteed
     to be ordered chronologically in the file, but CloudWatch requires all
     puts in a single batch to be sorted chronologically
   */
   FileObject<LogCollection> readBatch(size_t batch_size) override;
+
+  /*
+    If the user cfg options for discard_old_logs and a log is over 2 weeks old from
+    the latest time,it will be discarded. This is because the AWS API for PutLogEvents
+    rejects batches with log events older than 14 days.
+  */
+  void discardFiles() override;
+
+  using Timestamp = long;
+  Timestamp latestTime = 0;
+  std::priority_queue<std::tuple<Timestamp, std::string, FileManagement::DataToken>> pq;
 };
 
 }  // namespace Utils
+
+  const long ONE_DAY_IN_SEC = 86400000;
+  const long TWO_WEEK_IN_SEC = 1209600000;
 }  // namespace CloudWatchLogs
 }  // namespace Aws
