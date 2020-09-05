@@ -141,7 +141,9 @@ public:
 
   virtual bool isDataAvailable() = 0;
 
-  virtual bool discardOldLogs() = 0;
+  virtual bool isDeleteStaleData() = 0;
+
+  virtual void setDeleteStaleData(bool set_stale_data) = 0;
 
   virtual DataToken read(std::string &data) = 0;
 
@@ -304,9 +306,16 @@ public:
   bool isDataAvailable() override;
 
   /**
-   * Returns true if user set the option to remove older logs
+   * Deletes stale data that won't be accepted by the CloudWatch API. 
+   * This is done in a separate method so it doesn't block the current publishing task after
+   * reading the data.
    */
-  bool discardOldLogs() override;
+  bool isDeleteStaleData() override;
+
+  /**
+   * Sets option for deleting stale data that won't be accepted by the CloudWatch API.
+   */
+  void setDeleteStaleData(bool set_stale_data) override;
 
   /**
    * Reads a line of data from file storage. The most recent data in storage is read first. 

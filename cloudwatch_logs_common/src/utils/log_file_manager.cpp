@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>	
+#include <mutex>
 #include <queue>
 #include <tuple>
 
@@ -36,9 +37,9 @@ FileObject<LogCollection> LogFileManager::readBatch(
   size_t batch_size)
 {
   FileManagement::DataToken data_token;
-  pq = std::priority_queue<std::tuple<Timestamp, std::string, FileManagement::DataToken>>();
   AWS_LOG_INFO(__func__, "Reading Logbatch");
-
+	
+  std::priority_queue<std::tuple<Timestamp, std::string, FileManagement::DataToken>> pq;
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line;
     if (!file_manager_strategy_->isDataAvailable()) {
@@ -51,6 +52,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
     pq.push(std::make_tuple(input_event.GetTimestamp(), line, data_token));
   }
 
+  std::lock_guard<std::mutex> lock(active_delete_stale_data_mutex_);
   latestTime = std::get<0>(pq.top());
   LogCollection log_data;
   std::list<FileManagement::DataToken> data_tokens;
@@ -65,14 +67,17 @@ FileObject<LogCollection> LogFileManager::readBatch(
       log_data.push_front(input_event);
       data_tokens.push_back(new_data_token);
     }
-    else{
-      AWS_LOG_INFO(__func__, "Some logs were not batched since the time"
-        " difference was > 24 hours. Will try again in a separate batch./n"
-        "Logs read: %d, Logs batched: %d", batch_size, log_data.size()
-        );
-      break;
+    else if(file_manager_strategy_->isDeleteStaleData() && latestTime - curTime > TWO_WEEK_IN_SEC){
+      stale_data_.push_back(new_data_token);
     }
     pq.pop();
+  }
+
+  if(batch_size != log_data.size()){
+    AWS_LOG_INFO(__func__, "%d logs were not batched since the time"
+      " difference was > 24 hours. Will try again in a separate batch./n"
+      , batch_size - log_data.size()
+      );
   }
 
   FileObject<LogCollection> file_object;
@@ -80,36 +85,6 @@ FileObject<LogCollection> LogFileManager::readBatch(
   file_object.batch_size = log_data.size();
   file_object.data_tokens = data_tokens;
   return file_object;
-}
-
-void LogFileManager::discardFiles()
-{
-  if (!file_manager_strategy_->discardOldLogs() || pq.empty()) {
-    return;
-  }
-
-  AWS_LOG_INFO(__func__, "Discarding old logs from Logbatch");
-
-  std::list<FileManagement::DataToken> data_tokens;
-  int logsDiscarded = 0;
-
-  while(!pq.empty()){
-    Timestamp curTime = std::get<0>(pq.top());
-    std::string line = std::get<1>(pq.top());
-    FileManagement::DataToken data_token = std::get<2>(pq.top());
-    if(latestTime - curTime > TWO_WEEK_IN_SEC){
-      file_manager_strategy_->resolve(data_token, true);
-      logsDiscarded++;
-    }
-    pq.pop();
-  }
-
-  if(logsDiscarded > 0){
-    AWS_LOG_INFO(__func__, "Some logs were discarded since the time"
-      " difference was > 14 days./n"
-      "Logs discarded: %d", logsDiscarded
-      );
-  }
 }
 
 void LogFileManager::write(const LogCollection & data) {

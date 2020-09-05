@@ -30,8 +30,12 @@ public:
     return !logs.empty() && !data_tokens.empty();
   }
 
-  bool discardOldLogs(){
-    return options_.discard_old_logs;
+  bool isDeleteStaleData(){
+    return options_.delete_stale_data;
+  }
+
+  void setDeleteStaleData(bool set_stale_data) {
+    options_.delete_stale_data = set_stale_data;
   }
 
   DataToken read(std::string &data) override{
@@ -95,7 +99,7 @@ public:
       test_strategy->it = 0;
       batch = file_manager->readBatch(test_strategy->logs.size());
       resolveBatch();
-      file_manager->discardFiles();
+      file_manager->deleteStaleData();
       ASSERT_TRUE(validateBatch());
     }
   }
@@ -133,7 +137,7 @@ public:
   std::vector<long> timestamps;
   FileObject<LogCollection> batch;
 
-  //FileManagerStrategyOptions includes a new option "discard_2_week_logs" which we will
+  //FileManagerStrategyOptions includes a new option "delete_stale_data" which we will
   //set to true for testing
   FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024, true};
 
@@ -176,12 +180,12 @@ TEST_F(LogBatchTest, test_readBatch_3_batches) {
   readLogs();
 }
 /**
- * We defined discard_2_week_logs as true in our FileManagerStrategyOptions
+ * We defined delete_stale_data as true in our FileManagerStrategyOptions
  * In this test we expect that there will be two separate batches
- * separated by > 24 hours and we expect that timestamp 0 will be discarded
+ * separated by > 24 hours and we expect that timestamp 0 will be deleted
  * since it is > 14 days old.
  */
-TEST_F(LogBatchTest, test_2_week_discard_1_of_6) {
+TEST_F(LogBatchTest, test_2_week_delete_1_of_6) {
   timestamps = {15, ONE_DAY_IN_SEC, 0, TWO_WEEK_IN_SEC+5, TWO_WEEK_IN_SEC+1, 10};
   expectedTimeStamps = {{TWO_WEEK_IN_SEC+5, TWO_WEEK_IN_SEC+1}, {ONE_DAY_IN_SEC, 15, 10}};
   createLogs(timestamps);
@@ -189,12 +193,12 @@ TEST_F(LogBatchTest, test_2_week_discard_1_of_6) {
   readLogs();
 }
 /**
- * We defined discard_2_week_logs as true in our FileManagerStrategyOptions
+ * We defined delete_stale_data as true in our FileManagerStrategyOptions
  * In this test we expect that there will be two separate batches
  * separated by > 24 hours and we expect that timestamp 0, 1, 3, 4  will be
- * discarded since it is > 14 days old.
+ * deleted since it is > 14 days old.
  */
-TEST_F(LogBatchTest, test_2_week_discard_4_of_6) {
+TEST_F(LogBatchTest, test_2_week_delete_4_of_6) {
   timestamps = {1, ONE_DAY_IN_SEC, 4, TWO_WEEK_IN_SEC+5, 0, 3};
   expectedTimeStamps = {{TWO_WEEK_IN_SEC+5}, {ONE_DAY_IN_SEC}};
   createLogs(timestamps);
@@ -202,12 +206,12 @@ TEST_F(LogBatchTest, test_2_week_discard_4_of_6) {
   readLogs();
 }
 /**
- * We defined discard_old_logs as true in our FileManagerStrategyOptions
+ * We defined delete_stale_data as true in our FileManagerStrategyOptions
  * In this test we expect that there will be two separate batches
  * separated by > 24 hours and we expect that timestamp 0, 1, 3, 4, and
- * ONE_DAY_IN_SEC will be discarded since it is > 14 days old.
+ * ONE_DAY_IN_SEC will be deleted since it is > 14 days old.
  */
-TEST_F(LogBatchTest, test_2_week_discard_5_of_6) {
+TEST_F(LogBatchTest, test_2_week_delete_5_of_6) {
   timestamps = {1, ONE_DAY_IN_SEC, 4, TWO_WEEK_IN_SEC+ONE_DAY_IN_SEC+5, 0, 3};
   expectedTimeStamps = {{TWO_WEEK_IN_SEC+ONE_DAY_IN_SEC+5}};
   createLogs(timestamps);
@@ -215,13 +219,13 @@ TEST_F(LogBatchTest, test_2_week_discard_5_of_6) {
   readLogs();
 }
 /**
- * We defined discard_old_logs as true in our FileManagerStrategyOptions
- * In this test, we set the option discard_2_week_logs to false and expect
- * that none of the logs will be discarded. We expect three batches separated
+ * We defined delete_stale_data as true in our FileManagerStrategyOptions
+ * In this test, we set the option delete_stale_data to false and expect
+ * that none of the logs will be deleted. We expect three batches separated
  * by > 24 hours
  */
-TEST_F(LogBatchTest, test_2_week_no_discard) {
-  test_strategy->options_.discard_old_logs = false;
+TEST_F(LogBatchTest, test_2_week_no_delete) {
+  test_strategy->options_.delete_stale_data = false;
   timestamps = {1, ONE_DAY_IN_SEC, 4, TWO_WEEK_IN_SEC+5, 0, 3};
   expectedTimeStamps = {{TWO_WEEK_IN_SEC+5},{ONE_DAY_IN_SEC, 4, 3, 1}, {0}};
   createLogs(timestamps);
@@ -229,24 +233,28 @@ TEST_F(LogBatchTest, test_2_week_no_discard) {
   readLogs();
 }
 /**
- * FileManagerStrategyOptions defined with discard_old_logs set to true.
- * We expect discardOldLogs will return true.
+ * FileManagerStrategyOptions defined with delete_stale_data originally
+ * initialized to true, then set to false.
  */
-TEST(DiscardOptionTest, file_manager_discard_true) {
+TEST(DeleteOptionTest, file_manager_delete_true) {
   FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024, true};
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   LogFileManager file_manager(file_manager_strategy);
-  ASSERT_TRUE(file_manager_strategy->discardOldLogs());
+  ASSERT_TRUE(file_manager_strategy->isDeleteStaleData());
+  file_manager_strategy->setDeleteStaleData(false);
+  ASSERT_FALSE(file_manager_strategy->isDeleteStaleData());
 }
 /**
- * FileManagerStrategyOptions defined with discard_old_logs set to false.
- * We expect discardOldLogs will return false.
+ * FileManagerStrategyOptions defined with delete_stale_data originally
+ * initialized to false, then set to true.
  */
-TEST(DiscardOptionTest, file_manager_discard_false) {
+TEST(DeleteOptionTest, file_manager_delete_false) {
   FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024, false};
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   LogFileManager file_manager(file_manager_strategy);
-  ASSERT_FALSE(file_manager_strategy->discardOldLogs());
+  ASSERT_FALSE(file_manager_strategy->isDeleteStaleData());
+  file_manager_strategy->setDeleteStaleData(true);
+  ASSERT_TRUE(file_manager_strategy->isDeleteStaleData());
 }
 
 int main(int argc, char** argv)

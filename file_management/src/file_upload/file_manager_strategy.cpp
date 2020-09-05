@@ -273,8 +273,12 @@ bool FileManagerStrategy::isDataAvailable() {
   return !active_read_file_.empty() || !stored_files_.empty() || active_write_file_size_ > 0;
 }
 
-bool FileManagerStrategy::discardOldLogs() {
-  return options_.discard_old_logs;
+bool FileManagerStrategy::isDeleteStaleData() {
+  return options_.delete_stale_data;
+}
+
+void FileManagerStrategy::setDeleteStaleData(bool set_stale_data) {
+  options_.delete_stale_data = set_stale_data;
 }
 
 void FileManagerStrategy::write(const std::string &data) {

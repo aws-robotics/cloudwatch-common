@@ -67,16 +67,8 @@ class LogFileManager :
   */
   FileObject<LogCollection> readBatch(size_t batch_size) override;
 
-  /*
-    If the user cfg options for discard_old_logs and a log is over 2 weeks old from
-    the latest time,it will be discarded. This is because the AWS API for PutLogEvents
-    rejects batches with log events older than 14 days.
-  */
-  void discardFiles() override;
-
   using Timestamp = long;
   Timestamp latestTime = 0;
-  std::priority_queue<std::tuple<Timestamp, std::string, FileManagement::DataToken>> pq;
 };
 
 }  // namespace Utils
