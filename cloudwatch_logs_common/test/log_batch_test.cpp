@@ -34,10 +34,6 @@ public:
     return options_.delete_stale_data;
   }
 
-  void setDeleteStaleData(bool set_stale_data) {
-    options_.delete_stale_data = set_stale_data;
-  }
-
   DataToken read(std::string &data) override{
     if(isDataAvailable()){
       it++;
@@ -233,28 +229,24 @@ TEST_F(LogBatchTest, test_2_week_no_delete) {
   readLogs();
 }
 /**
- * FileManagerStrategyOptions defined with delete_stale_data originally
- * initialized to true, then set to false.
+ * FileManagerStrategyOptions defined with delete_stale_data set to true.
+ * We expect isDeleteStaleData to return true.
  */
 TEST(DeleteOptionTest, file_manager_delete_true) {
   FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024, true};
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   LogFileManager file_manager(file_manager_strategy);
   ASSERT_TRUE(file_manager_strategy->isDeleteStaleData());
-  file_manager_strategy->setDeleteStaleData(false);
-  ASSERT_FALSE(file_manager_strategy->isDeleteStaleData());
 }
 /**
- * FileManagerStrategyOptions defined with delete_stale_data originally
- * initialized to false, then set to true.
+ * FileManagerStrategyOptions defined with delete_stale_data set to false.
+ * We expect isDeleteStaleData to return false.
  */
 TEST(DeleteOptionTest, file_manager_delete_false) {
   FileManagerStrategyOptions options{"test", "log_tests/", ".log", 1024*1024, 1024*1024, false};
   std::shared_ptr<FileManagerStrategy> file_manager_strategy = std::make_shared<FileManagerStrategy>(options);
   LogFileManager file_manager(file_manager_strategy);
   ASSERT_FALSE(file_manager_strategy->isDeleteStaleData());
-  file_manager_strategy->setDeleteStaleData(true);
-  ASSERT_TRUE(file_manager_strategy->isDeleteStaleData());
 }
 
 int main(int argc, char** argv)

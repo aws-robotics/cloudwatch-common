@@ -277,10 +277,6 @@ bool FileManagerStrategy::isDeleteStaleData() {
   return options_.delete_stale_data;
 }
 
-void FileManagerStrategy::setDeleteStaleData(bool set_stale_data) {
-  options_.delete_stale_data = set_stale_data;
-}
-
 void FileManagerStrategy::write(const std::string &data) {
   try {
     checkIfWriteFileShouldRotate(data.size());

@@ -143,8 +143,6 @@ public:
 
   virtual bool isDeleteStaleData() = 0;
 
-  virtual void setDeleteStaleData(bool set_stale_data) = 0;
-
   virtual DataToken read(std::string &data) = 0;
 
   virtual void write(const std::string &data) = 0;
@@ -311,11 +309,6 @@ public:
    * reading the data.
    */
   bool isDeleteStaleData() override;
-
-  /**
-   * Sets option for deleting stale data that won't be accepted by the CloudWatch API.
-   */
-  void setDeleteStaleData(bool set_stale_data) override;
 
   /**
    * Reads a line of data from file storage. The most recent data in storage is read first. 
