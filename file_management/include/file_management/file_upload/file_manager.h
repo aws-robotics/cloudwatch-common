@@ -218,13 +218,14 @@ public:
     rejects batches with log events older than 14 days.
   */
   void deleteStaleData(){
+    std::lock_guard<std::mutex> lock(active_delete_stale_data_mutex_);
+    
     if (stale_data_.empty()) {
       return;
     }
 
     AWS_LOG_INFO(__func__, "Deleting stale data from Logbatch");
 
-    std::lock_guard<std::mutex> lock(active_delete_stale_data_mutex_);
     std::list<FileManagement::DataToken> data_tokens;
     int logsDeleted = 0;
     while(!stale_data_.empty()){

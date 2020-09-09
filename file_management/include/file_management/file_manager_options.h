@@ -67,7 +67,7 @@ struct FileManagerStrategyOptions {
    */
   size_t storage_limit_in_kb{};
   /**
-   * Option for the user to discard logs older than 14 days
+   * Option for the user to delete logs older than 14 days
    */
   bool delete_stale_data;
 };
