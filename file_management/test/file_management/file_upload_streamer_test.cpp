@@ -39,6 +39,10 @@ public:
     void(std::shared_ptr<StatusMonitor> monitor));
   MOCK_METHOD0(isDataAvailableToRead, bool());
 
+  void deleteStaleData() override {
+    return;
+  }
+
   /**
    * Set the observer for the queue.
    *

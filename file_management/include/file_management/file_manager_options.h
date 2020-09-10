@@ -35,12 +35,14 @@ struct FileManagerStrategyOptions {
     std::string _file_prefix,
     std::string _file_extension,
     size_t _maximum_file_size,
-    size_t _storage_limit)
+    size_t _storage_limit,
+    bool _delete_stale_data = false)
     : storage_directory(std::move(_storage_directory)),
       file_prefix(std::move(_file_prefix)),
       file_extension(std::move(_file_extension)),
       maximum_file_size_in_kb(_maximum_file_size),
-      storage_limit_in_kb(_storage_limit) {}
+      storage_limit_in_kb(_storage_limit),
+      delete_stale_data(_delete_stale_data) {}
 
   /**
    * The path to the folder where all files are stored. Can be absolute or relative
@@ -64,9 +66,13 @@ struct FileManagerStrategyOptions {
    * After this limit is reached files will start to be deleted, oldest first.
    */
   size_t storage_limit_in_kb{};
+  /**
+   * Option for the user to delete logs older than 14 days
+   */
+  bool delete_stale_data;
 };
 
-static const FileManagerStrategyOptions kDefaultFileManagerStrategyOptions{"~/.ros/cwlogs", "cwlog", ".log", 1024, 1024*1024};
+static const FileManagerStrategyOptions kDefaultFileManagerStrategyOptions{"~/.ros/cwlogs", "cwlog", ".log", 1024, 1024*1024, false};
 
 }  // namespace FileManagement
 }  // namespace Aws

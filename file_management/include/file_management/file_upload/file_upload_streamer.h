@@ -146,7 +146,8 @@ protected:
      * 1. First wait for work on all the status conditions. (i.e wait until files are available to upload)
      * 2. Read a batch of data from the file_manager
      * 3. Queue up the task to be worked on.
-     * 4. Wait for the task to be completed to continue.
+     * 4. Delete older logs if user option is enabled.
+     * 5. Wait for the upload task to be completed to continue.
      */
     inline void work() override {
       if (!stored_task_) {
@@ -195,6 +196,7 @@ protected:
         AWS_LOG_DEBUG(__func__,
                      "Enqueue failed");
       }
+      data_reader_->deleteStaleData();
     }
 
 private:

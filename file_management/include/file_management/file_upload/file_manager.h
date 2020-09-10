@@ -69,6 +69,8 @@ public:
     const FileObject<T> &log_messages) = 0;
 
   virtual void setStatusMonitor(std::shared_ptr<StatusMonitor> status_monitor) = 0;
+
+  virtual void deleteStaleData() = 0;
 };
 
 /**
@@ -210,6 +212,35 @@ public:
     return false;
   }
 
+  /*
+    If the user cfg options for delete_stale_data and a log is over 14 days old from
+    the latest time,it will be deleted. This is because the AWS API for PutLogEvents
+    rejects batches with log events older than 14 days.
+  */
+  void deleteStaleData(){
+    std::lock_guard<std::mutex> lock(active_delete_stale_data_mutex_);
+    
+    if (stale_data_.empty()) {
+      return;
+    }
+
+    AWS_LOG_INFO(__func__, "Deleting stale data from Logbatch");
+
+    std::list<FileManagement::DataToken> data_tokens;
+    int logsDeleted = 0;
+    while(!stale_data_.empty()){
+      file_manager_strategy_->resolve(stale_data_.back(), true);
+      logsDeleted++;
+      stale_data_.pop_back();
+    }
+
+    if(logsDeleted > 0){
+      AWS_LOG_INFO(__func__, "%d logs were deleted since the time"
+        " difference was > 14 days./n", logsDeleted
+        );
+    }
+  }
+
 protected:
   /**
    * The object that keeps track of which files to delete, read, or write to.
@@ -226,6 +257,18 @@ protected:
    * The status monitor for notifying an observer when files are available.
    */
   std::shared_ptr<StatusMonitor> file_status_monitor_;
+
+  /**
+   * A lock on the stale_data_ vector to prevent elements from being read or modified to
+   * stale_data_ while data is being read or modified from it.
+   */
+  std::mutex active_delete_stale_data_mutex_;
+
+  /**
+   * Store logs > 14 days old in this vector and resolve them in the delete_stale_data
+   * function after upload log task has been successfully enqueued.
+   */
+  std::vector<FileManagement::DataToken> stale_data_;
 
 };
 

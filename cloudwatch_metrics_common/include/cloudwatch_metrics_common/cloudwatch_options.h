@@ -40,7 +40,8 @@ static const Aws::FileManagement::FileManagerStrategyOptions kDefaultMetricFileM
   "cwmetric",
   Aws::FileManagement::kDefaultFileManagerStrategyOptions.file_extension,
   Aws::FileManagement::kDefaultFileManagerStrategyOptions.maximum_file_size_in_kb,
-  Aws::FileManagement::kDefaultFileManagerStrategyOptions.storage_limit_in_kb
+  Aws::FileManagement::kDefaultFileManagerStrategyOptions.storage_limit_in_kb,
+  Aws::FileManagement::kDefaultFileManagerStrategyOptions.delete_stale_data
 };
 
 static const CloudWatchOptions kDefaultCloudWatchOptions{

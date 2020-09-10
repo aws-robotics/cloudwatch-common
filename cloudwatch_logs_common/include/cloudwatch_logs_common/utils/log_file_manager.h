@@ -14,6 +14,8 @@
  */
 
 #pragma once
+#include <queue>
+#include <tuple>
 #include <aws/logs/model/InputLogEvent.h>
 
 #include <cloudwatch_logs_common/definitions/ros_cloudwatch_logs_errors.h>
@@ -53,9 +55,25 @@ class LogFileManager :
 
   void write(const LogCollection & data) override;
 
+  /*  
+    AWSClient will return 'InvalidParameterException' error when the log events in a
+    single batch span more than 24 hours. Therefore the readBatch function will only
+    return as many logs as can fit within the 24 hour span and the actual number of 
+    logs batched may end up being less than the original batch_size.
+
+    We must sort the log data chronologically because it is not guaranteed
+    to be ordered chronologically in the file, but CloudWatch requires all
+    puts in a single batch to be sorted chronologically
+  */
   FileObject<LogCollection> readBatch(size_t batch_size) override;
+
+  using Timestamp = long;
+  Timestamp latestTime = 0;
 };
 
 }  // namespace Utils
+
+  const long ONE_DAY_IN_SEC = 86400000;
+  const long TWO_WEEK_IN_SEC = 1209600000;
 }  // namespace CloudWatchLogs
 }  // namespace Aws

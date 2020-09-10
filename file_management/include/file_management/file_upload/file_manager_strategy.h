@@ -141,6 +141,8 @@ public:
 
   virtual bool isDataAvailable() = 0;
 
+  virtual bool isDeleteStaleData() = 0;
+
   virtual DataToken read(std::string &data) = 0;
 
   virtual void write(const std::string &data) = 0;
@@ -300,6 +302,13 @@ public:
    * @return bool if there is data available
    */
   bool isDataAvailable() override;
+
+  /**
+   * Deletes stale data that won't be accepted by the CloudWatch API. 
+   * This is done in a separate method so it doesn't block the current publishing task after
+   * reading the data.
+   */
+  bool isDeleteStaleData() override;
 
   /**
    * Reads a line of data from file storage. The most recent data in storage is read first. 

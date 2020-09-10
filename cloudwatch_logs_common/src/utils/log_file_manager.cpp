@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>	
+#include <mutex>
 #include <queue>
 #include <tuple>
 
@@ -27,29 +28,17 @@
 #include <aws/core/utils/logging/LogMacros.h>
 #include <cloudwatch_logs_common/definitions/definitions.h>
 
-const long ONE_DAY_IN_SEC = 86400000;
-
 namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
-/*  
-  AWSClient will return 'InvalidParameterException' error when the log events in a
-  single batch span more than 24 hours. Therefore the readBatch function will only
-  return as many logs as can fit within the 24 hour span and the actual number of 
-  logs batched may end up being less than the original batch_size.
 
-  We must sort the log data chronologically because it is not guaranteed
-  to be ordered chronologically in the file, but CloudWatch requires all
-  puts in a single batch to be sorted chronologically
-*/
 FileObject<LogCollection> LogFileManager::readBatch(
   size_t batch_size)
 {
   FileManagement::DataToken data_token;
   AWS_LOG_INFO(__func__, "Reading Logbatch");
-
-  using Timestamp = long;
+	
   std::priority_queue<std::tuple<Timestamp, std::string, FileManagement::DataToken>> pq;
   for (size_t i = 0; i < batch_size; ++i) {
     std::string line;
@@ -62,8 +51,8 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
     pq.push(std::make_tuple(input_event.GetTimestamp(), line, data_token));
   }
-
-  Timestamp latestTime = std::get<0>(pq.top());
+  
+  latestTime = std::get<0>(pq.top());
   LogCollection log_data;
   std::list<FileManagement::DataToken> data_tokens;
   while(!pq.empty()){
@@ -77,14 +66,20 @@ FileObject<LogCollection> LogFileManager::readBatch(
       log_data.push_front(input_event);
       data_tokens.push_back(new_data_token);
     }
-    else{
-      AWS_LOG_INFO(__func__, "Some logs were not batched since the time"
-        " difference was > 24 hours. Will try again in a separate batch./n"
-        "Logs read: %d, Logs batched: %d", batch_size, log_data.size()
-        );
-      break;
+    else if(file_manager_strategy_->isDeleteStaleData() && latestTime - curTime > TWO_WEEK_IN_SEC){
+      {
+        std::lock_guard<std::mutex> lock(active_delete_stale_data_mutex_);
+        stale_data_.push_back(new_data_token);
+      }
     }
     pq.pop();
+  }
+
+  if(batch_size != log_data.size()){
+    AWS_LOG_INFO(__func__, "%d logs were not batched since the time"
+      " difference was > 24 hours. Will try again in a separate batch./n"
+      , batch_size - log_data.size()
+      );
   }
 
   FileObject<LogCollection> file_object;
