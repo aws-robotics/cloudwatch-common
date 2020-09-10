@@ -51,8 +51,7 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
     pq.push(std::make_tuple(input_event.GetTimestamp(), line, data_token));
   }
-
-  std::lock_guard<std::mutex> lock(active_delete_stale_data_mutex_);
+  
   latestTime = std::get<0>(pq.top());
   LogCollection log_data;
   std::list<FileManagement::DataToken> data_tokens;
@@ -68,7 +67,10 @@ FileObject<LogCollection> LogFileManager::readBatch(
       data_tokens.push_back(new_data_token);
     }
     else if(file_manager_strategy_->isDeleteStaleData() && latestTime - curTime > TWO_WEEK_IN_SEC){
-      stale_data_.push_back(new_data_token);
+      {
+        std::lock_guard<std::mutex> lock(active_delete_stale_data_mutex_);
+        stale_data_.push_back(new_data_token);
+      }
     }
     pq.pop();
   }
