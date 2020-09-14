@@ -76,8 +76,8 @@ FileObject<LogCollection> LogFileManager::readBatch(
   }
 
   if(batch_size != log_data.size()){
-    AWS_LOG_INFO(__func__, "%d logs were not batched since the time"
-      " difference was > 24 hours. Will try again in a separate batch./n"
+    AWS_LOG_WARN(__func__, "%d logs were not batched since the time"
+      " difference was > 24 hours. Will try again in a separate batch."
       , batch_size - log_data.size()
       );
   }

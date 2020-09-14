@@ -13,8 +13,11 @@
  * permissions and limitations under the License.
  */
 
-#include <gtest/gtest.h>
+#include <aws/core/utils/logging/AWSLogging.h>
+#include <aws/core/utils/logging/ConsoleLogSystem.h>
 #include <cloudwatch_logs_common/utils/log_file_manager.h>
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 using Aws::CloudWatchLogs::Utils::LogFileManager;
 using namespace Aws::CloudWatchLogs;
@@ -251,7 +254,12 @@ TEST(DeleteOptionTest, file_manager_delete_false) {
 
 int main(int argc, char** argv)
 {
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  Aws::Utils::Logging::InitializeAWSLogging(
+      Aws::MakeShared<Aws::Utils::Logging::ConsoleLogSystem>(
+          "RunUnitTests", Aws::Utils::Logging::LogLevel::Trace));
+  ::testing::InitGoogleMock(&argc, argv);
+  int exitCode = RUN_ALL_TESTS();
+  Aws::Utils::Logging::ShutdownAWSLogging();
+  return exitCode;
 }
 
