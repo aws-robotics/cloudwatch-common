@@ -236,7 +236,7 @@ public:
 
     if(logsDeleted > 0){
       AWS_LOG_INFO(__func__, "%d logs were deleted since the time"
-        " difference was > 14 days./n", logsDeleted
+        " difference was > 14 days.", logsDeleted
         );
     }
   }
