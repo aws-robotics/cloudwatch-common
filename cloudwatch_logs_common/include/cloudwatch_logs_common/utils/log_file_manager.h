@@ -73,7 +73,7 @@ class LogFileManager :
 
 }  // namespace Utils
 
-  const long ONE_DAY_IN_SEC = 86400000;
-  const long TWO_WEEK_IN_SEC = 1209600000;
+  const long ONE_DAY_IN_MILLISEC = 24*60*60*1000;
+  const long TWO_WEEK_IN_MILLISEC = 14*ONE_DAY_IN_MILLISEC;
 }  // namespace CloudWatchLogs
 }  // namespace Aws

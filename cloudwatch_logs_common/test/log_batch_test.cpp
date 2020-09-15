@@ -150,30 +150,30 @@ public:
  * within 24 hours of each other
  */
 TEST_F(LogBatchTest, test_readBatch_1_batch) {
-  timestamps = {1, 3, 0, ONE_DAY_IN_SEC-1, 4, 2};
-  expectedTimeStamps = {{ONE_DAY_IN_SEC-1, 4, 3, 2, 1, 0}};
+  timestamps = {1, 3, 0, ONE_DAY_IN_MILLISEC-1, 4, 2};
+  expectedTimeStamps = {{ONE_DAY_IN_MILLISEC-1, 4, 3, 2, 1, 0}};
   createLogs(timestamps);
   file_manager->write(log_data);
   readLogs();
 }
 /**
  * This test will group half the logs into one batch and half into another
- * since there is > 24 hour difference from ONE_DAY_IN_SEC+2 and 2
+ * since there is > 24 hour difference from ONE_DAY_IN_MILLISEC+2 and 2
  */
 TEST_F(LogBatchTest, test_readBatch_2_batches) {
-  timestamps = {ONE_DAY_IN_SEC+1, 2, ONE_DAY_IN_SEC+2, 1, 0, ONE_DAY_IN_SEC};
-  expectedTimeStamps = {{ONE_DAY_IN_SEC+2, ONE_DAY_IN_SEC+1, ONE_DAY_IN_SEC}, {2, 1, 0}};
+  timestamps = {ONE_DAY_IN_MILLISEC+1, 2, ONE_DAY_IN_MILLISEC+2, 1, 0, ONE_DAY_IN_MILLISEC};
+  expectedTimeStamps = {{ONE_DAY_IN_MILLISEC+2, ONE_DAY_IN_MILLISEC+1, ONE_DAY_IN_MILLISEC}, {2, 1, 0}};
   createLogs(timestamps);
   file_manager->write(log_data);
   readLogs();
 }
 /**
- * This test will group three different batches since ONE_DAY_IN_SEC*2+10, 
- * ONE_DAY_IN_SEC+5, and 4 are all > 24 hours apart
+ * This test will group three different batches since ONE_DAY_IN_MILLISEC*2+10, 
+ * ONE_DAY_IN_MILLISEC+5, and 4 are all > 24 hours apart
  */
 TEST_F(LogBatchTest, test_readBatch_3_batches) {
-  timestamps = {1, ONE_DAY_IN_SEC+5, 4, 2, 0, ONE_DAY_IN_SEC*2+10};
-  expectedTimeStamps = {{ONE_DAY_IN_SEC*2+10}, {ONE_DAY_IN_SEC+5},{4, 2, 1, 0}};
+  timestamps = {1, ONE_DAY_IN_MILLISEC+5, 4, 2, 0, ONE_DAY_IN_MILLISEC*2+10};
+  expectedTimeStamps = {{ONE_DAY_IN_MILLISEC*2+10}, {ONE_DAY_IN_MILLISEC+5},{4, 2, 1, 0}};
   createLogs(timestamps);
   file_manager->write(log_data);
   readLogs();
@@ -185,8 +185,8 @@ TEST_F(LogBatchTest, test_readBatch_3_batches) {
  * since it is > 14 days old.
  */
 TEST_F(LogBatchTest, test_2_week_delete_1_of_6) {
-  timestamps = {15, ONE_DAY_IN_SEC, 0, TWO_WEEK_IN_SEC+5, TWO_WEEK_IN_SEC+1, 10};
-  expectedTimeStamps = {{TWO_WEEK_IN_SEC+5, TWO_WEEK_IN_SEC+1}, {ONE_DAY_IN_SEC, 15, 10}};
+  timestamps = {15, ONE_DAY_IN_MILLISEC, 0, TWO_WEEK_IN_MILLISEC+5, TWO_WEEK_IN_MILLISEC+1, 10};
+  expectedTimeStamps = {{TWO_WEEK_IN_MILLISEC+5, TWO_WEEK_IN_MILLISEC+1}, {ONE_DAY_IN_MILLISEC, 15, 10}};
   createLogs(timestamps);
   file_manager->write(log_data);
   readLogs();
@@ -198,8 +198,8 @@ TEST_F(LogBatchTest, test_2_week_delete_1_of_6) {
  * deleted since it is > 14 days old.
  */
 TEST_F(LogBatchTest, test_2_week_delete_4_of_6) {
-  timestamps = {1, ONE_DAY_IN_SEC, 4, TWO_WEEK_IN_SEC+5, 0, 3};
-  expectedTimeStamps = {{TWO_WEEK_IN_SEC+5}, {ONE_DAY_IN_SEC}};
+  timestamps = {1, ONE_DAY_IN_MILLISEC, 4, TWO_WEEK_IN_MILLISEC+5, 0, 3};
+  expectedTimeStamps = {{TWO_WEEK_IN_MILLISEC+5}, {ONE_DAY_IN_MILLISEC}};
   createLogs(timestamps);
   file_manager->write(log_data);
   readLogs();
@@ -208,11 +208,11 @@ TEST_F(LogBatchTest, test_2_week_delete_4_of_6) {
  * We defined delete_stale_data as true in our FileManagerStrategyOptions
  * In this test we expect that there will be two separate batches
  * separated by > 24 hours and we expect that timestamp 0, 1, 3, 4, and
- * ONE_DAY_IN_SEC will be deleted since it is > 14 days old.
+ * ONE_DAY_IN_MILLISEC will be deleted since it is > 14 days old.
  */
 TEST_F(LogBatchTest, test_2_week_delete_5_of_6) {
-  timestamps = {1, ONE_DAY_IN_SEC, 4, TWO_WEEK_IN_SEC+ONE_DAY_IN_SEC+5, 0, 3};
-  expectedTimeStamps = {{TWO_WEEK_IN_SEC+ONE_DAY_IN_SEC+5}};
+  timestamps = {1, ONE_DAY_IN_MILLISEC, 4, TWO_WEEK_IN_MILLISEC+ONE_DAY_IN_MILLISEC+5, 0, 3};
+  expectedTimeStamps = {{TWO_WEEK_IN_MILLISEC+ONE_DAY_IN_MILLISEC+5}};
   createLogs(timestamps);
   file_manager->write(log_data);
   readLogs();
@@ -225,8 +225,8 @@ TEST_F(LogBatchTest, test_2_week_delete_5_of_6) {
  */
 TEST_F(LogBatchTest, test_2_week_no_delete) {
   test_strategy->options_.delete_stale_data = false;
-  timestamps = {1, ONE_DAY_IN_SEC, 4, TWO_WEEK_IN_SEC+5, 0, 3};
-  expectedTimeStamps = {{TWO_WEEK_IN_SEC+5},{ONE_DAY_IN_SEC, 4, 3, 1}, {0}};
+  timestamps = {1, ONE_DAY_IN_MILLISEC, 4, TWO_WEEK_IN_MILLISEC+5, 0, 3};
+  expectedTimeStamps = {{TWO_WEEK_IN_MILLISEC+5},{ONE_DAY_IN_MILLISEC, 4, 3, 1}, {0}};
   createLogs(timestamps);
   file_manager->write(log_data);
   readLogs();
