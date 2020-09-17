@@ -59,14 +59,14 @@ FileObject<LogCollection> LogFileManager::readBatch(
     Timestamp curTime = std::get<0>(pq.top());
     std::string line = std::get<1>(pq.top());
     FileManagement::DataToken new_data_token = std::get<2>(pq.top());
-    if(latestTime - curTime < ONE_DAY_IN_SEC){
+    if(latestTime - curTime < ONE_DAY_IN_MILLISEC){
       Aws::String aws_line(line.c_str());
       Aws::Utils::Json::JsonValue value(aws_line);
       Aws::CloudWatchLogs::Model::InputLogEvent input_event(value);
       log_data.push_front(input_event);
       data_tokens.push_back(new_data_token);
     }
-    else if(file_manager_strategy_->isDeleteStaleData() && latestTime - curTime > TWO_WEEK_IN_SEC){
+    else if(file_manager_strategy_->isDeleteStaleData() && latestTime - curTime > TWO_WEEK_IN_MILLISEC){
       {
         std::lock_guard<std::mutex> lock(active_delete_stale_data_mutex_);
         stale_data_.push_back(new_data_token);
