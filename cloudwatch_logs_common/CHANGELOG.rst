@@ -14,6 +14,81 @@ Changelog for package cloudwatch_logs_common
 * Resolved false-positive error log messages
 * Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
 
+Forthcoming
+-----------
+* Correct seconds to milliseconds (`#59 <https://github.com/aws-robotics/cloudwatch-common/issues/59>`_)
+* Add AWS logging to batch tests (`#58 <https://github.com/aws-robotics/cloudwatch-common/issues/58>`_)
+* Allow user to automatically delete CloudWatch logs in batch that are > 14 days old (`#56 <https://github.com/aws-robotics/cloudwatch-common/issues/56>`_)
+  * move docstring and don't break loop
+  * call fileUploadComplete
+  * modify struct and add tests
+  * add tests and change 2 week wording to old
+  * Add lock to discard stale data container
+  * extend stale data protection
+  * remove setter
+  * Reduce lock_guard scope
+* add error for invalid log batch (`#52 <https://github.com/aws-robotics/cloudwatch-common/issues/52>`_)
+  * add error for invalid log batch
+  * modify logic
+  * change to long instead of time
+  * fix syntax
+  * separate to function
+  * change function order
+  * add unit test
+  * Add file manager test to CMakeList
+  * file manager unit test
+  * typo
+  * add test log file manager class
+  * modify filetest class and add unit test
+  * add test publisher
+  * debug
+  * add validate batch function:
+  * organize tuple
+  * for loop to add valid data
+  * pair
+  * new priority queue
+  * back to tuple
+  * add outdated check
+  * modify logic
+  * modify test and pq
+  * modify tests
+  * add readbatch mock
+  * add headers
+  * remove data token
+  * separate to new log_batch test file
+  * add log comparison function
+  * update test
+  * fix typos
+  * update batch test
+  * remove outdated, fix timestamp
+  * add > 24 hour log
+  * remove utility
+  * fix typo
+  * changes based on review
+  * modify macro
+  * modify test
+  * modify log_data
+  * typo
+  * add testfilemanagerstrategy
+  * change logfile to datamanager & more
+  * mock read function
+  * update read and write functions
+  * modify tests based on review
+  * add batch_data validation
+  * remove unnecessary headers
+  * add test fixture
+  * update test fixtures
+  * updates based on review
+* Bumping version to match bloom release (`#51 <https://github.com/aws-robotics/cloudwatch-common/issues/51>`_)
+  Bumping version to 1.1.3
+* Fix linting issues found by clang-tidy 6.0 (`#50 <https://github.com/aws-robotics/cloudwatch-common/issues/50>`_)
+  * clang-tidy fixes
+  * revert explicit constructor declarations to maintain API compatbility
+  * clang-tidy linting issues fixed manually
+  * fix unit tests build break
+* Increase package version numbers to 1.1.2 (`#44 <https://github.com/aws-robotics/cloudwatch-common/issues/44>`_)
+* Contributors: Jesse Ikawa, Miaofei Mei, Nick Burek, Ragha Prasad
+
 1.1.1 (2019-09-10)
 ------------------
 * Disable error on cast-align warning to support ARMhf builds (`#41 <https://github.com/aws-robotics/cloudwatch-common/issues/41>`_)

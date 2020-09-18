@@ -5,6 +5,33 @@ Changelog for package cloudwatch_metrics_common
 1.0.1 (2019-03-20)
 ------------------
 
+Forthcoming
+-----------
+* Allow user to automatically delete CloudWatch logs in batch that are > 14 days old (`#56 <https://github.com/aws-robotics/cloudwatch-common/issues/56>`_)
+  * move docstring and don't break loop
+  * call fileUploadComplete
+  * modify struct and add tests
+  * add tests and change 2 week wording to old
+  * Add lock to discard stale data container
+  * extend stale data protection
+  * remove setter
+  * Reduce lock_guard scope
+* Bumping version to match bloom release (`#51 <https://github.com/aws-robotics/cloudwatch-common/issues/51>`_)
+  Bumping version to 1.1.3
+* Fix linting issues found by clang-tidy 6.0 (`#50 <https://github.com/aws-robotics/cloudwatch-common/issues/50>`_)
+  * clang-tidy fixes
+  * revert explicit constructor declarations to maintain API compatbility
+  * clang-tidy linting issues fixed manually
+  * fix unit tests build break
+* Add support for Cloudwatch MetricDatum StatisticSet (`#48 <https://github.com/aws-robotics/cloudwatch-common/issues/48>`_)
+  * add support for cloudwatch metrics' StatisticSet
+  * add test for metricObjectToDatum()
+  * address PR comments
+  * take into consideration that MetricDatum's Value and StatisticValues are mutually exclusive
+  * add docstring to MetricObject constructors
+* Increase package version numbers to 1.1.2 (`#44 <https://github.com/aws-robotics/cloudwatch-common/issues/44>`_)
+* Contributors: Jesse Ikawa, Miaofei Mei, Nick Burek, Ragha Prasad
+
 1.1.1 (2019-09-10)
 ------------------
 * Disable error on cast-align warning to support ARMhf builds (`#41 <https://github.com/aws-robotics/cloudwatch-common/issues/41>`_)
