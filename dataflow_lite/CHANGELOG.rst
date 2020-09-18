@@ -2,8 +2,8 @@
 Changelog for package dataflow_lite
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.4 (2020-09-17)
+------------------
 * Bumping version to match bloom release (`#51 <https://github.com/aws-robotics/cloudwatch-common/issues/51>`_)
   Bumping version to 1.1.3
 * Fix linting issues found by clang-tidy 6.0 (`#50 <https://github.com/aws-robotics/cloudwatch-common/issues/50>`_)

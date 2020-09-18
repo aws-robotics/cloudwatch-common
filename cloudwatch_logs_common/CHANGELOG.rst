@@ -14,8 +14,8 @@ Changelog for package cloudwatch_logs_common
 * Resolved false-positive error log messages
 * Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
 
-Forthcoming
------------
+1.1.4 (2020-09-17)
+------------------
 * Correct seconds to milliseconds (`#59 <https://github.com/aws-robotics/cloudwatch-common/issues/59>`_)
 * Add AWS logging to batch tests (`#58 <https://github.com/aws-robotics/cloudwatch-common/issues/58>`_)
 * Allow user to automatically delete CloudWatch logs in batch that are > 14 days old (`#56 <https://github.com/aws-robotics/cloudwatch-common/issues/56>`_)
