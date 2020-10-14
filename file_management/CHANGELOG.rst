@@ -14,8 +14,8 @@ Changelog for package file_management
 * Resolved false-positive error log messages
 * Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
 
-Forthcoming
------------
+1.1.5 (2020-10-14)
+------------------
 No changes.
 
 1.1.4 (2020-09-17)

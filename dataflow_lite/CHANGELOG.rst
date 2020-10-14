@@ -2,8 +2,8 @@
 Changelog for package dataflow_lite
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.5 (2020-10-14)
+------------------
 No changes.
 
 1.1.4 (2020-09-17)

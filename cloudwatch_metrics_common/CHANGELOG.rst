@@ -5,8 +5,8 @@ Changelog for package cloudwatch_metrics_common
 1.0.1 (2019-03-20)
 ------------------
 
-Forthcoming
------------
+1.1.5 (2020-10-14)
+------------------
 No changes.
 
 1.1.4 (2020-09-17)
