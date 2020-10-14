@@ -2,6 +2,10 @@
 Changelog for package dataflow_lite
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+No changes.
+
 1.1.4 (2020-09-17)
 ------------------
 * Bumping version to match bloom release (`#51 <https://github.com/aws-robotics/cloudwatch-common/issues/51>`_)
