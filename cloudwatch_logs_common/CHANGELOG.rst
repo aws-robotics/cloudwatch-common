@@ -14,6 +14,12 @@ Changelog for package cloudwatch_logs_common
 * Resolved false-positive error log messages
 * Contributors: Abby Xu, Ross Desmond, Ryan Newell, Yuan "Forrest" Yu, hortala
 
+1.1.5 (2020-10-14)
+------------------
+* Limit the rate of cloudwatch log uploading to match API service limits (`#61 <https://github.com/aws-robotics/cloudwatch-common/issues/61>`_)
+  * Limit the rate of publishing to PutLogEvents by delaying calls inside the CloudWathLogsFacade
+* Contributors: Emerson Knapp
+
 1.1.4 (2020-09-17)
 ------------------
 * Correct seconds to milliseconds (`#59 <https://github.com/aws-robotics/cloudwatch-common/issues/59>`_)

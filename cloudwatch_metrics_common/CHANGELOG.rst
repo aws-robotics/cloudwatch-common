@@ -5,6 +5,10 @@ Changelog for package cloudwatch_metrics_common
 1.0.1 (2019-03-20)
 ------------------
 
+1.1.5 (2020-10-14)
+------------------
+No changes.
+
 1.1.4 (2020-09-17)
 ------------------
 * Allow user to automatically delete CloudWatch logs in batch that are > 14 days old (`#56 <https://github.com/aws-robotics/cloudwatch-common/issues/56>`_)
