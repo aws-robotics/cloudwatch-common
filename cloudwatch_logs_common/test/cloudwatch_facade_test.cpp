@@ -54,6 +54,10 @@ protected:
     logs_list_.clear();
     Aws::ShutdownAPI(options_);
   }
+
+  std::chrono::milliseconds Now() const {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch());
+  }
 };
 
 /*
@@ -108,58 +112,29 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_LongSuccessRe
         facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list));
 }
 
-/**
- * Given an API facade, repeatedly send logs to it until destroyed or call_count is reached.
- */
-class LogPutWorker {
- public:
-    LogPutWorker(std::shared_ptr<CloudWatchLogsFacade> facade, size_t call_count)
-      : thread_(&LogPutWorker::Work, this),
-        count_(call_count),
-        facade_(facade) {}
-
-    ~LogPutWorker() {
-      stop_ = true;
-      thread_.join();
-    }
-
- private:
-  void Work() {
-    while (!stop_.load() && count_ > 0) {
-      Aws::String nextToken;
-      std::list<Aws::CloudWatchLogs::Model::InputLogEvent> logs_list;
-      logs_list.emplace_back();
-      logs_list.emplace_back();
-
-      EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
-        facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list));
-
-      count_.store(count_.load() - 1);
-    }
-  }
-
-  std::thread thread_;
-  std::atomic_bool stop_{false};
-  std::atomic_size_t count_;
-  std::shared_ptr<CloudWatchLogsFacade> facade_;
-};
-
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_RateLimitsPutLogEvents)
 {
   Aws::CloudWatchLogs::Model::PutLogEventsResult successResult;
   Aws::CloudWatchLogs::Model::PutLogEventsOutcome successOutcome(successResult);
   EXPECT_CALL(*mock_client_p, PutLogEvents(testing::_))
-    .Times(testing::Between(1, 6))
     .WillRepeatedly(testing::Return(successOutcome));
 
-  {
-    // enter scope so that worker is destroyed on exit
-    // the worker will try to send 20 log calls as fast as possible,
-    // but we only allow ~1s to work
-    // if rate limiting is working properly, only ~5 calls will succeed in this time
-    LogPutWorker worker(facade_, 20);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+  const size_t count = 20;
+  // Note - it is hardcoded here that we are limiting to 5 Hz
+  // which is a hidden implementation variable of CloudWatchLogsFacade
+  // Also note we check count-1, because the first call goes immediately
+  const double expect_seconds = (count - 1) / 5.0;
+  const std::chrono::milliseconds min_time(int(expect_seconds * 1000));
+
+  Aws::String nextToken;
+  const auto start = Now();
+  for (int i = 0; i < 20; i++) {
+      EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
+        facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list_));
   }
+  const auto end = Now();
+  // The elapsed time must be at least min_time, or we know rate limiting did not occur
+  EXPECT_GE((end - start).count(), min_time.count());
 }
 
 
