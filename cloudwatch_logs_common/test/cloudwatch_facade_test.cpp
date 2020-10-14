@@ -267,8 +267,12 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_SuccessResponse)
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_FailedResponse)
 {
-    auto* failedOutcome =
-        new Aws::CloudWatchLogs::Model::CreateLogStreamOutcome();
+    // Choosing an arbitrary unhandled error code to initialize, for deterministic behavior
+    // When left uninitialized, on some systems it may come out as RESOURCE_ALREADY_EXISTS
+    Aws::Client::AWSError<Aws::CloudWatchLogs::CloudWatchLogsErrors> error(
+        Aws::CloudWatchLogs::CloudWatchLogsErrors::INTERNAL_FAILURE, false);
+
+    auto* failedOutcome = new Aws::CloudWatchLogs::Model::CreateLogStreamOutcome(error);
 
     EXPECT_CALL(*mock_client_p, CreateLogStream(testing::_))
         .WillOnce(testing::Return(*failedOutcome));
