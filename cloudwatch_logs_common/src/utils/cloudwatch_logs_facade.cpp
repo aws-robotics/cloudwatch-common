@@ -70,7 +70,7 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::SendLogsReque
     // This will wait _at most_ kMinPutLogsPeriod.
     const auto sleep_for = kMinPutLogsPeriod - time_since_last_put;
     AWS_LOG_WARN(__func__, "PutLogEvents occurring too quickly, rate limiting in effect. Delaying PutLogs call by %d ms", sleep_for.count());
-    std::this_thread::sleep_for(kMinPutLogsPeriod - time_since_last_put);
+    std::this_thread::sleep_for(sleep_for);
   }
 
   auto response = this->cw_client_->PutLogEvents(request);
