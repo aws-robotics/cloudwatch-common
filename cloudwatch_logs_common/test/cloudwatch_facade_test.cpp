@@ -108,6 +108,60 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_LongSuccessRe
         facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list));
 }
 
+/**
+ * Given an API facade, repeatedly send logs to it until destroyed or call_count is reached.
+ */
+class LogPutWorker {
+ public:
+    LogPutWorker(std::shared_ptr<CloudWatchLogsFacade> facade, size_t call_count)
+      : thread_(&LogPutWorker::Work, this),
+        count_(call_count),
+        facade_(facade) {}
+
+    ~LogPutWorker() {
+      stop_ = true;
+      thread_.join();
+    }
+
+ private:
+  void Work() {
+    while (!stop_.load() && count_ > 0) {
+      Aws::String nextToken;
+      std::list<Aws::CloudWatchLogs::Model::InputLogEvent> logs_list;
+      logs_list.emplace_back();
+      logs_list.emplace_back();
+
+      EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
+        facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list));
+
+      count_.store(count_.load() - 1);
+    }
+  }
+
+  std::thread thread_;
+  std::atomic_bool stop_{false};
+  std::atomic_size_t count_;
+  std::shared_ptr<CloudWatchLogsFacade> facade_;
+};
+
+TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_RateLimitsPutLogEvents)
+{
+  Aws::CloudWatchLogs::Model::PutLogEventsResult successResult;
+  Aws::CloudWatchLogs::Model::PutLogEventsOutcome successOutcome(successResult);
+  EXPECT_CALL(*mock_client_p, PutLogEvents(testing::_))
+    .Times(testing::Between(1, 6))
+    .WillRepeatedly(testing::Return(successOutcome));
+
+  {
+    // enter scope so that worker is destroyed on exit
+    // the worker will try to send 20 log calls as fast as possible,
+    // but we only allow ~1s to work
+    // if rate limiting is working properly, only ~5 calls will succeed in this time
+    LogPutWorker worker(facade_, 20);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+}
+
 
 /*
  * CreateLogGroup Tests
