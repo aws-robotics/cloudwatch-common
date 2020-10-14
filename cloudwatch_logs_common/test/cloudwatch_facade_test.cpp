@@ -54,6 +54,10 @@ protected:
     logs_list_.clear();
     Aws::ShutdownAPI(options_);
   }
+
+  std::chrono::milliseconds Now() const {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch());
+  }
 };
 
 /*
@@ -106,6 +110,31 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_LongSuccessRe
 
     EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
         facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list));
+}
+
+TEST_F(TestCloudWatchFacade, TestCWLogsFacade_SendLogsToCloudWatch_RateLimitsPutLogEvents)
+{
+  Aws::CloudWatchLogs::Model::PutLogEventsResult successResult;
+  Aws::CloudWatchLogs::Model::PutLogEventsOutcome successOutcome(successResult);
+  EXPECT_CALL(*mock_client_p, PutLogEvents(testing::_))
+    .WillRepeatedly(testing::Return(successOutcome));
+
+  const size_t count = 20;
+  // Note - it is hardcoded here that we are limiting to 5 Hz
+  // which is a hidden implementation variable of CloudWatchLogsFacade
+  // Also note we check count-1, because the first call goes immediately
+  const double expect_seconds = (count - 1) / 5.0;
+  const std::chrono::milliseconds min_time(int(expect_seconds * 1000));
+
+  Aws::String nextToken;
+  const auto start = Now();
+  for (int i = 0; i < 20; i++) {
+      EXPECT_EQ(Aws::CloudWatchLogs::ROSCloudWatchLogsErrors::CW_LOGS_SUCCEEDED,
+        facade_->SendLogsToCloudWatch(nextToken, "", "", logs_list_));
+  }
+  const auto end = Now();
+  // The elapsed time must be at least min_time, or we know rate limiting did not occur
+  EXPECT_GE((end - start).count(), min_time.count());
 }
 
 
@@ -213,8 +242,12 @@ TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_SuccessResponse)
 
 TEST_F(TestCloudWatchFacade, TestCWLogsFacade_CreateLogStream_FailedResponse)
 {
-    auto* failedOutcome =
-        new Aws::CloudWatchLogs::Model::CreateLogStreamOutcome();
+    // Choosing an arbitrary unhandled error code to initialize, for deterministic behavior
+    // When left uninitialized, on some systems it may come out as RESOURCE_ALREADY_EXISTS
+    Aws::Client::AWSError<Aws::CloudWatchLogs::CloudWatchLogsErrors> error(
+        Aws::CloudWatchLogs::CloudWatchLogsErrors::INTERNAL_FAILURE, false);
+
+    auto* failedOutcome = new Aws::CloudWatchLogs::Model::CreateLogStreamOutcome(error);
 
     EXPECT_CALL(*mock_client_p, CreateLogStream(testing::_))
         .WillOnce(testing::Return(*failedOutcome));

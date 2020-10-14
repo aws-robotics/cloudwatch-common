@@ -30,12 +30,24 @@
 #include <cloudwatch_logs_common/utils/cloudwatch_logs_facade.h>
 #include <cloudwatch_logs_common/definitions/definitions.h>
 
+namespace {
+// Return the current monotonic time in milliseconds since the epoch
+std::chrono::milliseconds now() {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch());
+}
+}  // unnamed namespace
 
 namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
 constexpr uint16_t kMaxLogsPerRequest = 100;
+
+/**
+ * See https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html
+ * PutLogEvents is limited to 5 requests per second per stream (equivalent to 200ms period).
+ */
+const std::chrono::milliseconds kMinPutLogsPeriod{200};
 
 CloudWatchLogsFacade::CloudWatchLogsFacade(const Aws::Client::ClientConfiguration & client_config)
 {
@@ -51,7 +63,18 @@ Aws::CloudWatchLogs::ROSCloudWatchLogsErrors CloudWatchLogsFacade::SendLogsReque
   const Aws::CloudWatchLogs::Model::PutLogEventsRequest & request, Aws::String & next_token)
 {
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors status = CW_LOGS_SUCCEEDED;
+
+  // Rate limiting
+  const auto time_since_last_put = now() - last_put_time_;
+  if (time_since_last_put < kMinPutLogsPeriod) {
+    // This will wait _at most_ kMinPutLogsPeriod.
+    const auto sleep_for = kMinPutLogsPeriod - time_since_last_put;
+    AWS_LOG_WARN(__func__, "PutLogEvents occurring too quickly, rate limiting in effect. Delaying PutLogs call by %d ms", sleep_for.count());
+    std::this_thread::sleep_for(sleep_for);
+  }
+
   auto response = this->cw_client_->PutLogEvents(request);
+  last_put_time_ = now();
   if (!response.IsSuccess()) {
 
     AWS_LOGSTREAM_ERROR(__func__, "Send log request failed due to: "

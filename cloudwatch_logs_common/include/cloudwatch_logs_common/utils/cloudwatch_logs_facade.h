@@ -59,6 +59,10 @@ public:
   /**
    *  @brief Sends a list of logs to CloudWatch
    *
+   *  This operation may block for a bounded amount of time to rate limit calls to the
+   *  CloudWatch Logs API. It is expected that tasks dispatched to this facade occur on worker
+   *  threads so that main loop program processing is not affected by this delay.
+   *
    *  @param next_token The next sequence token to use for sending logs to cloudwatch
    *  @param log_group A reference to a string with the log group name for all the logs being posted
    *  @param log_stream A reference to a string with the log stream name for all the logs being
@@ -132,6 +136,9 @@ protected:
 private:
   Aws::CloudWatchLogs::ROSCloudWatchLogsErrors SendLogsRequest(
     const Aws::CloudWatchLogs::Model::PutLogEventsRequest & request, Aws::String & next_token);
+
+  // The last time PutLogEvents was called, used to track rate limiting
+  std::chrono::milliseconds last_put_time_{0};
 
 };
 
