@@ -18,8 +18,8 @@ The source code is released under an [Apache 2.0].
 
 ### Build status
 * GitHub Action Status
-     * master: ![Build & Test](https://github.com/aws-robotics/cloudwatch-common/workflows/Build%20&%20Test/badge.svg?branch=master&event=schedule)
-     * release-latest: ![Build & Test release-latest](https://github.com/aws-robotics/cloudwatch-common//workflows/Build%20&%20Test%20release-latest/badge.svg?event=schedule)
+     * master: [![Build & Test](https://github.com/aws-robotics/cloudwatch-common/workflows/Build%20&%20Test/badge.svg?branch=master&event=schedule)](https://github.com/aws-robotics/cloudwatch-common/actions?query=workflow%3A%22Build+%26+Test%22)
+     * master: [![Build & Test](https://github.com/aws-robotics/cloudwatch-common/workflows/Build%20&%20Test/badge.svg?branch=master&event=schedule)](https://github.com/aws-robotics/cloudwatch-common/actions?query=workflow%3A%22Build+%26+Test+release-latest%22)
 
 
 * Travis CI:
