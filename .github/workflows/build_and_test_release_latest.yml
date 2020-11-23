@@ -39,8 +39,8 @@ jobs:
     - name: Run action-ros-ci to build and test
       uses: ros-tooling/action-ros-ci@0.1.0
       with:
-        target-ros1-distro: ${{ matrix.ros_version == '1' && matrix.ros_distro || '' }}
-        target-ros2-distro: ${{ matrix.ros_version == '2' && matrix.ros_distro || '' }}
+        target-ros1-distro: ${{ env.ROS_VERSION == '1' && matrix.ros_distro || '' }}
+        target-ros2-distro: ${{ env.ROS_VERSION == '2' && matrix.ros_distro || '' }}
         package-name: cloudwatch_logs_common dataflow_lite cloudwatch_metrics_common file_management
         extra-cmake-args: ${{ matrix.extra_cmake_args }}
         # schedule runs against the default branch (master), so specify release-latest via repos file
