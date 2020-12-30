@@ -20,11 +20,6 @@ The source code is released under an [Apache 2.0].
 * GitHub Action Status
      * master: [![Build & Test](https://github.com/aws-robotics/cloudwatch-common/workflows/Build%20&%20Test/badge.svg?branch=master&event=schedule)](https://github.com/aws-robotics/cloudwatch-common/actions?query=workflow%3A"Build+%26+Test"+event%3Aschedule)
      * release-latest: [![Build & Test release-latest](https://github.com/aws-robotics/cloudwatch-common/workflows/Build%20&%20Test%20release-latest/badge.svg?branch=master&event=schedule)](https://github.com/aws-robotics/cloudwatch-common/actions?query=workflow%3A"Build+%26+Test+release-latest"+event%3Aschedule)
-
-
-* Travis CI:
-    * "master" branch [![Build Status](https://travis-ci.org/aws-robotics/cloudwatch-common.svg?branch=master)](https://travis-ci.org/aws-robotics/cloudwatch-common/branches)
-    * "release-latest" branch [![Build Status](https://travis-ci.org/aws-robotics/cloudwatch-common.svg?branch=release-latest)](https://travis-ci.org/aws-robotics/cloudwatch-common/branches)
 * ROS build farm:
     * ROS Kinetic @ u16.04 Xenial
         * cloudwatch_metrics_common [![Build Status](http://build.ros.org/job/Kbin_uX64__cloudwatch_metrics_common__ubuntu_xenial_amd64__binary/badge/icon)](http://build.ros.org/job/Kbin_uX64__cloudwatch_metrics_common__ubuntu_xenial_amd64__binary)
